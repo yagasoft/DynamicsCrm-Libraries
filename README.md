@@ -8,7 +8,11 @@ A collection of libraries for common operations in Dynamics CRM development.
 
   + A collection of generic functionalities that give power to developers.
   + An extension to the out-of-the-box IOrganizationService.
-    + Supports async operations, dependencies, transactions, and caching.
+    + Supports async operations with dependency
+    + transactions and rollback
+    + caching
+    + automatic pool/queue handling
+    + automatic thread handling
   + Dynamics-CRM-specific code analysis rules
 
 ### Dependencies
