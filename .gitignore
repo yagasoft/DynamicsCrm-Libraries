@@ -333,4 +333,6 @@ ASALocalRun/
 nuget-access-key.txt
 *.snk
 *.dat
+
 /LinkDev.Tests.EnhancedOrgService
+*.exe

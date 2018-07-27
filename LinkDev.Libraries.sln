@@ -10,9 +10,6 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LinkDev.Tests.EnhancedOrgService", "LinkDev.Tests.EnhancedOrgService\LinkDev.Tests.EnhancedOrgService.csproj", "{A2F4AAE9-533C-4E2E-809F-921B392B47B0}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "lib", "lib", "{FE06650F-F420-4BF9-B5D0-C48FC643CBBA}"
-	ProjectSection(SolutionItems) = preProject
-		lib\nuget.exe = lib\nuget.exe
-	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LinkDev.Libraries.DynamicsCrmRules", "LinkDev.Libraries.DynamicsCrmRules\LinkDev.Libraries.DynamicsCrmRules.csproj", "{0E2D0109-918C-41D2-8784-8037B1EE92C0}"
 EndProject
