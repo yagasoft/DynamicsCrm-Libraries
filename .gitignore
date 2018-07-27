@@ -328,3 +328,9 @@ ASALocalRun/
 
 # MFractors (Xamarin productivity tool) working folder 
 .mfractor/
+
+# Secrets
+nuget-access-key.txt
+*.snk
+*.dat
+/LinkDev.Tests.EnhancedOrgService

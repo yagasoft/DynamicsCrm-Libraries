@@ -1,0 +1,8 @@
+[
+  {
+    "outputFileName": "Scripts/Sdk.Soap.vsdoc.min.js",
+    "inputFiles": [
+      "Scripts/Sdk.Soap.vsdoc.js"
+    ]
+  }
+]
