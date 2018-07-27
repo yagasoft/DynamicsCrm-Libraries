@@ -2,17 +2,17 @@
 ### Version: 1.1
 ---
 
-A collection of libraries for common operations in Dynamics CRM development.
+A collection of libraries for common and extended operations in Dynamics CRM development that gives power to the developer and saves time.
 
 ### Features
 
-  + A collection of generic functionalities that give power to developers.
-  + An extension to the out-of-the-box IOrganizationService.
-    + Supports async operations with dependency
-    + transactions and rollback
-    + caching
-    + automatic pool/queue handling
-    + automatic thread handling
+  + Massive JS and CS libraries of common and generic functions and classes.
+  + An extension to the out-of-the-box IOrganizationService. Supports:
+    + Async operations with dependency
+    + Transactions and rollback
+    + Caching
+    + Automatic pool/queue handling
+    + Automatic thread handling
   + Dynamics-CRM-specific code analysis rules
 
 ### Dependencies
