@@ -4,7 +4,7 @@
 /// <reference path="xrm.page.365.d.ts" />
 
 // Author: Ahmed el-Sawalhy
-// Version: 1.11.5
+// Version: 1.11.6
 
 var IsCommonGenericLibraryLoaded = true;
 var $ = window.$ || parent.$;
@@ -2314,7 +2314,7 @@ function SetupFieldNameAutoComplete(entityName, fieldNameFieldName, maxResults, 
 	{
 		entityMetadata = EntityMetadata[entityName];
 
-		if (!entityMetadata)
+		if (!entityMetadata || entityMetadata.length <= 0)
 		{
 			console.error('SetupFieldNameAutoComplete: must load entity metadata first before setting auto-complete.');
 			return;
@@ -3330,7 +3330,7 @@ function RetrieveEntityFields(entityName, callback, errorCallback)
 	{
 		entityMetadata = EntityMetadata[entityName];
 
-		if (!entityMetadata)
+		if (!entityMetadata || entityMetadata.length <= 0)
 		{
 			var message = 'RetrieveEntityFields: must load entity metadata first.';
 
