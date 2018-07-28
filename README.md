@@ -15,6 +15,15 @@ A collection of libraries for common and extended operations in Dynamics CRM dev
     + Automatic thread handling
   + Dynamics-CRM-specific code analysis rules
 
+### Guide
+
+  + Download
+    + Common (either)
+      + NuGet: called "LinkDev.Libraries.Common"
+      + Common.cs: in the repository
+    + EnhancedOrgService
+      + NuGet: called "LinkDev.Libraries.EnhancedOrgService"
+
 ### Dependencies
 
   + NuGet executable
