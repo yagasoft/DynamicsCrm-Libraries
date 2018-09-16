@@ -1,4 +1,7 @@
 # DynamicsCrm-Libraries
+
+[![Join the chat at https://gitter.im/yagasoft/DynamicsCrm-Libraries](https://badges.gitter.im/yagasoft/DynamicsCrm-Libraries.svg)](https://gitter.im/yagasoft/DynamicsCrm-Libraries?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 ### Version: 1.1
 ---
 
@@ -14,6 +17,15 @@ A collection of libraries for common and extended operations in Dynamics CRM dev
     + Automatic pool/queue handling
     + Automatic thread handling
   + Dynamics-CRM-specific code analysis rules
+
+### Guide
+
+  + Download
+    + Common (either)
+      + NuGet: called "LinkDev.Libraries.Common"
+      + Common.cs: in the repository
+    + EnhancedOrgService
+      + NuGet: called "LinkDev.Libraries.EnhancedOrgService"
 
 ### Dependencies
 
