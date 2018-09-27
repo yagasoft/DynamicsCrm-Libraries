@@ -117,11 +117,6 @@
     <None Include="Scripts\ldv_RecurrenceRule.js" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="CrmSchemaJs.js">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>CrmSchemaJs.tt</DependentUpon>
-    </None>
     <None Include="CrmSchemaJs.tt">
       <Generator>CrmCodeGenerator2011</Generator>
       <LastGenOutput>CrmSchemaJs.js</LastGenOutput>
@@ -139,6 +134,13 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Scripts\ldv_GenericConfig.js" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="CrmSchemaJs.js">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>CrmSchemaJs.tt</DependentUpon>
+    </Content>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
