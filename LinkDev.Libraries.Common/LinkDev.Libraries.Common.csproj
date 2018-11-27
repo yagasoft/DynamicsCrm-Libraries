@@ -146,7 +146,7 @@
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>$(SolutionDir)lib/nuget.exe pack $(ProjectPath) -Prop Configuration=Release
-$(SolutionDir)lib/nuget.exe pack $(ProjectDir)LinkDev.Libraries.Common.File.nuspec -OutputDirectory $(TargetDir)
+$(SolutionDir)lib/nuget.exe pack $(ProjectDir)FileForm.nuspec -OutputDirectory $(TargetDir)
 copy /Y "$(TargetDir)*.nupkg" "C:\Nuget.Local\"</PostBuildEvent>
   </PropertyGroup>
   <PropertyGroup>
