@@ -3,14 +3,14 @@
 <package>
   <metadata>
     <id>LinkDev.Libraries.Common</id>
-    <version>1.6.5</version>
+    <version>1.6.6</version>
     <authors>Ahmed el-Sawalhy</authors>
     <owners>Yagasoft.com</owners>
     <projectUrl>https://github.com/os008/DynamicsCrm-Libraries</projectUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <summary>Dynamics CRM Common Library.</summary>
     <description>Dynamics CRM Common Library is a collection of generic functionalities that give power to developers.</description>
-    <copyright>Copyright 2017</copyright>
+    <copyright>Copyright 2018</copyright>
     <tags>common, library, CRM, Dynamics, 365, 2016</tags>
     <developmentDependency>true</developmentDependency>
     <dependencies>
@@ -25,6 +25,8 @@
     </frameworkAssemblies>
     <references />
     <releaseNotes>
+      * 1.6.6
+      Fixed: spelling mistake
       * 1.6.5
       Added: conditions in FetchXML parser
       * 1.6.4

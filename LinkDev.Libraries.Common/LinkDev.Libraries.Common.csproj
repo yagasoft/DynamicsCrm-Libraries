@@ -92,6 +92,7 @@
     <None Include="bundleconfig.json" />
     <None Include="CrmSchemaJs.dat" />
     <None Include="key.snk" />
+    <None Include="LinkDev.Libraries.Common.File.nuspec" />
     <None Include="LinkDev.Libraries.Common.nuspec">
       <SubType>Designer</SubType>
     </None>
@@ -145,6 +146,7 @@
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>$(SolutionDir)lib/nuget.exe pack $(ProjectPath) -Prop Configuration=Release
+$(SolutionDir)lib/nuget.exe pack $(ProjectDir)LinkDev.Libraries.Common.File.nuspec -OutputDirectory $(TargetDir)
 copy /Y "$(TargetDir)*.nupkg" "C:\Nuget.Local\"</PostBuildEvent>
   </PropertyGroup>
   <PropertyGroup>
