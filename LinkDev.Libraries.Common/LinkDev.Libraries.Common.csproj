@@ -92,10 +92,10 @@
     <None Include="bundleconfig.json" />
     <None Include="CrmSchemaJs.dat" />
     <None Include="key.snk" />
-    <None Include="LinkDev.Libraries.Common.File.nuspec" />
     <None Include="LinkDev.Libraries.Common.nuspec">
       <SubType>Designer</SubType>
     </None>
+    <None Include="nuget\FileForm.nuspec" />
     <None Include="packages.config" />
     <None Include="WebResLink.dat">
       <SubType>Designer</SubType>
@@ -122,7 +122,6 @@
       <Generator>CrmCodeGenerator2011</Generator>
       <LastGenOutput>CrmSchemaJs.js</LastGenOutput>
     </None>
-    <None Include="nuget-access-key.txt" />
     <None Include="Scripts\ldv_CrmLoggerTree.html" />
     <None Include="Scripts\ldv_FetchXmlCondition.js" />
     <None Include="Scripts\ldv_RecurrenceRuleException.js" />
@@ -146,7 +145,7 @@
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>$(SolutionDir)lib/nuget.exe pack $(ProjectPath) -Prop Configuration=Release
-$(SolutionDir)lib/nuget.exe pack $(ProjectDir)FileForm.nuspec -OutputDirectory $(TargetDir)
+$(SolutionDir)lib/nuget.exe pack $(ProjectDir)nuget\FileForm.nuspec -OutputDirectory $(TargetDir)
 copy /Y "$(TargetDir)*.nupkg" "C:\Nuget.Local\"</PostBuildEvent>
   </PropertyGroup>
   <PropertyGroup>
