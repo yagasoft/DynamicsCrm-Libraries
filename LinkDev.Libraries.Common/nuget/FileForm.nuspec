@@ -3,7 +3,7 @@
 <package>
   <metadata>
     <id>LinkDev.Libraries.Common.File</id>
-    <version>3.7.5</version>
+    <version>3.7.6</version>
     <authors>Ahmed el-Sawalhy</authors>
     <owners>Yagasoft.com</owners>
     <projectUrl>http://yagasoft.com</projectUrl>
@@ -15,7 +15,6 @@
     <developmentDependency>true</developmentDependency>
     <dependencies>
       <group>
-        <dependency id="Microsoft.IdentityModel" version="6.1.7600.16394" />
         <dependency id="Microsoft.CrmSdk.CoreAssemblies" version="8.2.0.2" />
         <dependency id="Microsoft.CrmSdk.Workflow" version="8.2.0.2" />
       </group>
@@ -26,6 +25,8 @@
     </frameworkAssemblies>
     <references />
     <releaseNotes>
+      * 3.7.6
+      Changed: removed redundant references
       * 3.7.5
       Changed: reduced SDK requirements
       * 3.7.4
