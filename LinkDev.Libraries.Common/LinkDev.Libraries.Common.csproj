@@ -136,11 +136,11 @@
     <None Include="Scripts\ldv_GenericConfig.js" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="CrmSchemaJs.js">
+    <None Include="CrmSchemaJs.js">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>CrmSchemaJs.tt</DependentUpon>
-    </Content>
+    </None>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
