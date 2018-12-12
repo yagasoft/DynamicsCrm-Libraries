@@ -121,8 +121,19 @@ function HighlightLogEntries()
 			}
 		}
 
+        // skip execution duration, as it is the sum of all durations, so it will taint the result
+        var durationRowsNoExecEnd = $('#gridBodyTable > tbody > tr', documentObj)
+            .filter(function()
+            {
+                return $('div', $(this)).filter(function()
+                {
+                    return $(this).parent().hasClass('ms-crm-List-DataCell-Lite')
+                        && (this.innerHTML.indexOf('Started execution: ') >= 0
+                            || this.innerHTML.indexOf('Finished execution: ') >= 0);
+                }).length <= 0;
+            });
 		// get the duration and its associated row as a map
-		var durationRowMap = $.map($('#gridBodyTable > tbody > tr', documentObj), function(e)
+        var durationRowMap = $.map(durationRowsNoExecEnd, function(e)
 		{
 			var durationCell = $(e, documentObj).find('td').eq(durationColumnIndex);
 			var durationValueString = durationCell.find('div').html();
