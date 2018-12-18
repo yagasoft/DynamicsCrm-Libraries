@@ -3,7 +3,7 @@
 <package>
   <metadata>
     <id>LinkDev.Libraries.Common.File</id>
-    <version>3.8.1</version>
+    <version>3.8.2</version>
     <authors>Ahmed el-Sawalhy</authors>
     <owners>Yagasoft.com</owners>
     <projectUrl>http://yagasoft.com</projectUrl>
@@ -25,7 +25,7 @@
     </frameworkAssemblies>
     <references />
     <releaseNotes>
-      * 3.8.1
+      * 3.8.2
       Changed: reworked the placeholder system
       * 3.7.6
       Changed: removed redundant references

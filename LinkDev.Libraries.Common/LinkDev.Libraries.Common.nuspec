@@ -3,7 +3,7 @@
 <package>
   <metadata>
     <id>LinkDev.Libraries.Common</id>
-    <version>1.7.1</version>
+    <version>1.7.2</version>
     <authors>Ahmed el-Sawalhy</authors>
     <owners>Yagasoft.com</owners>
     <projectUrl>https://github.com/os008/DynamicsCrm-Libraries</projectUrl>
@@ -25,7 +25,7 @@
     </frameworkAssemblies>
     <references />
     <releaseNotes>
-      * 1.7.1
+      * 1.7.2
       Changed: reworked the placeholder system
       * 1.6.7
       Fixed: removed redundant JS file
