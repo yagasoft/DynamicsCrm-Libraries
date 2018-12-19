@@ -3,7 +3,7 @@
 <package>
   <metadata>
     <id>LinkDev.Libraries.Common.File</id>
-    <version>3.8.3</version>
+    <version>3.8.4</version>
     <authors>Ahmed el-Sawalhy</authors>
     <owners>Yagasoft.com</owners>
     <projectUrl>http://yagasoft.com</projectUrl>
@@ -25,7 +25,7 @@
     </frameworkAssemblies>
     <references />
     <releaseNotes>
-      * 3.8.3
+      * 3.8.4
       Added: relationship drill-through in placeholders
       * 3.8.2
       Changed: reworked the placeholder system

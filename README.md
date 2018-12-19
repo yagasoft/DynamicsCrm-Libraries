@@ -2,7 +2,7 @@
 
 [![Join the chat at https://gitter.im/yagasoft/DynamicsCrm-Libraries](https://badges.gitter.im/yagasoft/DynamicsCrm-Libraries.svg)](https://gitter.im/yagasoft/DynamicsCrm-Libraries?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-### Version: 1.3.3
+### Version: 1.3.4
 ---
 
 A collection of libraries for common and extended operations in Dynamics CRM development that gives power to the developer and saves time.
@@ -35,7 +35,7 @@ A collection of libraries for common and extended operations in Dynamics CRM dev
 
 ## Changes
 
-#### _v1.3.3 (2018-12-19)_
+#### _v1.3.4 (2018-12-19)_
 + Added: relationship drill-through in placeholders
 #### _v1.3.2 (2018-12-18)_
 + Changed: reworked the placeholder system
