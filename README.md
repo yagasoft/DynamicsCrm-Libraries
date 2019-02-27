@@ -2,7 +2,7 @@
 
 [![Join the chat at https://gitter.im/yagasoft/DynamicsCrm-Libraries](https://badges.gitter.im/yagasoft/DynamicsCrm-Libraries.svg)](https://gitter.im/yagasoft/DynamicsCrm-Libraries?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-### Version: 1.3.4
+### Version: 2.1.1
 ---
 
 A collection of libraries for common and extended operations in Dynamics CRM development that gives power to the developer and saves time.
@@ -22,10 +22,10 @@ A collection of libraries for common and extended operations in Dynamics CRM dev
 
   + Download
     + Common (either)
-      + NuGet: called "LinkDev.Libraries.Common"
+      + NuGet: called "Yagasoft.Libraries.Common"
       + Common.cs: in the repository
     + EnhancedOrgService
-      + NuGet: called "LinkDev.Libraries.EnhancedOrgService"
+      + NuGet: called "Yagasoft.Libraries.EnhancedOrgService"
 
 ### Dependencies
 
@@ -35,6 +35,8 @@ A collection of libraries for common and extended operations in Dynamics CRM dev
 
 ## Changes
 
+#### _v2.1.1 (2019-02-27)_
++ Changed: moved to a new namespace
 #### _v1.3.4 (2018-12-19)_
 + Added: relationship drill-through in placeholders
 #### _v1.3.2 (2018-12-18)_
@@ -49,4 +51,4 @@ A collection of libraries for common and extended operations in Dynamics CRM dev
 + Added: conditions in FetchXML parser
 
 ---
-**Copyright &copy; by Ahmed el-Sawalhy ([Yagasoft](http://yagasoft.com))** -- _GPL v3 Licence_
+**Copyright &copy; by Ahmed Elsawalhy ([Yagasoft](http://yagasoft.com))** -- _GPL v3 Licence_

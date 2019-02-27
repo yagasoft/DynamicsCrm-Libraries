@@ -334,5 +334,5 @@ nuget-access-key.txt
 *.snk
 *.dat
 
-/LinkDev.Tests.EnhancedOrgService
+/Yagasoft.Tests.EnhancedOrgService
 *.exe
