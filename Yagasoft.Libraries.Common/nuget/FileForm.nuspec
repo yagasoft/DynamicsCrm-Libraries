@@ -3,7 +3,7 @@
 <package>
   <metadata>
     <id>Yagasoft.Libraries.Common.File</id>
-    <version>4.1.1</version>
+    <version>4.1.2</version>
     <authors>Ahmed Elsawalhy</authors>
     <owners>Ahmed Elsawalhy</owners>
     <projectUrl>https://github.com/os008/DynamicsCrm-Libraries</projectUrl>
@@ -26,6 +26,8 @@
     </frameworkAssemblies>
     <references />
     <releaseNotes>
+      * 4.1.2
+      Fixed: moved exception tracing for steps outside of a condition
       * 4.1.1
       Changed: moved to a new namespace
       * 3.8.4
