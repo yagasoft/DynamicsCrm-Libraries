@@ -2,7 +2,7 @@
 
 [![Join the chat at https://gitter.im/yagasoft/DynamicsCrm-Libraries](https://badges.gitter.im/yagasoft/DynamicsCrm-Libraries.svg)](https://gitter.im/yagasoft/DynamicsCrm-Libraries?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-### Version: 2.1.1
+### Version: 2.1.2
 ---
 
 A collection of libraries for common and extended operations in Dynamics CRM development that gives power to the developer and saves time.
@@ -35,6 +35,9 @@ A collection of libraries for common and extended operations in Dynamics CRM dev
 
 ## Changes
 
+#### _v2.1.2 (2019-03-04)_
++ Fixed: moved exception tracing for steps outside of a condition
++ Fixed: library references
 #### _v2.1.1 (2019-02-27)_
 + Changed: moved to a new namespace
 #### _v1.3.4 (2018-12-19)_
