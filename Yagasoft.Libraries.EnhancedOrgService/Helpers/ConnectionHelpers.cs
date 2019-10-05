@@ -55,22 +55,33 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 		    }
 	    }
 
-        public static bool EnsureTokenValid(IOrganizationService crmService, int tokenExpiryCheckSecs = 600)
+        public static bool? EnsureTokenValid(IOrganizationService crmService, int tokenExpiryCheckSecs = 600)
         {
             if (crmService != null && crmService is CrmServiceClient clientService)
             {
+                if (clientService.LastCrmError.IsNotEmpty() || clientService.LastCrmException != null)
+                {
+                    return false;
+                }
+
                 var proxy = clientService.OrganizationServiceProxy;
 
-                if (proxy?.IsAuthenticated == false
-                    || proxy?.SecurityTokenResponse?.Response?.Lifetime?.Expires
+                if (proxy == null)
+                {
+                    return null;
+                }
+
+                if (!proxy.IsAuthenticated
+                    || proxy.SecurityTokenResponse?.Response?.Lifetime?.Expires
                         < DateTime.UtcNow.AddSeconds(tokenExpiryCheckSecs))
                 {
                     proxy.Authenticate();
-                    return proxy.IsAuthenticated;
                 }
+
+                return proxy.IsAuthenticated;
             }
 
-            return false;
+            return null;
         }
     }
 }

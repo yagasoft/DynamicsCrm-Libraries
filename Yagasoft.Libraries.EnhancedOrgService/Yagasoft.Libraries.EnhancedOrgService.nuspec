@@ -3,7 +3,7 @@
 <package>
   <metadata>
     <id>Yagasoft.Libraries.EnhancedOrgService</id>
-    <version>2.2.2</version>
+    <version>2.2.3</version>
     <authors>Ahmed Elsawalhy</authors>
     <owners>Ahmed Elsawalhy</owners>
     <projectUrl>https://github.com/os008/DynamicsCrm-Libraries</projectUrl>
@@ -22,6 +22,8 @@
     </dependencies>
     <references />
     <releaseNotes>
+      * 2.2.3
+      Fixed: missing SecurityToken should bypass reauthentication
       * 2.2.2
       Added: token auto-refresh
       * 2.2.1

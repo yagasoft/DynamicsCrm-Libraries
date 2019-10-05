@@ -47,7 +47,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 		{
 			crmServicesQueue.TryDequeue(out var crmService);
 
-		    if (!ConnectionHelpers.EnsureTokenValid(crmService, tokenExpiryCheckSecs))
+		    if (ConnectionHelpers.EnsureTokenValid(crmService, tokenExpiryCheckSecs) == false)
 		    {
 		        crmService = null;
 		    }
