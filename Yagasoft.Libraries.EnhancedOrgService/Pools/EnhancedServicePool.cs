@@ -1,11 +1,16 @@
 ﻿#region Imports
 
+using System;
 using System.Collections.Concurrent;
 using System.Linq;
+using Microsoft.Xrm.Client.Runtime.Serialization;
 using Yagasoft.Libraries.Common;
 using Yagasoft.Libraries.EnhancedOrgService.Factories;
 using Yagasoft.Libraries.EnhancedOrgService.Services;
 using Microsoft.Xrm.Sdk;
+using Microsoft.Xrm.Sdk.Client;
+using Microsoft.Xrm.Tooling.Connector;
+using Yagasoft.Libraries.EnhancedOrgService.Helpers;
 
 #endregion
 
@@ -21,12 +26,15 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 		private readonly ConcurrentQueue<IOrganizationService> crmServicesQueue = new ConcurrentQueue<IOrganizationService>();
 
 		private readonly int poolSize;
+		private readonly int tokenExpiryCheckSecs;
 		private int createdServicesCount;
 
-		public EnhancedServicePool(EnhancedServiceFactory<TService> factory, int poolSize = 10)
+		public EnhancedServicePool(EnhancedServiceFactory<TService> factory, int poolSize = 10,
+		    int tokenExpiryCheckSecs = 600)
 		{
 			this.factory = factory;
 			this.poolSize = poolSize;
+		    this.tokenExpiryCheckSecs = tokenExpiryCheckSecs;
 		}
 
 		public TService GetService(int threads = 1)
@@ -38,11 +46,17 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 		private IOrganizationService GetCrmService()
 		{
 			crmServicesQueue.TryDequeue(out var crmService);
-			return crmService ?? factory.CreateCrmService();
+
+		    if (!ConnectionHelpers.EnsureTokenValid(crmService, tokenExpiryCheckSecs))
+		    {
+		        crmService = null;
+		    }
+
+		    return crmService ?? factory.CreateCrmService();
 		}
 
-		private TService GetInitialisedService(int threads,
-			TService enhancedService = null)
+
+	    private TService GetInitialisedService(int threads, TService enhancedService = null)
 		{
 			if (enhancedService == null)
 			{

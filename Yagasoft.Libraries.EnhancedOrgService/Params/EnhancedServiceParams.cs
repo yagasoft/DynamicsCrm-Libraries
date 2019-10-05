@@ -40,6 +40,7 @@
 			{
 				ValidateLock();
 				cachingParams = value;
+			    IsCachingEnabled = true;
 			}
 		}
 
@@ -60,8 +61,9 @@
 			{
 				ValidateLock();
 				transactionParams = value;
+			    IsTransactionsEnabled = true;
 			}
-		}
+        }
 
 		public bool IsConcurrencyEnabled
 		{
@@ -80,7 +82,8 @@
 			{
 				ValidateLock();
 				concurrencyParams = value;
+			    IsConcurrencyEnabled = true;
 			}
-		}
+        }
 	}
 }

@@ -54,5 +54,23 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 			    throw new ServiceActivationException($"Can't create connection to: \"{escapedString}\" due to\r\n{errorMessage}");
 		    }
 	    }
+
+        public static bool EnsureTokenValid(IOrganizationService crmService, int tokenExpiryCheckSecs = 600)
+        {
+            if (crmService != null && crmService is CrmServiceClient clientService)
+            {
+                var proxy = clientService.OrganizationServiceProxy;
+
+                if (proxy?.IsAuthenticated == false
+                    || proxy?.SecurityTokenResponse?.Response?.Lifetime?.Expires
+                        < DateTime.UtcNow.AddSeconds(tokenExpiryCheckSecs))
+                {
+                    proxy.Authenticate();
+                    return proxy.IsAuthenticated;
+                }
+            }
+
+            return false;
+        }
     }
 }

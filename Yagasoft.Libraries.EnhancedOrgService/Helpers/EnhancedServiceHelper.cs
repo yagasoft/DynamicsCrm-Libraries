@@ -17,7 +17,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 	public static class EnhancedServiceHelper
 	{
 		public static EnhancedServicePool<Services.EnhancedOrgService> GetPool(string connectionString, int poolSize = 10,
-			EnhancedServiceParams serviceParams = null)
+		    int tokenExpiryCheckSecs = 600, EnhancedServiceParams serviceParams = null)
 		{
 			var builder = EnhancedServiceBuilder.NewBuilder.Initialise(connectionString);
 
@@ -38,11 +38,11 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 
 			var build = builder.Finalise().GetBuild();
 			var factory = new EnhancedServiceFactory<Services.EnhancedOrgService>(build);
-			return new EnhancedServicePool<Services.EnhancedOrgService>(factory, poolSize);
+			return new EnhancedServicePool<Services.EnhancedOrgService>(factory, poolSize, tokenExpiryCheckSecs);
 		}
 
 		public static EnhancedServicePool<AsyncOrgService> GetAsyncPool(string connectionString, int poolSize = 10,
-			EnhancedServiceParams serviceParams = null, bool isHoldAppForAsync = true)
+		    int tokenExpiryCheckSecs = 600, EnhancedServiceParams serviceParams = null, bool isHoldAppForAsync = true)
 		{
 			var builder = EnhancedServiceBuilder.NewBuilder.Initialise(connectionString);
 
@@ -68,7 +68,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 
 			var build = builder.Finalise().GetBuild();
 			var factory = new EnhancedServiceFactory<AsyncOrgService>(build);
-			return new EnhancedServicePool<AsyncOrgService>(factory, poolSize);
+			return new EnhancedServicePool<AsyncOrgService>(factory, poolSize, tokenExpiryCheckSecs);
 		}
 	}
 }

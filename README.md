@@ -2,7 +2,7 @@
 
 [![Join the chat at https://gitter.im/yagasoft/DynamicsCrm-Libraries](https://badges.gitter.im/yagasoft/DynamicsCrm-Libraries.svg)](https://gitter.im/yagasoft/DynamicsCrm-Libraries?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-### Version: 2.1.3
+### Version: 2.2.2
 ---
 
 A collection of libraries for common and extended operations in Dynamics CRM development that gives power to the developer and saves time.
@@ -35,6 +35,10 @@ A collection of libraries for common and extended operations in Dynamics CRM dev
 
 ## Changes
 
+#### _v2.2.2 (2019-10-06)_
++ Added: token auto-refresh
+#### _v2.2.1 (2019-10-05)_
++ Added: methods to remove entity from cache
 #### _v2.1.3 (2019-03-16)_
 + Fixed: string modifier 'sub' throwing exception
 #### _v2.1.2 (2019-03-04)_

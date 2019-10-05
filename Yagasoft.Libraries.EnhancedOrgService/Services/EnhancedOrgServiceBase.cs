@@ -14,6 +14,7 @@ using Yagasoft.Libraries.EnhancedOrgService.Response;
 using Yagasoft.Libraries.EnhancedOrgService.Transactions;
 using Microsoft.Xrm.Client.Caching;
 using Microsoft.Xrm.Client.Services;
+using Microsoft.Xrm.Client.Services.Messages;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Messages;
 using Microsoft.Xrm.Sdk.Query;
@@ -128,7 +129,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 			TransactionManager.EndTransaction(transaction);
 		}
 
-		#endregion
+	    #endregion
 
 		#region Caching
 
@@ -164,8 +165,33 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 			}
 		}
 
-		/// <inheritdoc />
-		public void ClearCache()
+	    public void RemoveFromCache(Entity record)
+	    {
+	        Cache.Remove(record);
+	    }
+
+	    public void RemoveFromCache(EntityReference entity)
+	    {
+	        Cache.Remove(entity);
+	    }
+
+        public void RemoveFromCache(string entityLogicalName, Guid? id)
+	    {
+            Cache.Remove(entityLogicalName, id);
+	    }
+
+        public void RemoveFromCache(OrganizationRequest request)
+	    {
+            Cache.Remove(request);
+	    }
+
+        public void RemoveAllFromCache()
+	    {
+            Cache.Remove(new OrganizationServiceCachePluginMessage {Category = CacheItemCategory.All});
+	    }
+
+        /// <inheritdoc />
+        public void ClearCache()
 		{
 			if (ObjectCache == null)
 			{

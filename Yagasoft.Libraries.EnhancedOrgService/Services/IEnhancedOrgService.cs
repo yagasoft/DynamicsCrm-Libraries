@@ -45,10 +45,35 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 		void EndTransaction(Transaction transaction = null);
 
 		/// <summary>
-		/// Clears the query's memory cache.<br />
-		///  If the cache is not only scoped to this service (factory's 'PrivatePerInstance' setting), an exception is thrown.
+		/// Removed an entity from cache.<br />
 		/// </summary>
-		void ClearCache();
+		void RemoveFromCache(Entity record);
+
+	    /// <summary>
+	    /// Removed an entity from cache.<br />
+	    /// </summary>
+	    void RemoveFromCache(EntityReference entity);
+
+	    /// <summary>
+	    /// Removed an entity from cache.<br />
+	    /// </summary>
+	    void RemoveFromCache(string entityLogicalName, Guid? id);
+
+	    /// <summary>
+	    /// Removed based on request from cache.<br />
+	    /// </summary>
+	    void RemoveFromCache(OrganizationRequest request);
+
+	    /// <summary>
+	    /// Removed all entities from cache.<br />
+	    /// </summary>
+	    void RemoveAllFromCache();
+
+		/// <summary>
+        /// Clears the query's memory cache.<br />
+        ///  If the cache is not only scoped to this service (factory's 'PrivatePerInstance' setting), an exception is thrown.
+        /// </summary>
+        void ClearCache();
 
 		/// <summary>
 		///     Executes the specified request with support for reversion.
