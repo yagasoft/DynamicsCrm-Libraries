@@ -1,5 +1,5 @@
 ﻿$scriptpath = split-path -parent $MyInvocation.MyCommand.Path
-$keyfile = "$scriptpath/../nuget/nuget-access-key.txt"
+$keyfile = "$scriptpath/../nuget-access-key.txt"
 $nugetpath = resolve-path "$scriptpath/../../lib/nuget.exe"
 $packagespath = resolve-path "$scriptpath/../bin/Release"
  
