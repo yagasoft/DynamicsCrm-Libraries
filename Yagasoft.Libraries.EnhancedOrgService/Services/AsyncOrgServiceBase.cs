@@ -14,7 +14,7 @@ using Microsoft.Xrm.Client.Services;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Messages;
 using Microsoft.Xrm.Sdk.Query;
-using OperationStatus = Yagasoft.Libraries.EnhancedOrgService.Response.OperationStatus;
+using OperationStatus = Yagasoft.Libraries.EnhancedOrgService.Response.Operations.OperationStatus;
 
 #endregion
 
@@ -138,21 +138,21 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 
 		#region Execute bulk
 
-		public Task<Dictionary<OrganizationRequest, ExecuteBulkResponse>> ExecuteBulkAsync(
+		public Task<IDictionary<OrganizationRequest, ExecuteBulkResponse>> ExecuteBulkAsync(
 			List<OrganizationRequest> requestsList, bool isReturnResponses, params Task[] dependencies)
 		{
 			ValidateState();
 			return ExecuteBulkAsync(requestsList, isReturnResponses, 1000, true, null, dependencies);
 		}
 		
-		public Task<Dictionary<OrganizationRequest, ExecuteBulkResponse>> ExecuteBulkAsync(
+		public Task<IDictionary<OrganizationRequest, ExecuteBulkResponse>> ExecuteBulkAsync(
 			List<OrganizationRequest> requestsList, bool isReturnResponses, int bulkSize, params Task[] dependencies)
 		{
 			ValidateState();
 			return ExecuteBulkAsync(requestsList, isReturnResponses, bulkSize,  true, null ,dependencies);
 		}
 
-		public async Task<Dictionary<OrganizationRequest, ExecuteBulkResponse>> ExecuteBulkAsync(
+		public async Task<IDictionary<OrganizationRequest, ExecuteBulkResponse>> ExecuteBulkAsync(
 			List<OrganizationRequest> requests,
 			bool isReturnResponses = false, int batchSize = 1000, bool isContinueOnError = true,
 			Action<int, int, IDictionary<OrganizationRequest, ExecuteBulkResponse>> bulkFinishHandler = null,
@@ -167,7 +167,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 
 		#region Retrieve multiple
 
-		public async Task<List<TEntityType>> RetrieveMultipleAsync<TEntityType>(QueryExpression query,
+		public async Task<IEnumerable<TEntityType>> RetrieveMultipleAsync<TEntityType>(QueryExpression query,
 			int limit = -1, params Task[] dependencies)
 			where TEntityType : Entity
 		{
@@ -183,7 +183,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 			return await GetDependentResult(() => RetrieveMultiple<TEntityType>(clonedQuery, limit), dependencies);
 		}
 
-		public async Task<List<TEntityType>> RetrieveMultipleRangePagedAsync<TEntityType>(QueryExpression query,
+		public async Task<IEnumerable<TEntityType>> RetrieveMultipleRangePagedAsync<TEntityType>(QueryExpression query,
 			int pageStart = 1, int pageEnd = 1, int pageSize = 5000, params Task[] dependencies)
 			where TEntityType : Entity
 		{
@@ -199,7 +199,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 			return await GetDependentResult(() => RetrieveMultipleRangePaged<TEntityType>(clonedQuery, pageStart, pageEnd, pageSize), dependencies);
 		}
 
-		public async Task<List<TEntityType>> RetrieveMultiplePageAsync<TEntityType>(QueryExpression query,
+		public async Task<IEnumerable<TEntityType>> RetrieveMultiplePageAsync<TEntityType>(QueryExpression query,
 			int pageSize = 5000, int page = 1, params Task[] dependencies)
 			where TEntityType : Entity
 		{

@@ -1,12 +1,11 @@
 ﻿#region Imports
 
 using System;
-using System.Threading;
 using Microsoft.Xrm.Sdk;
 
 #endregion
 
-namespace Yagasoft.Libraries.EnhancedOrgService.Response
+namespace Yagasoft.Libraries.EnhancedOrgService.Response.Operations
 {
 	public enum OperationStatus
 	{

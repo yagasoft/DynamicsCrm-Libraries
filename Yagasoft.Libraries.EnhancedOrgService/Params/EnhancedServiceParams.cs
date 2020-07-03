@@ -1,8 +1,12 @@
-﻿namespace Yagasoft.Libraries.EnhancedOrgService.Params
+﻿using System;
+
+namespace Yagasoft.Libraries.EnhancedOrgService.Params
 {
 	public class EnhancedServiceParams : ParamsBase
 	{
-		private string connectionString;
+		private bool isLocked;
+
+		private ConnectionParams connectionParams;
 
 		private bool isCachingEnabled;
 		private CachingParams cachingParams;
@@ -13,13 +17,57 @@
 		private bool isConcurrencyEnabled;
 		private ConcurrencyParams concurrencyParams;
 
-		public string ConnectionString
+		private PoolParams poolParams;
+
+		public EnhancedServiceParams()
+		{ }
+
+		public EnhancedServiceParams(string connectionString)
 		{
-			get => connectionString;
+			connectionParams = new ConnectionParams { ConnectionString = connectionString };
+		}
+
+		public override bool IsLocked
+		{
+			get => isLocked;
+			internal set
+			{
+				if (ConnectionParams != null)
+				{
+					ConnectionParams.IsLocked = value;
+				}
+
+				if (CachingParams != null)
+				{
+					CachingParams.IsLocked = value;
+				}
+
+				if (TransactionParams != null)
+				{
+					TransactionParams.IsLocked = value;
+				}
+
+				if (ConcurrencyParams != null)
+				{
+					ConcurrencyParams.IsLocked = value;
+				}
+
+				if (PoolParams != null)
+				{
+					PoolParams.IsLocked = value;
+				}
+
+				isLocked = value;
+			}
+		}
+
+		public ConnectionParams ConnectionParams
+		{
+			get => connectionParams;
 			set
 			{
 				ValidateLock();
-				connectionString = value;
+				connectionParams = value;
 			}
 		}
 
@@ -71,6 +119,13 @@
 			set
 			{
 				ValidateLock();
+				
+				if (isConcurrencyEnabled && ConcurrencyParams == null)
+				{
+					throw new ArgumentNullException(nameof(ConcurrencyParams),
+						"Must set concurrency parameters first before enabling concurrency.");
+				}
+
 				isConcurrencyEnabled = value;
 			}
 		}
@@ -83,6 +138,16 @@
 				ValidateLock();
 				concurrencyParams = value;
 			    IsConcurrencyEnabled = true;
+			}
+        }
+
+		public PoolParams PoolParams
+		{
+			get => poolParams;
+			set
+			{
+				ValidateLock();
+				poolParams = value;
 			}
         }
 	}

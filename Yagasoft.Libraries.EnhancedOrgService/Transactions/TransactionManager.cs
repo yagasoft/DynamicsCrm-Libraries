@@ -6,6 +6,7 @@ using System.Linq;
 using Yagasoft.Libraries.EnhancedOrgService.Helpers;
 using Yagasoft.Libraries.EnhancedOrgService.Response;
 using Microsoft.Xrm.Sdk;
+using Yagasoft.Libraries.EnhancedOrgService.Response.Operations;
 
 #endregion
 
@@ -58,8 +59,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Transactions
 
 				// get the undo request corresponding to the given request
 				operation.UndoRequest = undoFunction == null
-					                  ? UndoHelper.GenerateReverseRequest(service, request)
-					                  : undoFunction(service, request);
+					? UndoHelper.GenerateReverseRequest(service, request)
+					: undoFunction(service, request);
 
 				// register this response as the starting point of the latest transaction
 				transactionsStack.Peek().StartingPoint = transactionsStack.Peek().StartingPoint ?? operation;

@@ -99,21 +99,21 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 	    ///     Run <see cref="EnhancedOrgServiceBase.ExecuteBulk" /> asynchronously, and return a reponse object that contains the result.
 	    ///     Accessing the result will block the thread until the process finishes communicating with CRM.
 	    /// </summary>
-	    Task<Dictionary<OrganizationRequest, ExecuteBulkResponse>> ExecuteBulkAsync(
+	    Task<IDictionary<OrganizationRequest, ExecuteBulkResponse>> ExecuteBulkAsync(
 		    List<OrganizationRequest> requestsList, bool isReturnResponses, params Task[] dependencies);
 
 	    /// <summary>
 	    ///     Run <see cref="EnhancedOrgServiceBase.ExecuteBulk" /> asynchronously, and return a reponse object that contains the result.
 	    ///     Accessing the result will block the thread until the process finishes communicating with CRM.
 	    /// </summary>
-	    Task<Dictionary<OrganizationRequest, ExecuteBulkResponse>> ExecuteBulkAsync(
+	    Task<IDictionary<OrganizationRequest, ExecuteBulkResponse>> ExecuteBulkAsync(
 		    List<OrganizationRequest> requestsList, bool isReturnResponses, int bulkSize, params Task[] dependencies);
 
 	    /// <summary>
 	    ///     Run <see cref="EnhancedOrgServiceBase.ExecuteBulk" /> asynchronously, and return a reponse object that contains the result.
 	    ///     Accessing the result will block the thread until the process finishes communicating with CRM.
 	    /// </summary>
-	    Task<Dictionary<OrganizationRequest, ExecuteBulkResponse>> ExecuteBulkAsync(
+	    Task<IDictionary<OrganizationRequest, ExecuteBulkResponse>> ExecuteBulkAsync(
 		    List<OrganizationRequest> requests,
 			    bool isReturnResponses = false, int batchSize = 1000, bool isContinueOnError = true,
 			    Action<int, int, IDictionary<OrganizationRequest, ExecuteBulkResponse>> bulkFinishHandler = null,
@@ -124,7 +124,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 	    ///     asynchronously, and return a reponse object that contains the result.
 	    ///     Accessing the result will block the thread until the process finishes communicating with CRM.
 	    /// </summary>
-	    Task<List<TEntityType>> RetrieveMultipleAsync<TEntityType>(QueryExpression query,
+	    Task<IEnumerable<TEntityType>> RetrieveMultipleAsync<TEntityType>(QueryExpression query,
 		    int limit = -1, params Task[] dependencies)
 		    where TEntityType : Entity;
 
@@ -133,7 +133,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 	    ///     asynchronously, and return a reponse object that contains the result.
 	    ///     Accessing the result will block the thread until the process finishes communicating with CRM.
 	    /// </summary>
-	    Task<List<TEntityType>> RetrieveMultipleRangePagedAsync<TEntityType>(QueryExpression query,
+	    Task<IEnumerable<TEntityType>> RetrieveMultipleRangePagedAsync<TEntityType>(QueryExpression query,
 		    int pageStart = 1, int pageEnd = 1, int pageSize = 5000, params Task[] dependencies)
 		    where TEntityType : Entity;
 
@@ -142,7 +142,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 	    ///     asynchronously, and return a reponse object that contains the result.
 	    ///     Accessing the result will block the thread until the process finishes communicating with CRM.
 	    /// </summary>
-	    Task<List<TEntityType>> RetrieveMultiplePageAsync<TEntityType>(QueryExpression query,
+	    Task<IEnumerable<TEntityType>> RetrieveMultiplePageAsync<TEntityType>(QueryExpression query,
 		    int pageSize = 5000, int page = 1, params Task[] dependencies)
 		    where TEntityType : Entity;
 

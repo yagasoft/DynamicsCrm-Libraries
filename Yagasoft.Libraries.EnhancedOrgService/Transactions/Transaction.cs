@@ -1,5 +1,6 @@
 ﻿using Yagasoft.Libraries.EnhancedOrgService.Response;
 using Microsoft.Xrm.Sdk;
+using Yagasoft.Libraries.EnhancedOrgService.Response.Operations;
 
 namespace Yagasoft.Libraries.EnhancedOrgService.Transactions
 {

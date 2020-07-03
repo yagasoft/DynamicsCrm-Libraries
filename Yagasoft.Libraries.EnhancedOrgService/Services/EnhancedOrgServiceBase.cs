@@ -18,6 +18,8 @@ using Microsoft.Xrm.Client.Services.Messages;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Messages;
 using Microsoft.Xrm.Sdk.Query;
+using Yagasoft.Libraries.EnhancedOrgService.Response.Operations;
+using Yagasoft.Libraries.EnhancedOrgService.Response.Tokens;
 
 #endregion
 
@@ -25,7 +27,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 {
 	/// <summary>
 	///     Author: Ahmed Elsawalhy<br />
-	///     Version: 4.1.1
+	///     Version: 4.2.1
 	/// </summary>
 	public abstract class EnhancedOrgServiceBase : StateBase, IEnhancedOrgService
 	{
@@ -40,6 +42,9 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 		internal ObjectCache ObjectCache { get; set; }
 
 		protected EnhancedServiceParams Parameters;
+
+		private readonly List<IToken<OrganizationResponse>> deferredRequests =
+			new List<IToken<OrganizationResponse>>();
 
 		protected EnhancedOrgServiceBase(EnhancedServiceParams parameters)
 		{
@@ -70,7 +75,14 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 
 		internal SelfEnqueuingService GetService()
 		{
-			return new SelfEnqueuingService(servicesQueue, servicesQueue.Dequeue());
+		    var service = servicesQueue.Dequeue();
+
+		    if (ConnectionHelpers.EnsureTokenValid(service) == false)
+		    {
+				throw new Exception("Service token has expired.");
+		    }
+
+			return new SelfEnqueuingService(servicesQueue, service);
 		}
 
 		#endregion
@@ -448,10 +460,11 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 		{
 			ValidateState();
 
-			var operation = new Operation<OrganizationResponse>(request)
-							{
-								Index = OperationIndex++
-							};
+			var operation =
+				new Operation<OrganizationResponse>(request)
+				{
+					Index = OperationIndex++
+				};
 
 			try
 			{
@@ -480,9 +493,156 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 
 		#endregion
 
+		#region Deferred
+
+		public IEnumerable<OrganizationRequest> GetDeferredRequests()
+		{
+			return deferredRequests
+				.Cast<OrganisationRequestToken<OrganizationResponse>>()
+				.Select(e => e.Request);
+		}
+
+		public IDictionary<OrganizationRequest, OrganisationRequestToken<OrganizationResponse>>
+			ExecuteDeferredRequests(int bulkSize = 1000)
+		{
+			var bulkResponse = deferredRequests
+				.Cast<OrganisationRequestToken<OrganizationResponse>>()
+				.Select(e => e.Request)
+				.ExecuteTransaction(this, true, bulkSize);
+
+			var responses = deferredRequests
+					.Cast<OrganisationRequestToken<OrganizationResponse>>()
+					.ToDictionary(
+					e => e.Request,
+					e =>
+					{
+						e.Value = bulkResponse[e.Request].Response;
+						return e;
+					});
+
+			deferredRequests.Clear();
+
+			return responses;
+		}
+
+		public OrganisationRequestToken<CreateResponse> CreateDeferred(Entity entity)
+		{
+			var token =
+				new OrganisationRequestToken<CreateResponse>
+				{
+					Request =
+						new CreateRequest
+						{
+							Target = entity
+						}
+				};
+			deferredRequests.Add(token);
+			return token;
+		}
+
+		public OrganisationRequestToken<UpdateResponse> UpdateDeferred(Entity entity)
+		{
+			var token =
+				new OrganisationRequestToken<UpdateResponse>
+				{
+					Request =
+						new UpdateRequest
+						{
+							Target = entity
+						}
+				};
+			deferredRequests.Add(token);
+			return token;
+		}
+
+		public OrganisationRequestToken<UpsertResponse> UpsertDeferred(Entity entity)
+		{
+			var token =
+				new OrganisationRequestToken<UpsertResponse>
+				{
+					Request =
+						new UpsertRequest
+						{
+							Target = entity
+						}
+				};
+			deferredRequests.Add(token);
+			return token;
+		}
+
+		public OrganisationRequestToken<DeleteResponse> DeleteDeferred(string entityName, Guid id)
+		{
+			var token =
+				new OrganisationRequestToken<DeleteResponse>
+				{
+					Request =
+						new DeleteRequest
+						{
+							Target = new EntityReference(entityName, id)
+						}
+				};
+			deferredRequests.Add(token);
+			return token;
+		}
+
+		public OrganisationRequestToken<AssociateResponse> AssociateDeferred(string entityName,
+			Guid entityId, Relationship relationship, EntityReferenceCollection relatedEntities)
+		{
+			var token =
+				new OrganisationRequestToken<AssociateResponse>
+				{
+					Request =
+						new AssociateRequest
+						{
+							Target = new EntityReference(entityName, entityId),
+							Relationship = relationship,
+							RelatedEntities = relatedEntities
+						}
+				};
+			deferredRequests.Add(token);
+			return token;
+		}
+
+		public OrganisationRequestToken<DisassociateResponse> DisassociateDeferred(string entityName,
+			Guid entityId, Relationship relationship, EntityReferenceCollection relatedEntities)
+		{
+			var token =
+				new OrganisationRequestToken<DisassociateResponse>
+				{
+					Request =
+						new DisassociateRequest
+						{
+							Target = new EntityReference(entityName, entityId),
+							Relationship = relationship,
+							RelatedEntities = relatedEntities
+						}
+				};
+			deferredRequests.Add(token);
+			return token;
+		}
+
+		public OrganisationRequestToken<TResponse> ExecuteDeferred<TResponse>(OrganizationRequest request)
+		where TResponse : OrganizationResponse
+		{
+			var token = new OrganisationRequestToken<TResponse> { Request = request };
+			deferredRequests.Add(token);
+			return token;
+		}
+
+		#endregion
+
 		#region Convenience
 
-		public Dictionary<OrganizationRequest, ExecuteBulkResponse> ExecuteBulk(List<OrganizationRequest> requests,
+		public UpsertResponse Upsert(Entity entity)
+		{
+			return (UpsertResponse)Execute(
+				new UpsertRequest
+				{
+					Target = entity
+				});
+		}
+
+		public IDictionary<OrganizationRequest, ExecuteBulkResponse> ExecuteBulk(List<OrganizationRequest> requests,
 			bool isReturnResponses = false, int batchSize = 1000, bool isContinueOnError = true,
 			Action<int, int, IDictionary<OrganizationRequest, ExecuteBulkResponse>> bulkFinishHandler = null)
 		{
@@ -627,7 +787,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 
 		#region Retrieve multiple
 
-		public List<TEntityType> RetrieveMultiple<TEntityType>(QueryExpression query, int limit = -1)
+		public IEnumerable<TEntityType> RetrieveMultiple<TEntityType>(QueryExpression query, int limit = -1)
 			where TEntityType : Entity
 		{
 			ValidateState();
@@ -637,7 +797,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 				limit <= 0 ? int.MaxValue : 5000);
 		}
 
-		public List<TEntityType> RetrieveMultipleRangePaged<TEntityType>(QueryExpression query,
+		public IEnumerable<TEntityType> RetrieveMultipleRangePaged<TEntityType>(QueryExpression query,
 			int pageStart = 1, int pageEnd = 1, int pageSize = 5000)
 			where TEntityType : Entity
 		{
@@ -650,7 +810,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 
 			for (var i = pageStart; i <= pageEnd; i++)
 			{
-				var result = RetrieveMultiplePage<TEntityType>(query, pageSize, i);
+				var result = RetrieveMultiplePage<TEntityType>(query, pageSize, i)
+					.ToArray();
 				entities.AddRange(result);
 
 				if (!result.Any())
@@ -662,7 +823,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 			return entities;
 		}
 
-		public List<TEntityType> RetrieveMultiplePage<TEntityType>(QueryExpression query, int pageSize = 5000, int page = 1)
+		public IEnumerable<TEntityType> RetrieveMultiplePage<TEntityType>(QueryExpression query, int pageSize = 5000, int page = 1)
 			where TEntityType : Entity
 		{
 			ValidateState();

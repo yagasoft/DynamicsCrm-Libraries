@@ -2,6 +2,7 @@
 
 using System;
 using System.Linq;
+using Yagasoft.Libraries.Common;
 using Yagasoft.Libraries.EnhancedOrgService.Exceptions;
 using Yagasoft.Libraries.EnhancedOrgService.Helpers;
 using Yagasoft.Libraries.EnhancedOrgService.Params;
@@ -97,19 +98,10 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Builders
 			ValidateInitialised();
 			ValidateFinalised(false);
 
-			if (parameters.CachingParams != null)
+			if (parameters.ConnectionParams?.ConnectionString.IsEmpty() == true)
 			{
-				parameters.CachingParams.IsLocked = true;
-			}
-
-			if (parameters.TransactionParams != null)
-			{
-				parameters.TransactionParams.IsLocked = true;
-			}
-
-			if (parameters.ConcurrencyParams != null)
-			{
-				parameters.ConcurrencyParams.IsLocked = true;
+				throw new ArgumentNullException(nameof(parameters.ConnectionParams.ConnectionString),
+					"Connection String is missing in Enhanced Service parameters.");
 			}
 
 			parameters.IsLocked = true;

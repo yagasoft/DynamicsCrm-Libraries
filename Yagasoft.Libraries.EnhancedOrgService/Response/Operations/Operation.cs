@@ -5,7 +5,7 @@ using Microsoft.Xrm.Sdk;
 
 #endregion
 
-namespace Yagasoft.Libraries.EnhancedOrgService.Response
+namespace Yagasoft.Libraries.EnhancedOrgService.Response.Operations
 {
 	/// <summary>
 	///     Author: Ahmed Elsawalhy

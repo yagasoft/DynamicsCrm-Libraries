@@ -6,7 +6,10 @@ using System.Threading.Tasks;
 using Yagasoft.Libraries.Common;
 using Yagasoft.Libraries.EnhancedOrgService.Transactions;
 using Microsoft.Xrm.Sdk;
+using Microsoft.Xrm.Sdk.Messages;
 using Microsoft.Xrm.Sdk.Query;
+using Yagasoft.Libraries.EnhancedOrgService.Response;
+using Yagasoft.Libraries.EnhancedOrgService.Response.Tokens;
 
 namespace Yagasoft.Libraries.EnhancedOrgService.Services
 {
@@ -85,6 +88,64 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 			Func<IOrganizationService, OrganizationRequest, OrganizationRequest> undoFunction);
 
 		/// <summary>
+		///     Defers the create for later execution.
+		/// </summary>
+		/// <returns>A token of the record's ID whose value can be accessed after the deferred execution has finished.</returns>
+		IEnumerable<OrganizationRequest> GetDeferredRequests();
+
+		/// <summary>
+		///     Executes all deferred requests in a transaction.
+		/// </summary>
+		/// <param name="bulkSize">[Optional] The number of requests to execute at once every internal iteration.</param>
+		/// <returns>A map of the deferred organisation requests and their response tokens.</returns>
+		IDictionary<OrganizationRequest, OrganisationRequestToken<OrganizationResponse>> ExecuteDeferredRequests(int bulkSize = 1000);
+
+		/// <summary>
+		///     Defers the create for later execution.
+		/// </summary>
+		/// <returns>A token of the record's ID whose value can be accessed after the deferred execution has finished.</returns>
+		OrganisationRequestToken<CreateResponse> CreateDeferred(Entity entity);
+
+		/// <summary>
+		///     Defers the update for later execution.
+		/// </summary>
+		OrganisationRequestToken<UpdateResponse> UpdateDeferred(Entity entity);
+
+		/// <summary>
+		///     Defers the upsert for later execution.
+		/// </summary>
+		OrganisationRequestToken<UpsertResponse> UpsertDeferred(Entity entity);
+
+		/// <summary>
+		///     Defers the delete for later execution.
+		/// </summary>
+		OrganisationRequestToken<DeleteResponse> DeleteDeferred(string entityName, Guid id);
+
+		/// <summary>
+		///     Defers the association for later execution.
+		/// </summary>
+		OrganisationRequestToken<AssociateResponse> AssociateDeferred(string entityName,
+			Guid entityId, Relationship relationship, EntityReferenceCollection relatedEntities);
+
+		/// <summary>
+		///     Defers the disassociation for later execution.
+		/// </summary>
+		OrganisationRequestToken<DisassociateResponse> DisassociateDeferred(string entityName,
+			Guid entityId, Relationship relationship, EntityReferenceCollection relatedEntities);
+
+		/// <summary>
+		///     Defers the Organisation Request for later execution.
+		/// </summary>
+		/// <returns>A token of the organisation response whose value can be accessed after the deferred execution has finished.</returns>
+		OrganisationRequestToken<TResponse> ExecuteDeferred<TResponse>(OrganizationRequest request)
+			where TResponse : OrganizationResponse;
+
+		/// <summary>
+		///     Upsert a record.
+		/// </summary>
+		UpsertResponse Upsert(Entity entity);
+
+		/// <summary>
 		///     Executes given requests in bulk. The returned value should only be taken into consideration
 		///     if 'isReturnResponses' is 'true'.<br />
 		/// </summary>
@@ -100,7 +161,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 		/// </param>
 		/// <returns>A queue of responses to each request, in order.</returns>
 		/// <exception cref="System.Exception">Exception thrown if the execution fails.</exception>
-		Dictionary<OrganizationRequest, ExecuteBulkResponse> ExecuteBulk(List<OrganizationRequest> requests,
+		IDictionary<OrganizationRequest, ExecuteBulkResponse> ExecuteBulk(List<OrganizationRequest> requests,
 			bool isReturnResponses = false, int batchSize = 1000, bool isContinueOnError = true,
 			Action<int, int, IDictionary<OrganizationRequest, ExecuteBulkResponse>> bulkFinishHandler = null);
 
@@ -113,7 +174,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 		/// <param name="query">The query.</param>
 		/// <param name="limit">[OPTIONAL] How many entities to retrieve. </param>
 		/// <returns>A list of entities fitting the query conditions and cast to the type passed.</returns>
-		List<TEntityType> RetrieveMultiple<TEntityType>(QueryExpression query, int limit = -1)
+		IEnumerable<TEntityType> RetrieveMultiple<TEntityType>(QueryExpression query, int limit = -1)
 			where TEntityType : Entity;
 
 		/// <summary>
@@ -132,7 +193,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 		/// </param>
 		/// <param name="pageSize">[OPTIONAL] How many entities to retrieve per page. </param>
 		/// <returns>A list of entities fitting the query conditions and cast to the type passed.</returns>
-		List<TEntityType> RetrieveMultipleRangePaged<TEntityType>(QueryExpression query,
+		IEnumerable<TEntityType> RetrieveMultipleRangePaged<TEntityType>(QueryExpression query,
 			int pageStart = 1, int pageEnd = 1, int pageSize = 5000)
 			where TEntityType : Entity;
 
@@ -146,7 +207,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 		/// <param name="pageSize">[OPTIONAL] How many entities to retrieve per page. </param>
 		/// <param name="page">[OPTIONAL] If specified, only the that page is returned, otherwise, first page.</param>
 		/// <returns>A list of entities fitting the query conditions and cast to the type passed.</returns>
-		List<TEntityType> RetrieveMultiplePage<TEntityType>(QueryExpression query, int pageSize = 5000, int page = 1)
+		IEnumerable<TEntityType> RetrieveMultiplePage<TEntityType>(QueryExpression query, int pageSize = 5000, int page = 1)
 			where TEntityType : Entity;
 
 		/// <summary>

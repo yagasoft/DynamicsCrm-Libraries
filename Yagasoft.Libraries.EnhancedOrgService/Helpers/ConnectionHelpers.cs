@@ -1,87 +1,89 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿#region Imports
+
+using System;
 using System.ServiceModel;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using Yagasoft.Libraries.Common;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Tooling.Connector;
+using Yagasoft.Libraries.Common;
+
+#endregion
 
 namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 {
-    public class ConnectionHelpers
-    {
-	    private static string latestStringUsed = "";
+	public class ConnectionHelpers
+	{
 		private static readonly object lockObject = new object();
 
-	    public static IOrganizationService CreateCrmService(string connectionString)
-	    {
-		    CrmServiceClient service;
+		public static IOrganizationService CreateCrmService(string connectionString)
+		{
+			CrmServiceClient service;
 
-		    lock (lockObject)
-		    {
-			    if (latestStringUsed != connectionString
-				    && !connectionString.ToLower().Contains("requirenewinstance"))
-			    {
-				    latestStringUsed = connectionString;
-				    connectionString = connectionString.Trim(';', ' ');
-				    connectionString += ";RequireNewInstance=true";
-			    }
+			lock (lockObject)
+			{
+				service = new CrmServiceClient(connectionString);
+			}
 
-			    service = new CrmServiceClient(connectionString);
-		    }
+			var escapedString = Regex.Replace(connectionString, @"Password\s*?=.*?(?:;{0,1}$|;)",
+				"Password=********;");
 
-		    var escapedString = Regex.Replace(connectionString, @"Password\s*?=.*?(?:;{0,1}$|;)",
-			    "Password=********;");
+			var errorMessage = string.Empty;
 
-		    try
-		    {
-			    if (!string.IsNullOrEmpty(service.LastCrmError) || service.LastCrmException != null)
-			    {
-				    throw new ServiceActivationException(
-					    $"Can't create connection to: \"{escapedString}\" due to \"{service.LastCrmError}\"");
-			    }
+			if (!service.IsReady)
+			{
+				if (service.LastCrmException != null)
+				{
+					errorMessage += CrmHelpers.BuildExceptionMessage(service.LastCrmException);
+				}
 
-			    return service;
-		    }
-		    catch (Exception ex)
-		    {
-			    var errorMessage = service.LastCrmError
-				    ?? (service.LastCrmException != null ? CrmHelpers.BuildExceptionMessage(service.LastCrmException) : null)
-					    ?? CrmHelpers.BuildExceptionMessage(ex);
-			    throw new ServiceActivationException($"Can't create connection to: \"{escapedString}\" due to\r\n{errorMessage}");
-		    }
-	    }
+				if (service.LastCrmError.IsFilled())
+				{
+					errorMessage += $"\r\n\r\n{service.LastCrmError}";
+				}
 
-        public static bool? EnsureTokenValid(IOrganizationService crmService, int tokenExpiryCheckSecs = 600)
-        {
-            if (crmService != null && crmService is CrmServiceClient clientService)
-            {
-                if (clientService.LastCrmError.IsNotEmpty() || clientService.LastCrmException != null)
-                {
-                    return false;
-                }
+				if (errorMessage.IsEmpty())
+				{
+					errorMessage += "CRM service did not report a specific reason.";
+				}
+			}
 
-                var proxy = clientService.OrganizationServiceProxy;
+			if (errorMessage.IsFilled())
+			{
+				throw new ServiceActivationException($"Can't create connection to: \"{escapedString}\" due to\r\n{errorMessage}");
+			}
 
-                if (proxy == null)
-                {
-                    return null;
-                }
+			return service;
+		}
 
-                if (!proxy.IsAuthenticated
-                    || proxy.SecurityTokenResponse?.Response?.Lifetime?.Expires
-                        < DateTime.UtcNow.AddSeconds(tokenExpiryCheckSecs))
-                {
-                    proxy.Authenticate();
-                }
+		public static bool? EnsureTokenValid(IOrganizationService crmService, int tokenExpiryCheckSecs = 600)
+		{
+			if (crmService == null || !(crmService is CrmServiceClient clientService))
+			{
+				return null;
+			}
 
-                return proxy.IsAuthenticated;
-            }
+			if (!clientService.IsReady || clientService.LastCrmError.IsFilled() || clientService.LastCrmException != null)
+			{
+				return false;
+			}
 
-            return null;
-        }
-    }
+			var proxy = clientService.OrganizationServiceProxy;
+
+			if (proxy == null)
+			{
+				return null;
+			}
+
+			// token is about to expire based on the configured threshold time from actual expiry
+			var isTokenExpires = proxy.SecurityTokenResponse?.Response?.Lifetime?.Expires
+				< DateTime.UtcNow.AddSeconds(tokenExpiryCheckSecs);
+
+			if (!proxy.IsAuthenticated || isTokenExpires)
+			{
+				proxy.Authenticate();
+			}
+
+			return proxy.IsAuthenticated && clientService.IsReady;
+		}
+	}
 }

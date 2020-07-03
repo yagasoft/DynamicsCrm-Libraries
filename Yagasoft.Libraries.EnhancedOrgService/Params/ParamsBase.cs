@@ -9,7 +9,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 {
     public abstract class ParamsBase
     {
-		public bool IsLocked { get; internal set; }
+		public virtual bool IsLocked { get; internal set; }
 
 		public void ValidateLock()
 		{

@@ -11,6 +11,7 @@ using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Client;
 using Microsoft.Xrm.Tooling.Connector;
 using Yagasoft.Libraries.EnhancedOrgService.Helpers;
+using Yagasoft.Libraries.EnhancedOrgService.Params;
 
 #endregion
 
@@ -25,16 +26,20 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 		private readonly BlockingQueue<TService> servicesQueue = new BlockingQueue<TService>();
 		private readonly ConcurrentQueue<IOrganizationService> crmServicesQueue = new ConcurrentQueue<IOrganizationService>();
 
-		private readonly int poolSize;
-		private readonly int tokenExpiryCheckSecs;
+		private readonly PoolParams poolParams;
+
 		private int createdServicesCount;
 
-		public EnhancedServicePool(EnhancedServiceFactory<TService> factory, int poolSize = 10,
-		    int tokenExpiryCheckSecs = 600)
+		public EnhancedServicePool(EnhancedServiceFactory<TService> factory, int poolSize = 2)
 		{
 			this.factory = factory;
-			this.poolSize = poolSize;
-		    this.tokenExpiryCheckSecs = tokenExpiryCheckSecs;
+			poolParams = new PoolParams { PoolSize = poolSize };
+		}
+
+		public EnhancedServicePool(EnhancedServiceFactory<TService> factory, PoolParams poolParams = null)
+		{
+			this.factory = factory;
+			this.poolParams = poolParams ?? new PoolParams();
 		}
 
 		public TService GetService(int threads = 1)
@@ -47,32 +52,45 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 		{
 			crmServicesQueue.TryDequeue(out var crmService);
 
-		    if (ConnectionHelpers.EnsureTokenValid(crmService, tokenExpiryCheckSecs) == false)
+		    if (ConnectionHelpers.EnsureTokenValid(crmService, poolParams.TokenExpiryCheckSecs) == false)
 		    {
 		        crmService = null;
 		    }
 
 		    return crmService ?? factory.CreateCrmService();
 		}
-
-
+		
 	    private TService GetInitialisedService(int threads, TService enhancedService = null)
 		{
 			if (enhancedService == null)
 			{
 				lock (servicesQueue)
 				{
-					if (createdServicesCount < poolSize)
+					if (createdServicesCount < poolParams.PoolSize)
 					{
-						enhancedService = factory.CreateEnhancedServiceInternal(false);
-						createdServicesCount++;
+						enhancedService = GetEnhancedService();
 					}
 				}
 			}
 
-			enhancedService = enhancedService ?? servicesQueue.Dequeue();
+			try
+			{
+				enhancedService = enhancedService ?? servicesQueue.Dequeue(poolParams.DequeueTimeoutInMillis); 
+			}
+			catch (TimeoutException)
+			{
+				enhancedService = GetEnhancedService();
+			}
+
 			enhancedService.ReleaseService = () => ReleaseService(enhancedService);
 			enhancedService.FillServicesQueue(Enumerable.Range(0, threads).Select(e => GetCrmService()));
+			return enhancedService;
+		}
+
+		private TService GetEnhancedService()
+		{
+			var enhancedService = factory.CreateEnhancedServiceInternal(false);
+			createdServicesCount++;
 			return enhancedService;
 		}
 

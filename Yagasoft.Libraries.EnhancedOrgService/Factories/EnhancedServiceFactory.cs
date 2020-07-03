@@ -22,8 +22,7 @@ using Microsoft.Xrm.Tooling.Connector;
 namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 {
 	/// <inheritdoc cref="IEnhancedServiceFactory{TEnhancedOrgService}" />
-	public class EnhancedServiceFactory<TEnhancedOrgService>
-		: IEnhancedServiceFactory<TEnhancedOrgService>
+	public class EnhancedServiceFactory<TEnhancedOrgService> : IEnhancedServiceFactory<TEnhancedOrgService>
 		where TEnhancedOrgService : EnhancedOrgServiceBase
 	{
 		private readonly EnhancedServiceParams parameters;
@@ -31,6 +30,10 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 
 		public EnhancedServiceFactory(EnhancedServiceParams parameters)
 		{
+			parameters.Require(nameof(parameters));
+			parameters.ConnectionParams.Require(nameof(parameters.ConnectionParams));
+			parameters.ConnectionParams.ConnectionString.RequireFilled(nameof(parameters.ConnectionParams.ConnectionString));
+			
 			this.parameters = parameters;
 
 			if (parameters.IsCachingEnabled)
@@ -42,7 +45,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 						break;
 
 					case CacheMode.Private:
-						factoryCache = parameters.CachingParams.ObjectCache ?? new MemoryCache(parameters.ConnectionString);
+						factoryCache = parameters.CachingParams.ObjectCache
+							?? new MemoryCache(parameters.ConnectionParams.ConnectionString);
 						break;
 
 					case CacheMode.PrivatePerInstance:
@@ -93,7 +97,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 						break;
 
 					case CacheMode.PrivatePerInstance:
-						cache = new MemoryCache(parameters.ConnectionString);
+						cache = new MemoryCache(parameters.ConnectionParams.ConnectionString);
 						break;
 
 					default:
@@ -122,7 +126,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 
 		public IOrganizationService CreateCrmService()
 		{
-			return ConnectionHelpers.CreateCrmService(parameters.ConnectionString);
+			return ConnectionHelpers.CreateCrmService(parameters.ConnectionParams.ConnectionString);
 		}
 
 		/// <summary>
