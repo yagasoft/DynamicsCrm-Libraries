@@ -1316,6 +1316,60 @@ namespace Yagasoft.Libraries.Common
 		/// </summary>
 		/// <param name="key">The string key for the object to get.</param>
 		/// <param name="cacheFiller">The function to execute to fill the cache if the key can't be found in the cache.</param>
+		/// <param name="slidingExpiration">
+		///     The duration after which to remove the object from cache, if it was not accessed for that duration.
+		/// </param>
+		/// <param name="cacheKeysuffix">A string to append to all keys. Usually the assembly name.</param>
+		/// <param name="defaultValue">The value that if returned by the cache would cause the 'filler' to run anyway.</param>
+		public static T GetFromMemCacheAdd<T>(string key, Func<T> cacheFiller, TimeSpan slidingExpiration, string cacheKeysuffix = null,
+			T defaultValue = default(T))
+		{
+			key.RequireNotEmpty(nameof(key));
+			cacheFiller.Require(nameof(cacheFiller));
+
+			var cachedObject = GetFromMemCache<T>(key, cacheKeysuffix);
+
+			if (Equals(defaultValue, cachedObject))
+			{
+				cachedObject = AddToMemCache(key, cacheFiller(), slidingExpiration, cacheKeysuffix);
+			}
+
+			return cachedObject;
+		}
+
+		/// <summary>
+		///     Gets the object from the MemCache and add if it doesn't exist.<br />
+		///     Author: Ahmed Elsawalhy
+		/// </summary>
+		/// <param name="key">The string key for the object to get.</param>
+		/// <param name="cacheFiller">The function to execute to fill the cache if the key can't be found in the cache.</param>
+		/// <param name="offset">
+		///     [OPTIONAL] The time after which to remove the object from the cache.
+		/// </param>
+		/// <param name="cacheKeysuffix">A string to append to all keys. Usually the assembly name.</param>
+		/// <param name="defaultValue">The value that if returned by the cache would cause the 'filler' to run anyway.</param>
+		public static T GetFromMemCacheAdd<T>(string key, Func<T> cacheFiller, DateTimeOffset? offset = null, string cacheKeysuffix = null,
+			T defaultValue = default(T))
+		{
+			key.RequireNotEmpty(nameof(key));
+			cacheFiller.Require(nameof(cacheFiller));
+
+			var cachedObject = GetFromMemCache<T>(key, cacheKeysuffix);
+
+			if (Equals(defaultValue, cachedObject))
+			{
+				cachedObject = AddToMemCache(key, cacheFiller(), offset, cacheKeysuffix);
+			}
+
+			return cachedObject;
+		}
+
+		/// <summary>
+		///     Gets the object from the MemCache and add if it doesn't exist.<br />
+		///     Author: Ahmed Elsawalhy
+		/// </summary>
+		/// <param name="key">The string key for the object to get.</param>
+		/// <param name="cacheFiller">The function to execute to fill the cache if the key can't be found in the cache.</param>
 		/// <param name="cacheParams">A string to append to all keys.</param>
 		/// <param name="defaultValue">The value that if returned by the cache would cause the 'filler' to run anyway.</param>
 		public static T GetFromMemCacheAdd<T>(string key, Func<T> cacheFiller, CacheParams cacheParams,
@@ -4943,20 +4997,53 @@ namespace Yagasoft.Libraries.Common
 		}
 
 		/// <summary>
-		/// Fetches the BPF entity's record related to the given record.
+		///     Fetches the BPF entity's record related to the given record as raw Entity object.
 		/// </summary>
 		/// <param name="service">CRM service.</param>
 		/// <param name="record">Target record with the process set.</param>
 		/// <param name="processId">The process.</param>
 		/// <param name="isIncludeStage">Include the current Stage ID and Traversed Path in the retrieved info.</param>
+		/// <param name="primaryEntityPrefix">
+		///     Prefix of the Primary Entity ID attribute.
+		///     Default: "bpf", and for OoB Entities it's empty.
+		/// </param>
 		public static BpfRecord GetBpfRecord(IOrganizationService service, EntityReference record, Guid processId,
-			string orgId, bool isIncludeStage = false)
+			string orgId, bool isIncludeStage = false, string primaryEntityPrefix = "bpf")
 		{
-			var cacheKeyRecordName = $"Yagasoft.Common.GetBpfRecord|{record.Id}|{processId}|processRecordName";
+			var processRecord = GetBpfRecordRaw(service, record, processId, orgId, isIncludeStage, primaryEntityPrefix);
+
+			return
+				new BpfRecord
+				{
+					LogicalName = processRecord.LogicalName,
+					Id = processRecord.GetAttributeValue<Guid>("businessprocessflowinstanceid"),
+					ProcessId = processRecord.GetAttributeValue<EntityReference>("processid").Id,
+					StageId = processRecord.GetAttributeValue<EntityReference>("activestageid") == null
+						? (Guid?)null
+						: processRecord.GetAttributeValue<EntityReference>("activestageid").Id,
+					TraversedPath = processRecord.GetAttributeValue<string>("traversedpath")
+				};
+		}
+
+		/// <summary>
+		///     Fetches the BPF entity's record related to the given record as raw Entity object.
+		/// </summary>
+		/// <param name="service">CRM service.</param>
+		/// <param name="record">Target record with the process set.</param>
+		/// <param name="processId">The process.</param>
+		/// <param name="isIncludeStage">Include the current Stage ID and Traversed Path in the retrieved info.</param>
+		/// <param name="primaryEntityPrefix">
+		///     Prefix of the Primary Entity ID attribute.
+		///     Default: "bpf", and for OoB Entities it's empty.
+		/// </param>
+		public static Entity GetBpfRecordRaw(IOrganizationService service, EntityReference record, Guid processId,
+			string orgId, bool isIncludeStage = false, string primaryEntityPrefix = "bpf")
+		{
+			var cacheKeyRecordName = $"Yagasoft.Common.GetBpfRecordRaw|{record.Id}|{processId}|processRecordName";
 			var processRecordName = CacheHelpers.GetFromMemCache<string>(cacheKeyRecordName, orgId);
 
-			var cacheKeyRecord = $"Yagasoft.Common.GetBpfRecord|{record.Id}|{processId}|processRecord";
-			var processRecord = CacheHelpers.GetFromMemCache<BpfRecord>(cacheKeyRecord, orgId);
+			var cacheKeyRecord = $"Yagasoft.Common.GetBpfRecordRaw|{record.Id}|{processId}|processRecord";
+			var processRecord = CacheHelpers.GetFromMemCache<Entity>(cacheKeyRecord, orgId);
 
 			if (!isIncludeStage && processRecord != null)
 			{
@@ -4984,17 +5071,9 @@ namespace Yagasoft.Libraries.Common
 				processRecord =
 					(from processRecordQ in context.CreateQuery(processRecordName)
 					 where processRecordQ["processid"] == (object)processId
-						 && processRecordQ[$"bpf_{record.LogicalName}id"] == (object)record.Id
-					 select new BpfRecord
-							{
-								LogicalName = processRecordName,
-								Id = processRecordQ.GetAttributeValue<Guid>("businessprocessflowinstanceid"),
-								ProcessId = processRecordQ.GetAttributeValue<EntityReference>("processid").Id,
-								StageId = processRecordQ.GetAttributeValue<EntityReference>("activestageid") == null
-									? (Guid?)null
-									: processRecordQ.GetAttributeValue<EntityReference>("activestageid").Id,
-								TraversedPath = processRecordQ.GetAttributeValue<string>("traversedpath")
-							}).FirstOrDefault();
+						 && processRecordQ[$"{(primaryEntityPrefix.IsFilled() ? $"{primaryEntityPrefix}_" : "")}{record.LogicalName}id"]
+							 == (object)record.Id
+					 select processRecordQ).FirstOrDefault();
 
 				if (isIncludeStage)
 				{
@@ -5012,8 +5091,25 @@ namespace Yagasoft.Libraries.Common
 		public static IEnumerable<BpfRecord> GetBpfInstances(IOrganizationService service, EntityReference record, string orgId,
 			bool isIncludeStage = false)
 		{
-			var cacheKey = $"Yagasoft.Common.GetBpfInstances|{record.Id}";
-			var instances = CacheHelpers.GetFromMemCache<IEnumerable<BpfRecord>>(cacheKey, orgId);
+			return GetBpfInstancesRaw(service, record, orgId, isIncludeStage)?
+				.Select(
+					e =>
+						new BpfRecord
+						{
+							Id = e.Id,
+							ProcessId = e.GetAttributeValue<EntityReference>("processid")?.Id,
+							StageId = e.GetAttributeValue<Guid?>("processstageid")
+						});
+		}
+
+		/// <summary>
+		///     Returns the BPF Instance records as raw Entity objects.
+		/// </summary>
+		public static IEnumerable<Entity> GetBpfInstancesRaw(IOrganizationService service, EntityReference record, string orgId,
+			bool isIncludeStage = false)
+		{
+			var cacheKey = $"Yagasoft.Common.GetBpfInstancesRaw|{record.Id}";
+			var instances = CacheHelpers.GetFromMemCache<IEnumerable<Entity>>(cacheKey, orgId);
 
 			if (!isIncludeStage && instances != null)
 			{
@@ -5026,15 +5122,7 @@ namespace Yagasoft.Libraries.Common
 					{
 						EntityId = record.Id,
 						EntityLogicalName = record.LogicalName
-					})).Processes?.Entities?
-					.Select(
-						e =>
-							new BpfRecord
-							{
-								Id = e.Id,
-								ProcessId = e.GetAttributeValue<EntityReference>("processid")?.Id,
-								StageId = e.GetAttributeValue<Guid?>("processstageid")
-							});
+					})).Processes?.Entities.ToArray();
 
 			if (isIncludeStage)
 			{
@@ -5051,20 +5139,7 @@ namespace Yagasoft.Libraries.Common
 		public static BpfRecord GetBpfInstance(IOrganizationService service, EntityReference record, string processLogicalName,
 			Guid processId, string orgId, bool isIncludeStage = false)
 		{
-			service.Require(nameof(service));
-			record.Require(nameof(record));
-			processLogicalName.RequireNotEmpty(nameof(processLogicalName));
-			orgId.RequireNotEmpty(nameof(orgId));
-
-			var cacheKey = $"Yagasoft.Common.GetBpfInstance|{record.Id}|{processId}";
-			var instance = CacheHelpers.GetFromMemCache<BpfRecord>(cacheKey, orgId);
-
-			if (!isIncludeStage && instance != null)
-			{
-				return instance;
-			}
-
-			instance = GetBpfInstances(service, record, orgId, isIncludeStage)
+			var instance = GetBpfInstances(service, record, orgId, isIncludeStage)?
 				.FirstOrDefault(e => e.ProcessId == processId);
 
 			if (instance != null)
@@ -5072,8 +5147,17 @@ namespace Yagasoft.Libraries.Common
 				instance.LogicalName = processLogicalName;
 			}
 
-			return CacheHelpers.AddToMemCache(cacheKey, instance,
-				CrmHelpers.GetMetadataCacheExpiryDate(service, orgId), orgId);
+			return instance;
+		}
+
+		/// <summary>
+		///     Returns the BPF Instance record of the given Process as raw Entity object.
+		/// </summary>
+		public static Entity GetBpfInstanceRaw(IOrganizationService service, EntityReference record,
+			Guid processId, string orgId, bool isIncludeStage = false)
+		{
+			return GetBpfInstancesRaw(service, record, orgId, isIncludeStage)
+				.FirstOrDefault(e => e.GetAttributeValue<EntityReference>("processid")?.Id == processId);
 		}
 
 		public static Guid? GetActiveProcessId(IOrganizationService service, EntityReference record, string orgId)
@@ -5084,6 +5168,36 @@ namespace Yagasoft.Libraries.Common
 		public static Guid? GetActiveStageId(IOrganizationService service, EntityReference record, string orgId)
 		{
 			return GetBpfInstances(service, record, orgId, true).FirstOrDefault()?.StageId;
+		}
+
+		public static BpfStageRecord GetActiveStage(IOrganizationService service, EntityReference record, Guid? processId, string orgId,
+			string primaryEntityPrefix = "bpf")
+		{
+			service.Require(nameof(service));
+			record.Require(nameof(record));
+			processId.Require(nameof(processId));
+			orgId.RequireNotEmpty(nameof(orgId));
+
+			var bpfRecord = GetBpfRecordRaw(service, record, processId.GetValueOrDefault(), "123", true, primaryEntityPrefix);
+			var stageId = bpfRecord.GetAttributeValue<EntityReference>("activestageid")?.Id;
+			stageId.Require(nameof(stageId), $"Unable to find Stage ID in Process ({processId}) record ({bpfRecord.Id})"
+				+ $" for record ({record.LogicalName}|{record.Id}).");
+			var activePath = GetActivePathRaw(service, bpfRecord.Id).ToArray();
+			var stage = activePath.FirstOrDefault(e => e.Id == stageId);
+			stage.Require(nameof(stage), $"Unable to find Stage ({stageId}) info in Active Path of Process ({processId})"
+				+ $" for record ({record.LogicalName}|{record.Id}).");
+			var stageEntityName = stage?.GetAttributeValue<string>("primaryentitytypecode");
+			var stageEntityRef = bpfRecord.GetAttributeValue<EntityReference>(
+				$"{(primaryEntityPrefix.IsFilled() ? $"{primaryEntityPrefix}_" : "")}{stageEntityName}id");
+
+			return
+				new BpfStageRecord
+				{
+					Id = stageId.GetValueOrDefault(),
+					StageRecord = stageEntityRef,
+					ActivePath = activePath.Select(s => s.Id.ToString().ToLower()).StringAggregate(),
+					TraversedPath = bpfRecord.GetAttributeValue<string>("traversedpath")
+				};
 		}
 
 		public static void MoveStage(IOrganizationService service, EntityReference record, string processLogicalName, Guid processId, string orgId,
@@ -5248,13 +5362,17 @@ namespace Yagasoft.Libraries.Common
 
 		public static IEnumerable<Guid> GetActivePath(IOrganizationService service, Guid instanceId)
 		{
+			return GetActivePathRaw(service, instanceId).Select(s => s.Id);
+		}
+
+		public static IEnumerable<Entity> GetActivePathRaw(IOrganizationService service, Guid instanceId)
+		{
 			return
 				((RetrieveActivePathResponse)service.Execute(
 					new RetrieveActivePathRequest
 					{
 						ProcessInstanceId = instanceId
-					})).ProcessStages.Entities
-					.Select(s => s.Id);
+					})).ProcessStages.Entities.ToArray();
 		}
 
 		public static string BuildTraversedPath(Guid stageId, IEnumerable<Guid> activePath)
@@ -6043,7 +6161,14 @@ namespace Yagasoft.Libraries.Common
 		{
 			get; set;
 		}
+	}
 
+	public class BpfStageRecord
+	{
+		public Guid Id { get; set; }
+		public EntityReference StageRecord { get; set; }
+		public string ActivePath { get; set; }
+		public string TraversedPath { get; set; }
 	}
 
 	public class BpfStageInfo

@@ -19,7 +19,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Builders
 	/// </summary>
 	public sealed class EnhancedServiceBuilder : ProcessBase
 	{
-		private readonly EnhancedServiceParams parameters = new EnhancedServiceParams();
+		private EnhancedServiceParams parameters;
 
 		public static EnhancedServiceBuilder NewBuilder => new EnhancedServiceBuilder();
 
@@ -36,8 +36,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Builders
 				throw new FormatException("Connection string format is incorrect.");
 			}
 
+			parameters = new EnhancedServiceParams(connectionString);
 			IsInitialised = true;
-			parameters.ConnectionString = connectionString;
 
 			return this;
 		}

@@ -3,25 +3,35 @@
 <package>
   <metadata>
     <id>Yagasoft.Libraries.EnhancedOrgService</id>
-    <version>2.2.3</version>
+    <version>2.3.4</version>
     <authors>Ahmed Elsawalhy</authors>
     <owners>Ahmed Elsawalhy</owners>
     <projectUrl>https://github.com/os008/DynamicsCrm-Libraries</projectUrl>
     <license type="file">licence\LICENCE</license>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <summary>Dynamics CRM Enhanced Organisation Service.</summary>
-    <description>Dynamics CRM Enhanced Organisation Service is an extension to the out-of-the-box IOrganizationService. It supports async operations, dependencies, transactions, and caching.</description>
+    <description>Dynamics CRM Enhanced Organisation Service is an extension to the out-of-the-box IOrganizationService. It supports pooling, async operations, dependencies, transactions, deferred execution, and caching.</description>
     <copyright>Copyright Ahmed Elsawalhy</copyright>
-    <tags>organization, service, IOrganizationService, CrmServiceClient, CRM, Dynamics, 365, 2016</tags>
+    <tags>organization, service, IOrganizationService, CrmServiceClient, CRM, Dynamics, 365, 2016, async, transaction, pool, bulk, cache, caching</tags>
     <developmentDependency>true</developmentDependency>
     <dependencies>
       <group>
-        <dependency id="Microsoft.CrmSdk.XrmTooling.CoreAssembly" version="9.0.0.7" />
-        <dependency id="Yagasoft.Libraries.Common" version="2.1.2" />
+        <dependency id="Microsoft.CrmSdk.XrmTooling.CoreAssembly" version="9.1.0.26" />
+        <dependency id="Yagasoft.Libraries.Common" version="2.2.5" />
       </group>
     </dependencies>
     <references />
     <releaseNotes>
+      * 2.3.4
+      Fixed: issues
+      * 2.3.1
+      Added: deferred execution feature of organisation requests
+      Added: pool dequeue timeout option
+      Improved: connection error handling and message details
+      Improved: service parameters definition
+      Changed: supported SDK to v9.1.0.26 for .NET Framework 4.6.2
+      * 2.2.4
+      Fixed: ensure token is auto-refreshed internally as well
       * 2.2.3
       Fixed: missing SecurityToken should bypass reauthentication
       * 2.2.2
@@ -63,7 +73,7 @@
     </releaseNotes>
   </metadata>
   <files>
-    <file src="bin\Release\Microsoft.Xrm.Client.dll" target="lib\net452" />
+    <file src="bin\Release\Microsoft.Xrm.Client.dll" target="lib\net462" />
     <file src="LICENCE" target="licence\LICENCE" />
   </files>
 </package>

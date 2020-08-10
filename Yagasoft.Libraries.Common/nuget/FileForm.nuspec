@@ -3,7 +3,7 @@
 <package>
   <metadata>
     <id>Yagasoft.Libraries.Common.File</id>
-    <version>4.2.3</version>
+    <version>4.2.5</version>
     <authors>Ahmed Elsawalhy</authors>
     <owners>Ahmed Elsawalhy</owners>
     <projectUrl>https://github.com/os008/DynamicsCrm-Libraries</projectUrl>
@@ -26,6 +26,11 @@
     </frameworkAssemblies>
     <references />
     <releaseNotes>
+      * 4.2.5
+      Fixed: issues
+      * 4.2.4
+      Added: timeout to Blocking Queue
+      Fixed: BPF helper issues
       * 4.2.3
       Added: a few helpers (CRM, error ... etc.)
       Added: CRM Plugin Tracing service log feature

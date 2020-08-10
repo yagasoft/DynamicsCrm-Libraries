@@ -25,6 +25,12 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 		TService GetService(int threads = 1);
 
 		/// <summary>
+		///     Clears the cache of the Factory used to initialise the Pool.
+		///	    If the cache scope is not set to Factory in the Params, an Exception will be thrown.
+		/// </summary>
+		void ClearFactoryCache();
+
+		/// <summary>
 		///     Puts the service back into the pool for re-use.
 		///     The state of the service becomes invalid; so it should not be used after calling this method.
 		/// </summary>

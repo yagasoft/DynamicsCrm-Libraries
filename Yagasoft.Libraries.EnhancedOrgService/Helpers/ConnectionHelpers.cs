@@ -62,7 +62,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 				return null;
 			}
 
-			if (!clientService.IsReady || clientService.LastCrmError.IsFilled() || clientService.LastCrmException != null)
+			if (!clientService.IsReady)
 			{
 				return false;
 			}

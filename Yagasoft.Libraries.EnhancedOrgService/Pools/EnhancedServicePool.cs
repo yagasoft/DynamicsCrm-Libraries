@@ -94,6 +94,11 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 			return enhancedService;
 		}
 
+		public void ClearFactoryCache()
+		{
+			factory.ClearCache();
+		}
+
 		public void ReleaseService(TService enhancedService)
 		{
 			var releasedServices = enhancedService.ClearServicesQueue();

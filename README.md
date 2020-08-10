@@ -2,7 +2,7 @@
 
 [![Join the chat at https://gitter.im/yagasoft/DynamicsCrm-Libraries](https://badges.gitter.im/yagasoft/DynamicsCrm-Libraries.svg)](https://gitter.im/yagasoft/DynamicsCrm-Libraries?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-### Version: 2.2.3
+### Version: 2.3.1
 ---
 
 A collection of libraries for common and extended operations in Dynamics CRM development that gives power to the developer and saves time.
@@ -35,7 +35,19 @@ A collection of libraries for common and extended operations in Dynamics CRM dev
 
 ## Changes
 
-#### _v2.2.2 (2019-10-06)_
+#### _v2.3.1 (2020-08-10)_
++ Added: deferred execution feature of organisation requests
++ Added: pool dequeue timeout option
++ Added: a few helpers (CRM, error ... etc.)
++ Added: CRM Plugin Tracing service log feature
++ Added: timeout to Blocking Queue
++ Improved: connection error handling and message details
++ Improved: service parameters definition
++ Changed: supported SDK to v9.1.0.26 for .NET Framework 4.6.2
++ Fixed: ensure token is auto-refreshed internally as well
++ Fixed: BPF helper issues
++ Fixed: issues
+#### _v2.2.3 (2019-10-06)_
 + Fixed: missing SecurityToken should bypass reauthentication
 #### _v2.2.2 (2019-10-06)_
 + Added: token auto-refresh
