@@ -336,3 +336,4 @@ nuget-access-key.txt
 
 /Yagasoft.Tests.EnhancedOrgService
 *.exe
+/ConsoleApp1

@@ -75,8 +75,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 			return CreateEnhancedServiceInternal(true, threads);
 		}
 
-		internal virtual TEnhancedOrgService CreateEnhancedServiceInternal(bool isInitialiseCrmServices = true,
-			int threads = 1)
+		internal virtual TEnhancedOrgService CreateEnhancedServiceInternal(bool isInitialiseCrmServices = true, int threads = 1)
 		{
 			var enhancedService = (TEnhancedOrgService)Activator.CreateInstance(typeof(TEnhancedOrgService), parameters);
 
@@ -117,8 +116,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 
 			if (isInitialiseCrmServices)
 			{
-				enhancedService.FillServicesQueue(
-					Enumerable.Range(0, threads).Select(e => CreateCrmService()));
+				enhancedService.FillServicesQueue(Enumerable.Range(0, threads).Select(e => CreateCrmService()));
 			}
 
 			return enhancedService;

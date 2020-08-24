@@ -76,6 +76,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 			try
 			{
 				enhancedService = enhancedService ?? servicesQueue.Dequeue(poolParams.DequeueTimeoutInMillis); 
+				enhancedService.FillServicesQueue(Enumerable.Range(0, threads).Select(e => GetCrmService()));
 			}
 			catch (TimeoutException)
 			{
@@ -83,7 +84,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 			}
 
 			enhancedService.ReleaseService = () => ReleaseService(enhancedService);
-			enhancedService.FillServicesQueue(Enumerable.Range(0, threads).Select(e => GetCrmService()));
+
 			return enhancedService;
 		}
 

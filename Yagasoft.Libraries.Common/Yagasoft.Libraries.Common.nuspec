@@ -3,7 +3,7 @@
 <package>
   <metadata>
     <id>Yagasoft.Libraries.Common</id>
-    <version>2.2.5</version>
+    <version>2.2.6</version>
     <authors>Ahmed Elsawalhy</authors>
     <owners>Ahmed Elsawalhy</owners>
     <projectUrl>https://github.com/os008/DynamicsCrm-Libraries</projectUrl>
@@ -16,17 +16,18 @@
     <developmentDependency>true</developmentDependency>
     <dependencies>
       <group>
-        <dependency id="Microsoft.CrmSdk.CoreAssemblies" version="9.0.2.26" />
-        <dependency id="Microsoft.CrmSdk.Workflow" version="9.0.2.26" />
+        <dependency id="Microsoft.CrmSdk.CoreAssemblies" version="9.0.2.12" />
+        <dependency id="Microsoft.CrmSdk.Workflow" version="9.0.2.12" />
       </group>
     </dependencies>
     <frameworkAssemblies>
-      <frameworkAssembly assemblyName="System.Runtime.Serialization"  />
-      <frameworkAssembly assemblyName="System.Runtime.Caching"  />
+      <frameworkAssembly assemblyName="System.Runtime.Serialization" />
+      <frameworkAssembly assemblyName="System.Runtime.Caching" />
     </frameworkAssemblies>
     <references />
     <releaseNotes>
-      * 2.2.5
+      * 2.2.6
+      Changed: downgraded required CRM SDK version
       Fixed: issues
       * 2.2.4
       Added: timeout to Blocking Queue

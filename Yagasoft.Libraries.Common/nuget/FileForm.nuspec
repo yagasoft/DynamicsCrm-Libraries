@@ -21,8 +21,8 @@
       </group>
     </dependencies>
     <frameworkAssemblies>
-      <frameworkAssembly assemblyName="System.Runtime.Serialization"  />
-      <frameworkAssembly assemblyName="System.Runtime.Caching"  />
+      <frameworkAssembly assemblyName="System.Runtime.Serialization" />
+      <frameworkAssembly assemblyName="System.Runtime.Caching" />
     </frameworkAssemblies>
     <references />
     <releaseNotes>

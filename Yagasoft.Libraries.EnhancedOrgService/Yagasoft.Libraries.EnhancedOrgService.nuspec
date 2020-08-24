@@ -3,7 +3,7 @@
 <package>
   <metadata>
     <id>Yagasoft.Libraries.EnhancedOrgService</id>
-    <version>2.3.4</version>
+    <version>2.3.7</version>
     <authors>Ahmed Elsawalhy</authors>
     <owners>Ahmed Elsawalhy</owners>
     <projectUrl>https://github.com/os008/DynamicsCrm-Libraries</projectUrl>
@@ -16,14 +16,15 @@
     <developmentDependency>true</developmentDependency>
     <dependencies>
       <group>
-        <dependency id="Microsoft.CrmSdk.XrmTooling.CoreAssembly" version="9.1.0.26" />
-        <dependency id="Yagasoft.Libraries.Common" version="2.2.5" />
+        <dependency id="Microsoft.CrmSdk.XrmTooling.CoreAssembly" version="9.0.2.12" />
+        <dependency id="Yagasoft.Libraries.Common" version="2.2.6" />
       </group>
     </dependencies>
     <references />
     <releaseNotes>
-      * 2.3.4
-      Fixed: issues
+      * 2.3.7
+      Changed: downgraded required CRM SDK version
+      Fixed: avoid duplicate service creation upon pool timeout
       * 2.3.1
       Added: deferred execution feature of organisation requests
       Added: pool dequeue timeout option

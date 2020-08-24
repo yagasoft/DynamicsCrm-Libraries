@@ -2,7 +2,7 @@
 
 [![Join the chat at https://gitter.im/yagasoft/DynamicsCrm-Libraries](https://badges.gitter.im/yagasoft/DynamicsCrm-Libraries.svg)](https://gitter.im/yagasoft/DynamicsCrm-Libraries?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-### Version: 2.3.1
+### Version: 2.3.2
 ---
 
 A collection of libraries for common and extended operations in Dynamics CRM development that gives power to the developer and saves time.
@@ -22,10 +22,10 @@ A collection of libraries for common and extended operations in Dynamics CRM dev
 
   + Download
     + Common (either)
-      + NuGet: called "Yagasoft.Libraries.Common"
-      + Common.cs: in the repository
+      + Assembly: [Yagasoft.Libraries.Common](https://www.nuget.org/packages/Yagasoft.Libraries.Common)
+      + Single CS file: [Yagasoft.Libraries.Common.File](https://www.nuget.org/packages/Yagasoft.Libraries.Common.File)
     + EnhancedOrgService
-      + NuGet: called "Yagasoft.Libraries.EnhancedOrgService"
+      + NuGet: [Yagasoft.Libraries.EnhancedOrgService](https://www.nuget.org/packages/Yagasoft.Libraries.EnhancedOrgService)
 
 ### Dependencies
 
@@ -35,6 +35,10 @@ A collection of libraries for common and extended operations in Dynamics CRM dev
 
 ## Changes
 
+#### _v2.3.2 (2020-08-24)_
++ Changed: downgraded required CRM SDK version
++ Fixed: avoid duplicate service creation upon pool timeout
++ Fixed: issues
 #### _v2.3.1 (2020-08-10)_
 + Added: deferred execution feature of organisation requests
 + Added: pool dequeue timeout option
@@ -60,18 +64,6 @@ A collection of libraries for common and extended operations in Dynamics CRM dev
 + Fixed: library references
 #### _v2.1.1 (2019-02-27)_
 + Changed: moved to a new namespace
-#### _v1.3.4 (2018-12-19)_
-+ Added: relationship drill-through in placeholders
-#### _v1.3.2 (2018-12-18)_
-+ Changed: reworked the placeholder system
-#### _v1.2.4 (2018-12-04)_
-+ Fixed: removed redundant JS file
-#### _v1.2.3 (2018-11-27)_
-+ Changed: Common.cs file NuGet package
-#### _v1.2.2 (2018-11-27)_
-+ Fixed: spelling mistake
-#### _v1.2.1 (2018-09-27)_
-+ Added: conditions in FetchXML parser
 
 ---
 **Copyright &copy; by Ahmed Elsawalhy ([Yagasoft](http://yagasoft.com))** -- _GPL v3 Licence_

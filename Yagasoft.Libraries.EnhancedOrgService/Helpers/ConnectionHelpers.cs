@@ -33,7 +33,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 			{
 				if (service.LastCrmException != null)
 				{
-					errorMessage += CrmHelpers.BuildExceptionMessage(service.LastCrmException);
+					errorMessage += service.LastCrmException.BuildExceptionMessage();
 				}
 
 				if (service.LastCrmError.IsFilled())
@@ -67,23 +67,36 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 				return false;
 			}
 
+			bool? isValidToken = null;
+
 			var proxy = clientService.OrganizationServiceProxy;
 
-			if (proxy == null)
+			if (proxy != null)
+			{
+				// token is about to expire based on the configured threshold time from actual expiry
+				var isTokenExpires = proxy.SecurityTokenResponse?.Response?.Lifetime?.Expires
+					< DateTime.UtcNow.AddSeconds(tokenExpiryCheckSecs);
+
+				if (!proxy.IsAuthenticated || isTokenExpires)
+				{
+					proxy.Authenticate();
+				}
+
+				isValidToken = proxy.IsAuthenticated;
+			}
+
+			var webProxy = clientService.OrganizationWebProxyClient;
+
+			if (webProxy != null)
+			{
+			}
+
+			if (isValidToken == null)
 			{
 				return null;
 			}
 
-			// token is about to expire based on the configured threshold time from actual expiry
-			var isTokenExpires = proxy.SecurityTokenResponse?.Response?.Lifetime?.Expires
-				< DateTime.UtcNow.AddSeconds(tokenExpiryCheckSecs);
-
-			if (!proxy.IsAuthenticated || isTokenExpires)
-			{
-				proxy.Authenticate();
-			}
-
-			return proxy.IsAuthenticated && clientService.IsReady;
+			return isValidToken.Value && clientService.IsReady;
 		}
 	}
 }
