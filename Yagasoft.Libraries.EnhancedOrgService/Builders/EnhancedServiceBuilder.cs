@@ -2,6 +2,7 @@
 
 using System;
 using System.Linq;
+using Microsoft.Xrm.Sdk;
 using Yagasoft.Libraries.Common;
 using Yagasoft.Libraries.EnhancedOrgService.Exceptions;
 using Yagasoft.Libraries.EnhancedOrgService.Helpers;
@@ -48,7 +49,6 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Builders
 			ValidateFinalised(false);
 
 			parameters.IsCachingEnabled = true;
-			parameters.CachingParams = cachingParams ?? new CachingParams();
 
 			return this;
 		}
@@ -59,7 +59,6 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Builders
 			ValidateFinalised(false);
 
 			parameters.IsTransactionsEnabled = true;
-			parameters.TransactionParams = transactionParams ?? new TransactionParams();
 
 			return this;
 		}
@@ -70,7 +69,6 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Builders
 			ValidateFinalised(false);
 
 			parameters.IsConcurrencyEnabled = true;
-			parameters.ConcurrencyParams = concurrencyParams ?? new ConcurrencyParams();
 
 			return this;
 		}
@@ -89,6 +87,16 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Builders
 			}
 
 			parameters.ConcurrencyParams.IsAsyncAppHold = true;
+
+			return this;
+		}
+
+		public EnhancedServiceBuilder DefineCustomIOrgSvcFactory(Func<string, IOrganizationService> customIOrgSvcFactory)
+		{
+			ValidateInitialised();
+			ValidateFinalised(false);
+
+			parameters.ConnectionParams.CustomIOrgSvcFactory = customIOrgSvcFactory;
 
 			return this;
 		}

@@ -27,6 +27,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 	{
 		private readonly EnhancedServiceParams parameters;
 		private readonly ObjectCache factoryCache;
+		private readonly Func<string, IOrganizationService> customServiceFactory = ConnectionHelpers.CreateCrmService;
 
 		public EnhancedServiceFactory(EnhancedServiceParams parameters)
 		{
@@ -68,6 +69,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 			{
 				throw new UnsupportedException("Cannot create an async service factory unless concurrency is enabled.");
 			}
+
+			customServiceFactory = parameters.ConnectionParams.CustomIOrgSvcFactory ?? customServiceFactory;
 		}
 
 		public virtual TEnhancedOrgService CreateEnhancedService(int threads = 1)
@@ -124,7 +127,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 
 		public IOrganizationService CreateCrmService()
 		{
-			return ConnectionHelpers.CreateCrmService(parameters.ConnectionParams.ConnectionString);
+			return customServiceFactory(parameters.ConnectionParams.ConnectionString);
 		}
 
 		/// <summary>

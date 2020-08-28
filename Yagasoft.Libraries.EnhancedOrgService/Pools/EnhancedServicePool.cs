@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Linq;
+using System.Threading;
 using Microsoft.Xrm.Client.Runtime.Serialization;
 using Yagasoft.Libraries.Common;
 using Yagasoft.Libraries.EnhancedOrgService.Factories;
@@ -27,8 +28,10 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 		private readonly ConcurrentQueue<IOrganizationService> crmServicesQueue = new ConcurrentQueue<IOrganizationService>();
 
 		private readonly PoolParams poolParams;
+		private int createdCrmServicesCount;
 
-		private int createdServicesCount;
+		private Thread warmupThread;
+		private bool isWarmUp;
 
 		public EnhancedServicePool(EnhancedServiceFactory<TService> factory, int poolSize = 2)
 		{
@@ -42,48 +45,110 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 			this.poolParams = poolParams ?? new PoolParams();
 		}
 
+		public int CreatedServices { get; private set; }
+		public int CurrentPoolSize => servicesQueue.Count;
+
 		public TService GetService(int threads = 1)
 		{
 			servicesQueue.TryTake(out var service);
 			return GetInitialisedService(threads, service);
 		}
 
-		private IOrganizationService GetCrmService()
+		public void WarmUp()
 		{
-			crmServicesQueue.TryDequeue(out var crmService);
+			lock (this)
+			{
+				isWarmUp = true;
 
-		    if (ConnectionHelpers.EnsureTokenValid(crmService, poolParams.TokenExpiryCheckSecs) == false)
-		    {
-		        crmService = null;
-		    }
+				if (warmupThread?.IsAlive == true)
+				{
+					return;
+				}
 
-		    return crmService ?? factory.CreateCrmService();
+				warmupThread =
+					new Thread(
+						() =>
+						{
+							while (isWarmUp && createdCrmServicesCount < poolParams.PoolSize)
+							{
+								try
+								{
+									lock (crmServicesQueue)
+									{
+										crmServicesQueue.Enqueue(GetCrmService(true));
+									}
+								}
+								catch
+								{
+									// ignored
+								}
+							}
+						}) { IsBackground = true };
+
+				warmupThread.Start();
+			}
+		}
+
+		public void EndWarmup()
+		{
+			isWarmUp = false;
+		}
+
+		private IOrganizationService GetCrmService(bool isSkipQueue = false)
+		{
+			lock (crmServicesQueue)
+			{
+				IOrganizationService crmService = null;
+
+				if (!isSkipQueue)
+				{
+					crmServicesQueue.TryDequeue(out crmService);
+				}
+
+				if (ConnectionHelpers.EnsureTokenValid(crmService, poolParams.TokenExpiryCheckSecs) == false)
+				{
+					crmService = null;
+				}
+
+				if (crmService != null)
+				{
+					return crmService;
+				}
+
+				crmService = factory.CreateCrmService();
+				createdCrmServicesCount++;
+
+				return crmService;
+			}
 		}
 		
-	    private TService GetInitialisedService(int threads, TService enhancedService = null)
+	    private TService GetInitialisedService(int threads, TService enhancedService = null, bool isWarmup = false)
 		{
 			if (enhancedService == null)
 			{
 				lock (servicesQueue)
 				{
-					if (createdServicesCount < poolParams.PoolSize)
+					if (CreatedServices < poolParams.PoolSize)
 					{
 						enhancedService = GetEnhancedService();
 					}
 				}
 			}
 
-			try
-			{
-				enhancedService = enhancedService ?? servicesQueue.Dequeue(poolParams.DequeueTimeoutInMillis); 
-				enhancedService.FillServicesQueue(Enumerable.Range(0, threads).Select(e => GetCrmService()));
-			}
-			catch (TimeoutException)
-			{
-				enhancedService = GetEnhancedService();
-			}
-
-			enhancedService.ReleaseService = () => ReleaseService(enhancedService);
+		    try
+		    {
+			    enhancedService = enhancedService ?? servicesQueue.Dequeue(poolParams.DequeueTimeoutInMillis);
+		    }
+		    catch (TimeoutException)
+		    {
+			    lock (servicesQueue)
+			    {
+				    enhancedService = GetEnhancedService();
+			    }
+		    }
+		    
+			enhancedService.FillServicesQueue(Enumerable.Range(0, threads).Select(e => GetCrmService()));
+		    enhancedService.ReleaseService = () => ReleaseService(enhancedService);
 
 			return enhancedService;
 		}
@@ -91,7 +156,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 		private TService GetEnhancedService()
 		{
 			var enhancedService = factory.CreateEnhancedServiceInternal(false);
-			createdServicesCount++;
+			CreatedServices++;
 			return enhancedService;
 		}
 
@@ -102,11 +167,14 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 
 		public void ReleaseService(TService enhancedService)
 		{
-			var releasedServices = enhancedService.ClearServicesQueue();
-
-			foreach (var service in releasedServices)
+			lock (crmServicesQueue)
 			{
-				crmServicesQueue.Enqueue(service);
+				var releasedServices = enhancedService.ClearServicesQueue();
+
+				foreach (var service in releasedServices)
+				{
+					crmServicesQueue.Enqueue(service);
+				}
 			}
 
 			servicesQueue.Enqueue(enhancedService);

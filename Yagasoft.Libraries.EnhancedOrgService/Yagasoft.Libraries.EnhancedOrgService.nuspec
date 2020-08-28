@@ -3,7 +3,7 @@
 <package>
   <metadata>
     <id>Yagasoft.Libraries.EnhancedOrgService</id>
-    <version>2.3.7</version>
+    <version>2.4.1</version>
     <authors>Ahmed Elsawalhy</authors>
     <owners>Ahmed Elsawalhy</owners>
     <projectUrl>https://github.com/os008/DynamicsCrm-Libraries</projectUrl>
@@ -22,9 +22,12 @@
     </dependencies>
     <references />
     <releaseNotes>
+      * 2.4.1
+      Added: Pools accept a function to define custom logic for IOrganizationService creation
+      Added: warmup logic for CRM connections to improve caching performance
       * 2.3.7
       Changed: downgraded required CRM SDK version
-      Fixed: avoid duplicate service creation upon pool timeout
+      Fixed: issues
       * 2.3.1
       Added: deferred execution feature of organisation requests
       Added: pool dequeue timeout option

@@ -1,5 +1,7 @@
 ﻿#region Imports
 
+using System;
+using Microsoft.Xrm.Sdk;
 using Yagasoft.Libraries.Common;
 using Yagasoft.Libraries.EnhancedOrgService.Builders;
 using Yagasoft.Libraries.EnhancedOrgService.Factories;
@@ -17,12 +19,26 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 	/// </summary>
 	public static class EnhancedServiceHelper
 	{
-		public static EnhancedServicePool<Services.EnhancedOrgService> GetPool(string connectionString, int poolSize = 2)
+		/// <summary>
+		///     Convenience method to get a service pool.
+		/// </summary>
+		/// <param name="connectionString">The connection string.</param>
+		/// <param name="poolSize">Size of the pool.</param>
+		/// <param name="customIOrgSvcFactory">
+		///     A custom factory that will be used to create CRM connections instead of the library built-in method.
+		/// </param>
+		public static EnhancedServicePool<Services.EnhancedOrgService> GetPool(string connectionString, int poolSize = 2,
+			Func<string, IOrganizationService> customIOrgSvcFactory = null)
 		{
 			return BuildPool<Services.EnhancedOrgService>(
 				new EnhancedServiceParams
 				{
-					ConnectionParams = new ConnectionParams { ConnectionString = connectionString },
+					ConnectionParams =
+						new ConnectionParams
+						{
+							ConnectionString = connectionString,
+							CustomIOrgSvcFactory = customIOrgSvcFactory
+						},
 					PoolParams = new PoolParams { PoolSize = poolSize }
 				});
 		}
@@ -33,11 +49,26 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 			return BuildPool<Services.EnhancedOrgService>(serviceParams);
 		}
 
-		public static EnhancedServicePool<AsyncOrgService> GetAsyncPool(string connectionString, int poolSize = 2)
+		/// <summary>
+		///     Convenience method to get an async-based service pool.
+		/// </summary>
+		/// <param name="connectionString">The connection string.</param>
+		/// <param name="poolSize">Size of the pool.</param>
+		/// <param name="customIOrgSvcFactory">
+		///     A custom factory that will be used to create CRM connections instead of the library built-in method.
+		/// </param>
+		public static EnhancedServicePool<AsyncOrgService> GetAsyncPool(string connectionString, int poolSize = 2,
+			Func<string, IOrganizationService> customIOrgSvcFactory = null)
 		{
 			return BuildPool<AsyncOrgService>(
-				new EnhancedServiceParams (connectionString)
+				new EnhancedServiceParams
 				{
+					ConnectionParams =
+						new ConnectionParams
+						{
+							ConnectionString = connectionString,
+							CustomIOrgSvcFactory = customIOrgSvcFactory
+						},
 					PoolParams = new PoolParams { PoolSize = poolSize }
 				});
 		}

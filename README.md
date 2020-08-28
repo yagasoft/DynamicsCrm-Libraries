@@ -2,12 +2,12 @@
 
 [![Join the chat at https://gitter.im/yagasoft/DynamicsCrm-Libraries](https://badges.gitter.im/yagasoft/DynamicsCrm-Libraries.svg)](https://gitter.im/yagasoft/DynamicsCrm-Libraries?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-### Version: 2.3.2
+### Version: 2.4.1
 ---
 
 A collection of libraries for common and extended operations in Dynamics CRM development that gives power to the developer and saves time.
 
-### Features
+## Features
 
   + Massive JS and CS libraries of common and generic functions and classes.
   + An extension to the out-of-the-box IOrganizationService. Supports:
@@ -16,9 +16,10 @@ A collection of libraries for common and extended operations in Dynamics CRM dev
     + Caching
     + Automatic pool/queue handling
     + Automatic thread handling
+    + Connection warmup to improve caching performance
   + Dynamics-CRM-specific code analysis rules
 
-### Guide
+## Guide
 
   + Download
     + Common (either)
@@ -27,7 +28,7 @@ A collection of libraries for common and extended operations in Dynamics CRM dev
     + EnhancedOrgService
       + NuGet: [Yagasoft.Libraries.EnhancedOrgService](https://www.nuget.org/packages/Yagasoft.Libraries.EnhancedOrgService)
 
-### Dependencies
+## Dependencies
 
   + NuGet executable
     + Required to deploy the NuGet packages
@@ -35,9 +36,11 @@ A collection of libraries for common and extended operations in Dynamics CRM dev
 
 ## Changes
 
+#### _v2.4.1 (2020-08-28)_
++ Added: Pools accept a function to define custom logic for IOrganizationService creation
++ Added: warmup logic for CRM connections to improve caching performance
 #### _v2.3.2 (2020-08-24)_
 + Changed: downgraded required CRM SDK version
-+ Fixed: avoid duplicate service creation upon pool timeout
 + Fixed: issues
 #### _v2.3.1 (2020-08-10)_
 + Added: deferred execution feature of organisation requests

@@ -63,7 +63,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 
 		public ConnectionParams ConnectionParams
 		{
-			get => connectionParams;
+			get => connectionParams = connectionParams ?? new ConnectionParams();
 			set
 			{
 				ValidateLock();
@@ -83,7 +83,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 
 		public CachingParams CachingParams
 		{
-			get => cachingParams;
+			get => cachingParams = cachingParams ?? new CachingParams();
 			set
 			{
 				ValidateLock();
@@ -104,7 +104,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 
 		public TransactionParams TransactionParams
 		{
-			get => transactionParams;
+			get => transactionParams = transactionParams ?? new TransactionParams();
 			set
 			{
 				ValidateLock();
@@ -132,7 +132,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 
 		public ConcurrencyParams ConcurrencyParams
 		{
-			get => concurrencyParams;
+			get => concurrencyParams = concurrencyParams ?? new ConcurrencyParams();
 			set
 			{
 				ValidateLock();
@@ -143,7 +143,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 
 		public PoolParams PoolParams
 		{
-			get => poolParams;
+			get => poolParams = poolParams ?? new PoolParams();
 			set
 			{
 				ValidateLock();

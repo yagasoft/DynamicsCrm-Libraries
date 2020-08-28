@@ -14,6 +14,9 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 	public interface IEnhancedServicePool<TService>
 		where TService : IEnhancedOrgService
 	{
+		int CreatedServices { get; }
+		int CurrentPoolSize { get; }
+
 		/// <summary>
 		///     If the pool is empty, creates a new Enhanced Service.
 		///     Blocks if the pool exceeds capacity until a service is released.<br />
@@ -23,6 +26,16 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 		/// </summary>
 		/// <param name="threads">Number of internal CRM services to create.</param>
 		TService GetService(int threads = 1);
+
+		/// <summary>
+		///     Starts making connections to fill the internal queue. Makes retrieving the connections a lot faster later.
+		/// </summary>
+		void WarmUp();
+
+		/// <summary>
+		///     Stops the warmup process.
+		/// </summary>
+		void EndWarmup();
 
 		/// <summary>
 		///     Clears the cache of the Factory used to initialise the Pool.
