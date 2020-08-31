@@ -79,7 +79,14 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 
 				if (!proxy.IsAuthenticated || isTokenExpires)
 				{
-					proxy.Authenticate();
+					try
+					{
+						proxy.Authenticate();
+					}
+					catch
+					{
+						// ignored
+					}
 				}
 
 				isValidToken = proxy.IsAuthenticated;
@@ -88,8 +95,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 			var webProxy = clientService.OrganizationWebProxyClient;
 
 			if (webProxy != null)
-			{
-			}
+			{ }
 
 			if (isValidToken == null)
 			{

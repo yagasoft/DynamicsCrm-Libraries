@@ -48,7 +48,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 		/// </summary>
 		public CacheMode? CacheMode
 		{
-			get => cacheMode;
+			get => cacheMode ?? Params.CacheMode.Private;
 			set
 			{
 				ValidateLock();
@@ -89,7 +89,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 		}
 
 		private ObjectCache objectCache;
-		private CacheMode? cacheMode = Params.CacheMode.Private;
+		private CacheMode? cacheMode;
 		private DateTimeOffset? offset;
 		private TimeSpan? slidingExpiration;
 	}

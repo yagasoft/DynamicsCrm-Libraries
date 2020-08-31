@@ -5,29 +5,6 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 {
 	public class EnhancedServiceParams : ParamsBase
 	{
-		private bool isLocked;
-
-		private ConnectionParams connectionParams;
-
-		private bool isCachingEnabled;
-		private CachingParams cachingParams;
-
-		private bool isTransactionsEnabled;
-		private TransactionParams transactionParams;
-
-		private bool isConcurrencyEnabled;
-		private ConcurrencyParams concurrencyParams;
-
-		private PoolParams poolParams;
-
-		public EnhancedServiceParams()
-		{ }
-
-		public EnhancedServiceParams(string connectionString)
-		{
-			connectionParams = new ConnectionParams { ConnectionString = connectionString };
-		}
-
 		public override bool IsLocked
 		{
 			get => isLocked;
@@ -156,5 +133,52 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 				poolParams = value;
 			}
         }
+
+		private bool isLocked;
+
+		private ConnectionParams connectionParams;
+
+		private bool isCachingEnabled;
+		private CachingParams cachingParams;
+
+		private bool isTransactionsEnabled;
+		private TransactionParams transactionParams;
+
+		private bool isConcurrencyEnabled;
+		private ConcurrencyParams concurrencyParams;
+
+		private PoolParams poolParams;
+
+		public EnhancedServiceParams()
+		{ }
+
+		public EnhancedServiceParams(string connectionString)
+		{
+			connectionParams = new ConnectionParams { ConnectionString = connectionString };
+		}
+
+		/// <summary>
+		///     Automatically sets all performance parameters in this object tree to try to achieve the best performance possible.
+		///     <br />
+		///     Those parameters are app-wide -- global on the .Net Framework level; so they will affect all logic in this process.
+		/// </summary>
+		public void AutoSetMaxPerformanceParams()
+		{
+			if (ConnectionParams == null)
+			{
+				ConnectionParams = new ConnectionParams();
+			}
+
+			ConnectionParams.DotNetDefaultConnectionLimit = 30000;
+			ConnectionParams.IsDotNetDisableWaitForConnectConfirm = true;
+			ConnectionParams.IsDotNetDisableNagleAlgorithm = true;
+
+			if (PoolParams == null)
+			{
+				PoolParams = new PoolParams();
+			}
+
+			PoolParams.DotNetSetMinAppReservedThreads = 100;
+		}
 	}
 }

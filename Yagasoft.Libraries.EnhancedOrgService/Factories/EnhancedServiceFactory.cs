@@ -34,26 +34,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 		{
 			parameters.Require(nameof(parameters));
 
-			if (parameters.ConnectionParams?.DotNetDefaultConnectionLimit.HasValue == true)
-			{
-				System.Net.ServicePointManager.DefaultConnectionLimit = parameters.ConnectionParams.DotNetDefaultConnectionLimit.Value;
-			}
-
-			if (parameters.PoolParams?.DotNetSetMinAppReservedThreads.HasValue == true)
-			{
-				var minThreads = parameters.PoolParams.DotNetSetMinAppReservedThreads.Value;
-				System.Threading.ThreadPool.SetMinThreads(minThreads, minThreads);
-			}
-
-			if (parameters.ConnectionParams?.IsDotNetWaitForConnectConfirm.HasValue == true)
-			{
-				System.Net.ServicePointManager.Expect100Continue = parameters.ConnectionParams.IsDotNetWaitForConnectConfirm.Value;
-			}
-
-			if (parameters.ConnectionParams?.IsDotNetUseNagleAlgorithm.HasValue == true)
-			{
-				System.Net.ServicePointManager.UseNagleAlgorithm = parameters.ConnectionParams.IsDotNetUseNagleAlgorithm.Value;
-			}
+			SetPerformanceParams(parameters);
 
 			this.parameters = parameters;
 
@@ -91,6 +72,31 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 			}
 
 			customServiceFactory = parameters.ConnectionParams.CustomIOrgSvcFactory ?? customServiceFactory;
+		}
+
+		private static void SetPerformanceParams(EnhancedServiceParams parameters)
+		{
+			if (parameters.ConnectionParams?.DotNetDefaultConnectionLimit.HasValue == true)
+			{
+				System.Net.ServicePointManager.DefaultConnectionLimit = parameters.ConnectionParams.DotNetDefaultConnectionLimit.Value;
+			}
+
+			if (parameters.PoolParams?.DotNetSetMinAppReservedThreads.HasValue == true)
+			{
+				var minThreads = parameters.PoolParams.DotNetSetMinAppReservedThreads.Value;
+				System.Threading.ThreadPool.SetMinThreads(minThreads, minThreads);
+			}
+
+			if (parameters.ConnectionParams?.IsDotNetDisableWaitForConnectConfirm.HasValue == true)
+			{
+				System.Net.ServicePointManager.Expect100Continue =
+					!parameters.ConnectionParams.IsDotNetDisableWaitForConnectConfirm.Value;
+			}
+
+			if (parameters.ConnectionParams?.IsDotNetDisableNagleAlgorithm.HasValue == true)
+			{
+				System.Net.ServicePointManager.UseNagleAlgorithm = !parameters.ConnectionParams.IsDotNetDisableNagleAlgorithm.Value;
+			}
 		}
 
 		public virtual TEnhancedOrgService CreateEnhancedService(int threads = 1)
@@ -160,7 +166,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 				service = serviceCloneBase.Clone();
 			}
 			
-			if (service.EnsureTokenValid(parameters.PoolParams.TokenExpiryCheckSecs) == false)
+			if (service.EnsureTokenValid(parameters.PoolParams.TokenExpiryCheckSecs ?? 0) == false)
 			{
 				service = null;
 			}
