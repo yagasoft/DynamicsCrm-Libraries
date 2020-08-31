@@ -28,6 +28,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 		private readonly EnhancedServiceParams parameters;
 		private readonly ObjectCache factoryCache;
 		private readonly Func<string, IOrganizationService> customServiceFactory = ConnectionHelpers.CreateCrmService;
+		private CrmServiceClient serviceCloneBase;
 
 		public EnhancedServiceFactory(EnhancedServiceParams parameters)
 		{
@@ -127,7 +128,25 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 
 		public IOrganizationService CreateCrmService()
 		{
-			return customServiceFactory(parameters.ConnectionParams.ConnectionString);
+			IOrganizationService service = null;
+
+			if (serviceCloneBase == null)
+			{
+				service = customServiceFactory(parameters.ConnectionParams.ConnectionString);
+				serviceCloneBase = service as CrmServiceClient;
+			}
+
+			if (serviceCloneBase != null)
+			{
+				service = serviceCloneBase.Clone();
+			}
+			
+			if (service.EnsureTokenValid(parameters.PoolParams.TokenExpiryCheckSecs) == false)
+			{
+				service = null;
+			}
+
+			return service ?? customServiceFactory(parameters.ConnectionParams.ConnectionString);
 		}
 
 		/// <summary>

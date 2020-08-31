@@ -77,7 +77,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 		{
 		    var service = servicesQueue.Dequeue();
 
-		    if (ConnectionHelpers.EnsureTokenValid(service) == false)
+		    if (service.EnsureTokenValid() == false)
 		    {
 				throw new Exception("Service token has expired.");
 		    }

@@ -26,7 +26,7 @@
 		/// </summary>
 	    public int TokenExpiryCheckSecs
 	    {
-		    get => tokenExpiryCheckSecs ?? 3600;
+		    get => tokenExpiryCheckSecs ?? 60 * 60;
 		    set
 		    {
 			    ValidateLock();
@@ -43,7 +43,7 @@
 		/// </summary>
 	    public int DequeueTimeoutInMillis
 	    {
-		    get => dequeueTimeoutInMillis ?? 120000;
+		    get => dequeueTimeoutInMillis ?? 2 * 60 * 1000;
 		    set
 		    {
 			    ValidateLock();

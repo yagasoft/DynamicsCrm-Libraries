@@ -105,7 +105,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 					crmServicesQueue.TryDequeue(out crmService);
 				}
 
-				if (ConnectionHelpers.EnsureTokenValid(crmService, poolParams.TokenExpiryCheckSecs) == false)
+				if (crmService.EnsureTokenValid(poolParams.TokenExpiryCheckSecs) == false)
 				{
 					crmService = null;
 				}

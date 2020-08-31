@@ -11,7 +11,7 @@ using Yagasoft.Libraries.Common;
 
 namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 {
-	public class ConnectionHelpers
+	public static class ConnectionHelpers
 	{
 		private static readonly object lockObject = new object();
 
@@ -55,7 +55,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 			return service;
 		}
 
-		public static bool? EnsureTokenValid(IOrganizationService crmService, int tokenExpiryCheckSecs = 600)
+		public static bool? EnsureTokenValid(this IOrganizationService crmService, int tokenExpiryCheckSecs = 600)
 		{
 			if (crmService == null || !(crmService is CrmServiceClient clientService))
 			{
