@@ -38,6 +38,7 @@ A collection of libraries for common and extended operations in Dynamics CRM dev
 
 #### _v2.5.1 (2020-08-31)_
 + Added: use CrmServiceClient's Clone method internally for faster pooling of connections if available (SDK limits it for CRM Online only for now)
++ Added: DotNet optimisation options
 #### _v2.4.1 (2020-08-28)_
 + Added: Pools accept a function to define custom logic for IOrganizationService creation
 + Added: warmup logic for CRM connections to improve caching performance

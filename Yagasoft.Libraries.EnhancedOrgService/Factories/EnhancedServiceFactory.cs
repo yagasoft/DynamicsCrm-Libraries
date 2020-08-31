@@ -33,9 +33,28 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 		public EnhancedServiceFactory(EnhancedServiceParams parameters)
 		{
 			parameters.Require(nameof(parameters));
-			parameters.ConnectionParams.Require(nameof(parameters.ConnectionParams));
-			parameters.ConnectionParams.ConnectionString.RequireFilled(nameof(parameters.ConnectionParams.ConnectionString));
-			
+
+			if (parameters.ConnectionParams?.DotNetDefaultConnectionLimit.HasValue == true)
+			{
+				System.Net.ServicePointManager.DefaultConnectionLimit = parameters.ConnectionParams.DotNetDefaultConnectionLimit.Value;
+			}
+
+			if (parameters.PoolParams?.DotNetSetMinAppReservedThreads.HasValue == true)
+			{
+				var minThreads = parameters.PoolParams.DotNetSetMinAppReservedThreads.Value;
+				System.Threading.ThreadPool.SetMinThreads(minThreads, minThreads);
+			}
+
+			if (parameters.ConnectionParams?.IsDotNetWaitForConnectConfirm.HasValue == true)
+			{
+				System.Net.ServicePointManager.Expect100Continue = parameters.ConnectionParams.IsDotNetWaitForConnectConfirm.Value;
+			}
+
+			if (parameters.ConnectionParams?.IsDotNetUseNagleAlgorithm.HasValue == true)
+			{
+				System.Net.ServicePointManager.UseNagleAlgorithm = parameters.ConnectionParams.IsDotNetUseNagleAlgorithm.Value;
+			}
+
 			this.parameters = parameters;
 
 			if (parameters.IsCachingEnabled)

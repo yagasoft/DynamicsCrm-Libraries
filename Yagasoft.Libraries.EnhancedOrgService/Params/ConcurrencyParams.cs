@@ -2,8 +2,6 @@
 {
     public class ConcurrencyParams : ParamsBase
     {
-	    private bool isAsyncAppHold;
-
 	    public bool IsAsyncAppHold
 	    {
 		    get => isAsyncAppHold;
@@ -13,5 +11,7 @@
 			    isAsyncAppHold = value;
 		    }
 	    }
+
+	    private bool isAsyncAppHold;
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using Yagasoft.Libraries.Common;
 
 namespace Yagasoft.Libraries.EnhancedOrgService.Params
 {
@@ -67,6 +68,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 			set
 			{
 				ValidateLock();
+				value.Require(nameof(ConnectionParams));
 				connectionParams = value;
 			}
 		}
@@ -87,6 +89,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 			set
 			{
 				ValidateLock();
+				value.Require(nameof(CachingParams));
 				cachingParams = value;
 			    IsCachingEnabled = true;
 			}
@@ -108,6 +111,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 			set
 			{
 				ValidateLock();
+				value.Require(nameof(TransactionParams));
 				transactionParams = value;
 			    IsTransactionsEnabled = true;
 			}
@@ -136,6 +140,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 			set
 			{
 				ValidateLock();
+				value.Require(nameof(ConcurrencyParams));
 				concurrencyParams = value;
 			    IsConcurrencyEnabled = true;
 			}
@@ -147,6 +152,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 			set
 			{
 				ValidateLock();
+				value.Require(nameof(PoolParams));
 				poolParams = value;
 			}
         }
