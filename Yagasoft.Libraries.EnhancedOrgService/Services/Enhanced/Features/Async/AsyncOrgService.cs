@@ -4,7 +4,7 @@ using Yagasoft.Libraries.EnhancedOrgService.Params;
 
 #endregion
 
-namespace Yagasoft.Libraries.EnhancedOrgService.Services
+namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Features.Async
 {
 	/// <summary>
 	///     Author: Ahmed Elsawalhy<br />

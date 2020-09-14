@@ -1,13 +1,10 @@
 ﻿#region Imports
 
-using System;
 using Yagasoft.Libraries.EnhancedOrgService.Params;
-using Yagasoft.Libraries.EnhancedOrgService.Response;
-using Microsoft.Xrm.Sdk;
 
 #endregion
 
-namespace Yagasoft.Libraries.EnhancedOrgService.Services
+namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 {
 	/// <summary>
 	///     Author: Ahmed Elsawalhy<br />

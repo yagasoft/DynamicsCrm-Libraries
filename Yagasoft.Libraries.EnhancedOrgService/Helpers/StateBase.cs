@@ -1,16 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Yagasoft.Libraries.EnhancedOrgService.Builders;
+﻿#region Imports
+
 using Yagasoft.Libraries.EnhancedOrgService.Exceptions;
+
+#endregion
 
 namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 {
 	public abstract class StateBase
 	{
-	    protected bool IsValid;
+		protected bool IsValid;
 
 		internal void ValidateState(bool isValid = true)
 		{
@@ -18,9 +16,10 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 			{
 				throw new StateException("Object is in an invalid state.");
 			}
-			else if (!isValid && IsValid)
+
+			if (!isValid && IsValid)
 			{
-				throw new StateException("Object is in n valid state.");
+				throw new StateException("Object is in a valid state.");
 			}
 		}
 	}

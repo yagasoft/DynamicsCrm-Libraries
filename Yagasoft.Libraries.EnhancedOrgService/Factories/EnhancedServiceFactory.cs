@@ -16,6 +16,8 @@ using Microsoft.Xrm.Client.Caching;
 using Microsoft.Xrm.Client.Services;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Tooling.Connector;
+using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced;
+using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Features.Async;
 
 #endregion
 
@@ -23,7 +25,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 {
 	/// <inheritdoc cref="IEnhancedServiceFactory{TEnhancedOrgService}" />
 	public class EnhancedServiceFactory<TEnhancedOrgService> : IEnhancedServiceFactory<TEnhancedOrgService>
-		where TEnhancedOrgService : EnhancedOrgServiceBase
+		where TEnhancedOrgService : IEnhancedOrgService
 	{
 		private readonly EnhancedServiceParams parameters;
 		private readonly ObjectCache factoryCache;
@@ -107,10 +109,11 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 		internal virtual TEnhancedOrgService CreateEnhancedServiceInternal(bool isInitialiseCrmServices = true, int threads = 1)
 		{
 			var enhancedService = (TEnhancedOrgService)Activator.CreateInstance(typeof(TEnhancedOrgService), parameters);
+			var enhancedOrgServiceBase = enhancedService as EnhancedOrgServiceBase;
 
-			if (parameters.IsTransactionsEnabled)
+			if (parameters.IsTransactionsEnabled && enhancedOrgServiceBase != null)
 			{
-				enhancedService.TransactionManager = new TransactionManager();
+				enhancedOrgServiceBase.TransactionManager = new TransactionManager();
 			}
 
 			if (parameters.IsCachingEnabled)
@@ -139,13 +142,16 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 							parameters.CachingParams.SlidingExpiration)
 					};
 
-				enhancedService.Cache = new OrganizationServiceCache(cache, cacheSettings);
-				enhancedService.ObjectCache = cache;
+				if (enhancedOrgServiceBase != null)
+				{
+					enhancedOrgServiceBase.Cache = new OrganizationServiceCache(cache, cacheSettings);
+					enhancedOrgServiceBase.ObjectCache = cache;
+				}
 			}
 
 			if (isInitialiseCrmServices)
 			{
-				enhancedService.FillServicesQueue(Enumerable.Range(0, threads).Select(e => CreateCrmService()));
+				enhancedOrgServiceBase?.FillServicesQueue(Enumerable.Range(0, threads).Select(e => CreateCrmService()));
 			}
 
 			return enhancedService;

@@ -1,16 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Yagasoft.Libraries.EnhancedOrgService.Builders;
+﻿#region Imports
+
 using Yagasoft.Libraries.EnhancedOrgService.Exceptions;
+
+#endregion
 
 namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 {
 	public abstract class ProcessBase
 	{
-	    protected bool IsInitialised;
+		protected bool IsInitialised;
 		protected bool IsFinalised;
 
 		internal void ValidateInitialised(bool isInitialised = true)
@@ -19,7 +17,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 			{
 				throw new InitialisationException("Process must be initialised.");
 			}
-			else if (!isInitialised && IsInitialised)
+
+			if (!isInitialised && IsInitialised)
 			{
 				throw new InitialisationException("Process cannot be initialised.");
 			}
@@ -31,7 +30,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 			{
 				throw new FinalisationException("Process must be finalised.");
 			}
-			else if (!isFinalised && IsFinalised)
+
+			if (!isFinalised && IsFinalised)
 			{
 				throw new FinalisationException("Process cannot be finalised.");
 			}

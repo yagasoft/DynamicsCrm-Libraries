@@ -1,6 +1,6 @@
 ﻿#region Imports
 
-using Yagasoft.Libraries.EnhancedOrgService.Services;
+using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced;
 
 #endregion
 
@@ -39,7 +39,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 
 		/// <summary>
 		///     Clears the cache of the Factory used to initialise the Pool.
-		///	    If the cache scope is not set to Factory in the Params, an Exception will be thrown.
+		///     If the cache scope is not set to Factory in the Params, an Exception will be thrown.
 		/// </summary>
 		void ClearFactoryCache();
 

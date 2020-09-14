@@ -3,9 +3,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Yagasoft.Libraries.EnhancedOrgService.Helpers;
-using Yagasoft.Libraries.EnhancedOrgService.Response;
 using Microsoft.Xrm.Sdk;
+using Yagasoft.Libraries.EnhancedOrgService.Helpers;
 using Yagasoft.Libraries.EnhancedOrgService.Response.Operations;
 
 #endregion
@@ -105,9 +104,11 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Transactions
 					{
 						operation = operationsStack.Pop();
 						//operation.IsDoneWait();		// TODO: wait for operation to finish first
-						service.Execute(operation.UndoRequest);		// undo
-					} while (operationsStack.Any() && currentTransaction.StartingPoint != operation);
-				} while (currentTransaction != transaction && transaction != null);
+						service.Execute(operation.UndoRequest); // undo
+					}
+					while (operationsStack.Any() && currentTransaction.StartingPoint != operation);
+				}
+				while (currentTransaction != transaction && transaction != null);
 			}
 			catch (Exception ex)
 			{
@@ -128,7 +129,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Transactions
 			{
 				currentTransaction = transactionsStack.Pop();
 				currentTransaction.Current = false;
-			} while (currentTransaction != transaction && transaction != null);
+			}
+			while (currentTransaction != transaction && transaction != null);
 		}
 	}
 }

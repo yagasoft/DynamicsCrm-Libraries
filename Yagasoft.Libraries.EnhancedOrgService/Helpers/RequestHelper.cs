@@ -1,10 +1,10 @@
 ﻿#region Imports
 
 using System;
-using Yagasoft.Libraries.EnhancedOrgService.Cache;
 using Microsoft.Crm.Sdk.Messages;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
+using Yagasoft.Libraries.EnhancedOrgService.Cache;
 
 #endregion
 

@@ -1,8 +1,8 @@
 ﻿#region Imports
 
 using System.Collections.Generic;
-using Yagasoft.Libraries.Common;
 using Microsoft.Xrm.Sdk.Query;
+using Yagasoft.Libraries.Common;
 
 #endregion
 
@@ -14,15 +14,15 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Cache
 
 		public void AddCachedQuery(QueryBase query, QueryExpression queryExpression)
 		{
-			var serialisedQuery = SerialiserHelpers.SerialiseXml(query);
-			queryCache[serialisedQuery] = SerialiserHelpers.SerialiseXml(queryExpression);
+			var serialisedQuery = SerialiserHelpers.SerialiseStrictXml(query);
+			queryCache[serialisedQuery] = SerialiserHelpers.SerialiseStrictXml(queryExpression);
 		}
 
 		public QueryExpression GetCachedQuery(QueryBase query)
 		{
-			var serialisedQuery = SerialiserHelpers.SerialiseXml(query);
+			var serialisedQuery = SerialiserHelpers.SerialiseStrictXml(query);
 			queryCache.TryGetValue(serialisedQuery, out var queryExpression);
-			return queryExpression == null ? null : SerialiserHelpers.DeserializeXml<QueryExpression>(queryExpression);
+			return queryExpression == null ? null : SerialiserHelpers.DeserialiseStrictXml<QueryExpression>(queryExpression);
 		}
 
 		public void ClearCache()

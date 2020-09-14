@@ -2,43 +2,45 @@
 
 [![Join the chat at https://gitter.im/yagasoft/DynamicsCrm-Libraries](https://badges.gitter.im/yagasoft/DynamicsCrm-Libraries.svg)](https://gitter.im/yagasoft/DynamicsCrm-Libraries?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-### Version: 2.5.1
+### Version: 3.1.1
 ---
 
 A collection of libraries for common and extended operations in Dynamics CRM development that gives power to the developer and saves time.
 
 ## Features
 
-  + Massive JS and CS libraries of common and generic functions and classes.
-  + An extension to the out-of-the-box IOrganizationService. Supports:
-    + Async operations with dependency
-    + Transactions and rollback
-    + Caching
+  + Massive JS and CS libraries of common and generic functions and classes
+  + An extension to the out-of-the-box IOrganizationService
     + Automatic pool/queue handling
     + Automatic thread handling
     + Connection warmup to improve caching performance
+    + Caching of operation results
+    + Deferred operations to run in a transaction
+      + Accumulate operations from across the application to be executed in one go
+    + Planned execution to be sent to CRM for execution
+      + Return values from mid-execution operations can be used in later operations within the same transaction
+    + Async operations with support for async/await and dependency definitions
   + Dynamics-CRM-specific code analysis rules
 
 ## Guide
 
   + Download
-    + Common (either)
+    + Common library (either packages)
       + Assembly: [Yagasoft.Libraries.Common](https://www.nuget.org/packages/Yagasoft.Libraries.Common)
       + Single CS file: [Yagasoft.Libraries.Common.File](https://www.nuget.org/packages/Yagasoft.Libraries.Common.File)
-    + EnhancedOrgService
+    + Enhanced Organisation Service library
       + NuGet: [Yagasoft.Libraries.EnhancedOrgService](https://www.nuget.org/packages/Yagasoft.Libraries.EnhancedOrgService)
-
-## Dependencies
-
-  + NuGet executable
-    + Required to deploy the NuGet packages
-    + Should be added to the 'lib' folder
 
 ## Changes
 
+#### _v3.1.1 (2020-09-14)_
++ Added: execution planning, where a plan is executed in CRM itself for performance and atomicity reasons
++ Added: more convenience methods
++ Changed: refactoring
 #### _v2.5.1 (2020-08-31)_
 + Added: use CrmServiceClient's Clone method internally for faster pooling of connections if available (SDK limits it for CRM Online only for now)
 + Added: DotNet optimisation options
++ Fixed: issues
 #### _v2.4.1 (2020-08-28)_
 + Added: Pools accept a function to define custom logic for IOrganizationService creation
 + Added: warmup logic for CRM connections to improve caching performance

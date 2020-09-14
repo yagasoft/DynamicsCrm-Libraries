@@ -1,6 +1,10 @@
-﻿using System;
+﻿#region Imports
+
+using System;
 using System.Runtime.Caching;
 using Microsoft.Xrm.Client.Services;
+
+#endregion
 
 namespace Yagasoft.Libraries.EnhancedOrgService.Cache
 {

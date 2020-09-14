@@ -57,7 +57,6 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 			}
 		}
 
-
 		/// <summary>
 		///     Bump up the min threads reserved for this app. Default: 4.<br />
 		///     This is an app-wide (global on the .Net Framework level) setting.

@@ -1,5 +1,9 @@
-﻿using System;
+﻿#region Imports
+
+using System;
 using Yagasoft.Libraries.Common;
+
+#endregion
 
 namespace Yagasoft.Libraries.EnhancedOrgService.Params
 {
@@ -68,7 +72,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 				ValidateLock();
 				value.Require(nameof(CachingParams));
 				cachingParams = value;
-			    IsCachingEnabled = true;
+				IsCachingEnabled = true;
 			}
 		}
 
@@ -90,9 +94,9 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 				ValidateLock();
 				value.Require(nameof(TransactionParams));
 				transactionParams = value;
-			    IsTransactionsEnabled = true;
+				IsTransactionsEnabled = true;
 			}
-        }
+		}
 
 		public bool IsConcurrencyEnabled
 		{
@@ -100,7 +104,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 			set
 			{
 				ValidateLock();
-				
+
 				if (isConcurrencyEnabled && ConcurrencyParams == null)
 				{
 					throw new ArgumentNullException(nameof(ConcurrencyParams),
@@ -119,9 +123,9 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 				ValidateLock();
 				value.Require(nameof(ConcurrencyParams));
 				concurrencyParams = value;
-			    IsConcurrencyEnabled = true;
+				IsConcurrencyEnabled = true;
 			}
-        }
+		}
 
 		public PoolParams PoolParams
 		{
@@ -132,7 +136,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 				value.Require(nameof(PoolParams));
 				poolParams = value;
 			}
-        }
+		}
 
 		private bool isLocked;
 

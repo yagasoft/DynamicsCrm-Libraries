@@ -1,8 +1,8 @@
 ﻿#region Imports
 
-using Yagasoft.Libraries.EnhancedOrgService.Pools;
-using Yagasoft.Libraries.EnhancedOrgService.Services;
 using Microsoft.Xrm.Sdk;
+using Yagasoft.Libraries.EnhancedOrgService.Pools;
+using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced;
 
 #endregion
 

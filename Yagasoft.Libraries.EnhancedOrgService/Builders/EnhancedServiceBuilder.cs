@@ -32,7 +32,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Builders
 			ValidateInitialised(false);
 			ValidateFinalised(false);
 
-			if (connectionString.Trim(';').Split(';').SelectMany(e => e.Split('=')).Count() % 2 != 0)
+			if (connectionString.Trim().Trim(';').Split(';').SelectMany(e => e.Split('=')).Count() % 2 != 0)
 			{
 				throw new FormatException("Connection string format is incorrect.");
 			}

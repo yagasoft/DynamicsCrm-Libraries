@@ -5,20 +5,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Xrm.Sdk;
+using Microsoft.Xrm.Sdk.Query;
 using Yagasoft.Libraries.Common;
 using Yagasoft.Libraries.EnhancedOrgService.Exceptions;
 using Yagasoft.Libraries.EnhancedOrgService.Helpers;
 using Yagasoft.Libraries.EnhancedOrgService.Params;
-using Yagasoft.Libraries.EnhancedOrgService.Response;
-using Microsoft.Xrm.Client.Services;
-using Microsoft.Xrm.Sdk;
-using Microsoft.Xrm.Sdk.Messages;
-using Microsoft.Xrm.Sdk.Query;
-using OperationStatus = Yagasoft.Libraries.EnhancedOrgService.Response.Operations.OperationStatus;
 
 #endregion
 
-namespace Yagasoft.Libraries.EnhancedOrgService.Services
+namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Features.Async
 {
 	/// <summary>
 	///     Author: Ahmed Elsawalhy<br />
@@ -28,7 +24,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 	{
 		private readonly bool isAsyncAppHold;
 
-		public AsyncOrgServiceBase(EnhancedServiceParams parameters) : base(parameters)
+		protected AsyncOrgServiceBase(EnhancedServiceParams parameters) : base(parameters)
 		{
 			if (!parameters.IsConcurrencyEnabled)
 			{
@@ -44,7 +40,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 		private Task GetDependenciesTask(params Task[] dependencies)
 		{
 			return dependencies.Aggregate<Task, Task>(null, (current, task) =>
-				current?.ContinueWith(taskQ => task.Wait()) ?? Task.Run(() => task.Wait()));
+				current?.ContinueWith(taskQ => task.Wait()) ?? Task.Run((Action)task.Wait));
 		}
 
 		private Task<TResult> GetDependentResult<TResult>(Func<TResult> function, params Task[] dependencies)
@@ -144,12 +140,12 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 			ValidateState();
 			return ExecuteBulkAsync(requestsList, isReturnResponses, 1000, true, null, dependencies);
 		}
-		
+
 		public Task<IDictionary<OrganizationRequest, ExecuteBulkResponse>> ExecuteBulkAsync(
 			List<OrganizationRequest> requestsList, bool isReturnResponses, int bulkSize, params Task[] dependencies)
 		{
 			ValidateState();
-			return ExecuteBulkAsync(requestsList, isReturnResponses, bulkSize,  true, null ,dependencies);
+			return ExecuteBulkAsync(requestsList, isReturnResponses, bulkSize, true, null, dependencies);
 		}
 
 		public async Task<IDictionary<OrganizationRequest, ExecuteBulkResponse>> ExecuteBulkAsync(
@@ -196,7 +192,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 				clonedQuery = RequestHelper.CloneQuery(service, query);
 			}
 
-			return await GetDependentResult(() => RetrieveMultipleRangePaged<TEntityType>(clonedQuery, pageStart, pageEnd, pageSize), dependencies);
+			return await GetDependentResult(() => RetrieveMultipleRangePaged<TEntityType>(clonedQuery, pageStart, pageEnd, pageSize),
+				dependencies);
 		}
 
 		public async Task<IEnumerable<TEntityType>> RetrieveMultiplePageAsync<TEntityType>(QueryExpression query,

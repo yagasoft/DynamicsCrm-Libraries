@@ -1,14 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿#region Imports
+
 using Yagasoft.Libraries.EnhancedOrgService.Exceptions;
+
+#endregion
 
 namespace Yagasoft.Libraries.EnhancedOrgService.Params
 {
-    public abstract class ParamsBase
-    {
+	public abstract class ParamsBase
+	{
 		public virtual bool IsLocked { get; internal set; }
 
 		public void ValidateLock()

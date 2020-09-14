@@ -27,10 +27,10 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Response.Operations
 		private DateTime endDate;
 
 		/// <summary>
-		/// Exception thrown by the CRM Organisation Service.
+		///     Exception thrown by the CRM Organisation Service.
 		/// </summary>
 		/// <value>
-		/// The exception.
+		///     The exception.
 		/// </value>
 		public Exception Exception
 		{
@@ -48,6 +48,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Response.Operations
 
 		public DateTime StartDate { get; protected set; }
 		public TimeSpan TotalTime { get; protected set; }
+
 		public DateTime EndDate
 		{
 			get => endDate;
@@ -61,10 +62,10 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Response.Operations
 		public OperationStatus OperationStatus { get; internal set; }
 
 		/// <summary>
-		/// Index of the operation since the creation of the enhanced service that is handling this operation.
+		///     Index of the operation since the creation of the enhanced service that is handling this operation.
 		/// </summary>
 		/// <value>
-		/// The index.
+		///     The index.
 		/// </value>
 		public int Index { get; internal set; }
 
@@ -72,7 +73,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Response.Operations
 		{
 			StartDate = DateTime.Now;
 			OperationStatus = OperationStatus.Ready;
-			
+
 			Request = request;
 			UndoRequest = undoRequest;
 		}

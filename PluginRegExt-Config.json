@@ -1,0 +1,10 @@
+{
+  "SelectedSettingsIndex": 0,
+  "SettingsList": [
+    {
+      "DisplayName": "",
+      "ProfileName": "",
+      "ConnectionString": "AuthType = AD;\r\nUrl      = http://win-dbm4c3jtk7h/Test;\r\nUsername = administrator;\r\nPassword = a;\r\nDomain   = YAGASOFT"
+    }
+  ]
+}

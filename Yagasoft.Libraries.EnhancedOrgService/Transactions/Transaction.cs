@@ -1,6 +1,8 @@
-﻿using Yagasoft.Libraries.EnhancedOrgService.Response;
-using Microsoft.Xrm.Sdk;
+﻿#region Imports
+
 using Yagasoft.Libraries.EnhancedOrgService.Response.Operations;
+
+#endregion
 
 namespace Yagasoft.Libraries.EnhancedOrgService.Transactions
 {
@@ -12,7 +14,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Transactions
 		public readonly string Id;
 
 		/// <summary>
-		/// If true, indicates that the transaction hasn't ended yet.
+		///     If true, indicates that the transaction hasn't ended yet.
 		/// </summary>
 		public bool Current = true;
 

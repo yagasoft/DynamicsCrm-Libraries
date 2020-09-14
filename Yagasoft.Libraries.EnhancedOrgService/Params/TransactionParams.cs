@@ -1,6 +1,5 @@
 ﻿namespace Yagasoft.Libraries.EnhancedOrgService.Params
 {
-    public class TransactionParams : ParamsBase
-	{
-    }
+	public class TransactionParams : ParamsBase
+	{ }
 }

@@ -1,5 +1,9 @@
-﻿using System;
+﻿#region Imports
+
+using System;
 using System.Runtime.Serialization;
+
+#endregion
 
 namespace Yagasoft.Libraries.EnhancedOrgService.Exceptions
 {
@@ -7,19 +11,15 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Exceptions
 	public class InitialisationException : Exception
 	{
 		public InitialisationException()
-		{
-		}
+		{ }
 
 		public InitialisationException(string message) : base(message)
-		{
-		}
+		{ }
 
 		public InitialisationException(string message, Exception innerException) : base(message, innerException)
-		{
-		}
+		{ }
 
 		protected InitialisationException(SerializationInfo info, StreamingContext context) : base(info, context)
-		{
-		}
+		{ }
 	}
 }

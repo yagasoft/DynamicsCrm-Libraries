@@ -7,7 +7,8 @@ using Yagasoft.Libraries.EnhancedOrgService.Builders;
 using Yagasoft.Libraries.EnhancedOrgService.Factories;
 using Yagasoft.Libraries.EnhancedOrgService.Params;
 using Yagasoft.Libraries.EnhancedOrgService.Pools;
-using Yagasoft.Libraries.EnhancedOrgService.Services;
+using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced;
+using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Features.Async;
 
 #endregion
 
@@ -27,26 +28,28 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 		/// <param name="customIOrgSvcFactory">
 		///     A custom factory that will be used to create CRM connections instead of the library built-in method.
 		/// </param>
-		public static EnhancedServicePool<Services.EnhancedOrgService> GetPool(string connectionString, int poolSize = 2,
+		public static EnhancedServicePool<Services.Enhanced.EnhancedOrgService> GetPool(string connectionString, int poolSize = 2,
 			Func<string, IOrganizationService> customIOrgSvcFactory = null)
 		{
-			return BuildPool<Services.EnhancedOrgService>(
+			var parameters =
 				new EnhancedServiceParams
 				{
-					ConnectionParams =
-						new ConnectionParams
-						{
-							ConnectionString = connectionString,
-							CustomIOrgSvcFactory = customIOrgSvcFactory
-						},
+					ConnectionParams = new ConnectionParams { ConnectionString = connectionString },
 					PoolParams = new PoolParams { PoolSize = poolSize }
-				});
+				};
+
+			if (customIOrgSvcFactory != null)
+			{
+				parameters.ConnectionParams.CustomIOrgSvcFactory = customIOrgSvcFactory;
+			}
+
+			return BuildPool<Services.Enhanced.EnhancedOrgService>(parameters);
 		}
-		
-		public static EnhancedServicePool<Services.EnhancedOrgService> GetPool(EnhancedServiceParams serviceParams)
+
+		public static EnhancedServicePool<Services.Enhanced.EnhancedOrgService> GetPool(EnhancedServiceParams serviceParams)
 		{
 			serviceParams.Require(nameof(serviceParams));
-			return BuildPool<Services.EnhancedOrgService>(serviceParams);
+			return BuildPool<Services.Enhanced.EnhancedOrgService>(serviceParams);
 		}
 
 		/// <summary>
@@ -60,17 +63,19 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 		public static EnhancedServicePool<AsyncOrgService> GetAsyncPool(string connectionString, int poolSize = 2,
 			Func<string, IOrganizationService> customIOrgSvcFactory = null)
 		{
-			return BuildPool<AsyncOrgService>(
+			var parameters =
 				new EnhancedServiceParams
 				{
-					ConnectionParams =
-						new ConnectionParams
-						{
-							ConnectionString = connectionString,
-							CustomIOrgSvcFactory = customIOrgSvcFactory
-						},
+					ConnectionParams = new ConnectionParams { ConnectionString = connectionString },
 					PoolParams = new PoolParams { PoolSize = poolSize }
-				});
+				};
+
+			if (customIOrgSvcFactory != null)
+			{
+				parameters.ConnectionParams.CustomIOrgSvcFactory = customIOrgSvcFactory;
+			}
+
+			return BuildPool<AsyncOrgService>(parameters);
 		}
 
 		public static EnhancedServicePool<AsyncOrgService> GetAsyncPool(EnhancedServiceParams serviceParams)
@@ -78,7 +83,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 			serviceParams.Require(nameof(serviceParams));
 			return BuildPool<AsyncOrgService>(serviceParams);
 		}
-		
+
 		private static EnhancedServicePool<TService> BuildPool<TService>(EnhancedServiceParams serviceParams)
 			where TService : EnhancedOrgServiceBase
 		{
@@ -92,7 +97,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 		{
 			serviceParams.ConnectionParams.Require(nameof(serviceParams.ConnectionParams));
 			serviceParams.ConnectionParams.ConnectionString.RequireFilled(nameof(serviceParams.ConnectionParams.ConnectionString));
-			
+
 			var builder = EnhancedServiceBuilder.NewBuilder.Initialise(serviceParams.ConnectionParams.ConnectionString);
 
 			if (serviceParams.IsCachingEnabled)

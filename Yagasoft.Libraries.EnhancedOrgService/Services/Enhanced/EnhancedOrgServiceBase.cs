@@ -1,37 +1,43 @@
 ﻿#region Imports
 
 using System;
+using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Caching;
 using System.Text;
 using System.Text.RegularExpressions;
-using Yagasoft.Libraries.Common;
-using Yagasoft.Libraries.EnhancedOrgService.Exceptions;
-using Yagasoft.Libraries.EnhancedOrgService.Helpers;
-using Yagasoft.Libraries.EnhancedOrgService.Params;
-using Yagasoft.Libraries.EnhancedOrgService.Response;
-using Yagasoft.Libraries.EnhancedOrgService.Transactions;
+using Microsoft.Xrm.Client;
 using Microsoft.Xrm.Client.Caching;
 using Microsoft.Xrm.Client.Services;
 using Microsoft.Xrm.Client.Services.Messages;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Messages;
 using Microsoft.Xrm.Sdk.Query;
+using Yagasoft.Libraries.Common;
+using Yagasoft.Libraries.EnhancedOrgService.Exceptions;
+using Yagasoft.Libraries.EnhancedOrgService.ExecutionPlan.Base;
+using Yagasoft.Libraries.EnhancedOrgService.ExecutionPlan.Planning;
+using Yagasoft.Libraries.EnhancedOrgService.ExecutionPlan.SdkMocks;
+using Yagasoft.Libraries.EnhancedOrgService.ExecutionPlan.SerialiseWorkarounds;
+using Yagasoft.Libraries.EnhancedOrgService.Helpers;
+using Yagasoft.Libraries.EnhancedOrgService.Params;
 using Yagasoft.Libraries.EnhancedOrgService.Response.Operations;
 using Yagasoft.Libraries.EnhancedOrgService.Response.Tokens;
+using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Features;
+using Yagasoft.Libraries.EnhancedOrgService.Transactions;
 
 #endregion
 
-namespace Yagasoft.Libraries.EnhancedOrgService.Services
+namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 {
 	/// <summary>
 	///     Author: Ahmed Elsawalhy<br />
-	///     Version: 4.2.1
 	/// </summary>
-	public abstract class EnhancedOrgServiceBase : StateBase, IEnhancedOrgService
+	public abstract class EnhancedOrgServiceBase : StateBase, IEnhancedOrgService, IDeferredOrgService, IPlannedOrgService
 	{
-		internal ITransactionManager TransactionManager;
+		internal ITransactionManager TransactionManager { get; set; }
 		protected int OperationIndex;
 
 		private readonly BlockingQueue<IOrganizationService> servicesQueue = new BlockingQueue<IOrganizationService>();
@@ -43,8 +49,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 
 		protected EnhancedServiceParams Parameters;
 
-		private readonly List<IToken<OrganizationResponse>> deferredRequests =
-			new List<IToken<OrganizationResponse>>();
+		private List<IToken<OrganizationResponse>> deferredRequests;
+		private Queue<PlannedOperation> executionQueue;
 
 		protected EnhancedOrgServiceBase(EnhancedServiceParams parameters)
 		{
@@ -75,12 +81,12 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 
 		internal SelfEnqueuingService GetService()
 		{
-		    var service = servicesQueue.Dequeue();
+			var service = servicesQueue.Dequeue();
 
-		    if (service.EnsureTokenValid() == false)
-		    {
+			if (service.EnsureTokenValid() == false)
+			{
 				throw new Exception("Service token has expired.");
-		    }
+			}
 
 			return new SelfEnqueuingService(servicesQueue, service);
 		}
@@ -88,14 +94,6 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 		#endregion
 
 		#region Transactions
-
-		private void ValidateTransactionSupport()
-		{
-			if (TransactionManager == null)
-			{
-				throw new UnsupportedException("Transactions are not enabled for this service.");
-			}
-		}
 
 		public Transaction BeginTransaction(string transactionId = null)
 		{
@@ -110,10 +108,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 			ValidateTransactionSupport();
 			ValidateState();
 
-			using (var service = GetService())
-			{
-				TransactionManager.UndoTransaction(service, transaction);
-			}
+			using var service = GetService();
+			TransactionManager.UndoTransaction(service, transaction);
 		}
 
 		public void AddUndoLogicToCache<TRequestType>(
@@ -141,9 +137,54 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 			TransactionManager.EndTransaction(transaction);
 		}
 
-	    #endregion
+		private void ValidateTransactionSupport()
+		{
+			if (TransactionManager == null)
+			{
+				throw new UnsupportedException("Transactions are not enabled for this service.");
+			}
+		}
+
+		#endregion
 
 		#region Caching
+
+		public void RemoveFromCache(Entity record)
+		{
+			Cache.Remove(record);
+		}
+
+		public void RemoveFromCache(EntityReference entity)
+		{
+			Cache.Remove(entity);
+		}
+
+		public void RemoveFromCache(string entityLogicalName, Guid? id)
+		{
+			Cache.Remove(entityLogicalName, id);
+		}
+
+		public void RemoveFromCache(OrganizationRequest request)
+		{
+			Cache.Remove(request);
+		}
+
+		public void RemoveAllFromCache()
+		{
+			Cache.Remove(new OrganizationServiceCachePluginMessage { Category = CacheItemCategory.All });
+		}
+
+		/// <inheritdoc />
+		public void ClearCache()
+		{
+			if (ObjectCache == null)
+			{
+				throw new UnsupportedException("The query's memory cache is not limited to this service's scope."
+					+ " Use the factory's method to clear the cache instead.");
+			}
+
+			ObjectCache.Clear();
+		}
 
 		private T Execute<T>(OrganizationRequest request, Func<OrganizationResponse, T> selector, string selectorCacheKey)
 		{
@@ -171,47 +212,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 
 		private OrganizationResponse InnerExecute(OrganizationRequest request)
 		{
-			using (var service = GetService())
-			{
-				return service.Execute(request is KeyedRequest keyedRequest ? keyedRequest.Request : request);
-			}
-		}
-
-	    public void RemoveFromCache(Entity record)
-	    {
-	        Cache.Remove(record);
-	    }
-
-	    public void RemoveFromCache(EntityReference entity)
-	    {
-	        Cache.Remove(entity);
-	    }
-
-        public void RemoveFromCache(string entityLogicalName, Guid? id)
-	    {
-            Cache.Remove(entityLogicalName, id);
-	    }
-
-        public void RemoveFromCache(OrganizationRequest request)
-	    {
-            Cache.Remove(request);
-	    }
-
-        public void RemoveAllFromCache()
-	    {
-            Cache.Remove(new OrganizationServiceCachePluginMessage {Category = CacheItemCategory.All});
-	    }
-
-        /// <inheritdoc />
-        public void ClearCache()
-		{
-			if (ObjectCache == null)
-			{
-				throw new UnsupportedException("The query's memory cache is not limited to this service's scope."
-					+ " Use the factory's method to clear the cache instead.");
-			}
-
-			ObjectCache.Clear();
+			using var service = GetService();
+			return service.Execute(request is KeyedRequest keyedRequest ? keyedRequest.Request : request);
 		}
 
 		#endregion
@@ -231,29 +233,27 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 								Index = OperationIndex++
 							};
 
-			using (var service = GetService())
+			using var service = GetService();
+			if (TransactionManager?.IsTransactionInEffect() == true)
 			{
-				if (TransactionManager?.IsTransactionInEffect() == true)
+				TransactionManager.ProcessRequest(service, operation);
+			}
+
+			try
+			{
+				var id = operation.Response = service.Create(entity);
+
+				if (IsCacheEnabled)
 				{
-					TransactionManager.ProcessRequest(service, operation);
+					Cache.Remove(entity);
 				}
 
-				try
-				{
-					var id = operation.Response = service.Create(entity);
-
-					if (IsCacheEnabled)
-					{
-						Cache.Remove(entity);
-					}
-
-					return id;
-				}
-				catch (Exception ex)
-				{
-					operation.Exception = ex;
-					throw;
-				}
+				return id;
+			}
+			catch (Exception ex)
+			{
+				operation.Exception = ex;
+				throw;
 			}
 		}
 
@@ -270,28 +270,26 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 								Index = OperationIndex++
 							};
 
-			using (var service = GetService())
+			using var service = GetService();
+			if (TransactionManager?.IsTransactionInEffect() == true)
 			{
-				if (TransactionManager?.IsTransactionInEffect() == true)
-				{
-					TransactionManager.ProcessRequest(service, operation);
-				}
+				TransactionManager.ProcessRequest(service, operation);
+			}
 
-				try
-				{
-					service.Update(entity);
-					operation.Response = new object();
+			try
+			{
+				service.Update(entity);
+				operation.Response = new object();
 
-					if (IsCacheEnabled)
-					{
-						Cache.Remove(entity);
-					}
-				}
-				catch (Exception ex)
+				if (IsCacheEnabled)
 				{
-					operation.Exception = ex;
-					throw;
+					Cache.Remove(entity);
 				}
+			}
+			catch (Exception ex)
+			{
+				operation.Exception = ex;
+				throw;
 			}
 		}
 
@@ -308,28 +306,26 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 								Index = OperationIndex++
 							};
 
-			using (var service = GetService())
+			using var service = GetService();
+			if (TransactionManager?.IsTransactionInEffect() == true)
 			{
-				if (TransactionManager?.IsTransactionInEffect() == true)
-				{
-					TransactionManager.ProcessRequest(service, operation);
-				}
+				TransactionManager.ProcessRequest(service, operation);
+			}
 
-				try
-				{
-					service.Delete(entityName, id);
-					operation.Response = new object();
+			try
+			{
+				service.Delete(entityName, id);
+				operation.Response = new object();
 
-					if (IsCacheEnabled)
-					{
-						Cache.Remove(entityName, id);
-					}
-				}
-				catch (Exception ex)
+				if (IsCacheEnabled)
 				{
-					operation.Exception = ex;
-					throw;
+					Cache.Remove(entityName, id);
 				}
+			}
+			catch (Exception ex)
+			{
+				operation.Exception = ex;
+				throw;
 			}
 		}
 
@@ -349,25 +345,23 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 								Index = OperationIndex++
 							};
 
-			using (var service = GetService())
+			using var service = GetService();
+			try
 			{
-				try
-				{
-					service.Associate(entityName, entityId, relationship, relatedEntities);
-				}
-				catch (Exception ex)
-				{
-					operation.Exception = ex;
-					throw;
-				}
-
-				if (TransactionManager?.IsTransactionInEffect() == true)
-				{
-					TransactionManager.ProcessRequest(service, operation);
-				}
-
-				operation.Response = new object();
+				service.Associate(entityName, entityId, relationship, relatedEntities);
 			}
+			catch (Exception ex)
+			{
+				operation.Exception = ex;
+				throw;
+			}
+
+			if (TransactionManager?.IsTransactionInEffect() == true)
+			{
+				TransactionManager.ProcessRequest(service, operation);
+			}
+
+			operation.Response = new object();
 		}
 
 		public void Disassociate(string entityName, Guid entityId, Relationship relationship,
@@ -386,25 +380,23 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 								Index = OperationIndex++
 							};
 
-			using (var service = GetService())
+			using var service = GetService();
+			try
 			{
-				try
-				{
-					service.Disassociate(entityName, entityId, relationship, relatedEntities);
-				}
-				catch (Exception ex)
-				{
-					operation.Exception = ex;
-					throw;
-				}
-
-				if (TransactionManager?.IsTransactionInEffect() == true)
-				{
-					TransactionManager.ProcessRequest(service, operation);
-				}
-
-				operation.Response = new object();
+				service.Disassociate(entityName, entityId, relationship, relatedEntities);
 			}
+			catch (Exception ex)
+			{
+				operation.Exception = ex;
+				throw;
+			}
+
+			if (TransactionManager?.IsTransactionInEffect() == true)
+			{
+				TransactionManager.ProcessRequest(service, operation);
+			}
+
+			operation.Response = new object();
 		}
 
 		public Entity Retrieve(string entityName, Guid id, ColumnSet columnSet)
@@ -425,10 +417,13 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 					})?.Entity;
 			}
 
-			using (var service = GetService())
-			{
-				return service.Retrieve(entityName, id, columnSet);
-			}
+			using var service = GetService();
+			return service.Retrieve(entityName, id, columnSet);
+		}
+
+		public virtual TEntity Retrieve<TEntity>(string entityName, Guid id, ColumnSet columnSet) where TEntity : Entity
+		{
+			return Retrieve(entityName, id, columnSet).ToEntity<TEntity>();
 		}
 
 		public EntityCollection RetrieveMultiple(QueryBase query)
@@ -444,10 +439,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 					})?.EntityCollection;
 			}
 
-			using (var service = GetService())
-			{
-				return service.RetrieveMultiple(query);
-			}
+			using var service = GetService();
+			return service.RetrieveMultiple(query);
 		}
 
 		public OrganizationResponse Execute(OrganizationRequest request)
@@ -491,12 +484,40 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 			}
 		}
 
+		public virtual TResponse Execute<TResponse, TRequest>(TRequest request,
+			Func<IOrganizationService, TRequest, OrganizationRequest> undoFunction = null)
+			where TRequest : OrganizationRequest
+			where TResponse : OrganizationResponse
+		{
+			return (TResponse)Execute(request, (Func<IOrganizationService, OrganizationRequest, OrganizationRequest>)undoFunction);
+		}
+
 		#endregion
 
 		#region Deferred
 
+		public IDeferredOrgService StartDeferredQueue()
+		{
+			if (deferredRequests == null)
+			{
+				deferredRequests = new List<IToken<OrganizationResponse>>();
+				return this;
+			}
+
+			throw new InitialisationException("Queue has already been started.");
+		}
+
+		private void ValidateDeferredQueueState()
+		{
+			if (deferredRequests == null)
+			{
+				throw new StateException("Deferred queue is in an invalid state. Restart the queue first.");
+			}
+		}
+
 		public IEnumerable<OrganizationRequest> GetDeferredRequests()
 		{
+			ValidateDeferredQueueState();
 			return deferredRequests
 				.Cast<OrganisationRequestToken<OrganizationResponse>>()
 				.Select(e => e.Request);
@@ -505,35 +526,44 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 		public IDictionary<OrganizationRequest, OrganisationRequestToken<OrganizationResponse>>
 			ExecuteDeferredRequests(int bulkSize = 1000)
 		{
+			ValidateDeferredQueueState();
+
 			var bulkResponse = deferredRequests
 				.Cast<OrganisationRequestToken<OrganizationResponse>>()
 				.Select(e => e.Request)
 				.ExecuteTransaction(this, true, bulkSize);
 
 			var responses = deferredRequests
-					.Cast<OrganisationRequestToken<OrganizationResponse>>()
-					.ToDictionary(
+				.Cast<OrganisationRequestToken<OrganizationResponse>>()
+				.ToDictionary(
 					e => e.Request,
 					e =>
 					{
 						e.Value = bulkResponse[e.Request].Response;
 						return e;
 					});
-
-			deferredRequests.Clear();
+			// TODO set response token as ready for consumption, else error
+			CancelDeferredRequests();
 
 			return responses;
 		}
 
+		public void CancelDeferredRequests()
+		{
+			deferredRequests?.Clear();
+			deferredRequests = null;
+		}
+
 		public OrganisationRequestToken<CreateResponse> CreateDeferred(Entity entity)
 		{
+			ValidateDeferredQueueState();
 			var token =
 				new OrganisationRequestToken<CreateResponse>
 				{
 					Request =
 						new CreateRequest
 						{
-							Target = entity
+							Target = entity.Copy()
 						}
 				};
 			deferredRequests.Add(token);
@@ -542,13 +572,14 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 
 		public OrganisationRequestToken<UpdateResponse> UpdateDeferred(Entity entity)
 		{
+			ValidateDeferredQueueState();
 			var token =
 				new OrganisationRequestToken<UpdateResponse>
 				{
 					Request =
 						new UpdateRequest
 						{
-							Target = entity
+							Target = entity.Copy()
 						}
 				};
 			deferredRequests.Add(token);
@@ -557,13 +588,14 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 
 		public OrganisationRequestToken<UpsertResponse> UpsertDeferred(Entity entity)
 		{
+			ValidateDeferredQueueState();
 			var token =
 				new OrganisationRequestToken<UpsertResponse>
 				{
 					Request =
 						new UpsertRequest
 						{
-							Target = entity
+							Target = entity.Copy()
 						}
 				};
 			deferredRequests.Add(token);
@@ -572,6 +604,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 
 		public OrganisationRequestToken<DeleteResponse> DeleteDeferred(string entityName, Guid id)
 		{
+			ValidateDeferredQueueState();
 			var token =
 				new OrganisationRequestToken<DeleteResponse>
 				{
@@ -588,6 +621,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 		public OrganisationRequestToken<AssociateResponse> AssociateDeferred(string entityName,
 			Guid entityId, Relationship relationship, EntityReferenceCollection relatedEntities)
 		{
+			ValidateDeferredQueueState();
 			var token =
 				new OrganisationRequestToken<AssociateResponse>
 				{
@@ -595,8 +629,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 						new AssociateRequest
 						{
 							Target = new EntityReference(entityName, entityId),
-							Relationship = relationship,
-							RelatedEntities = relatedEntities
+							Relationship = relationship.Copy(),
+							RelatedEntities = relatedEntities.Copy()
 						}
 				};
 			deferredRequests.Add(token);
@@ -606,6 +640,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 		public OrganisationRequestToken<DisassociateResponse> DisassociateDeferred(string entityName,
 			Guid entityId, Relationship relationship, EntityReferenceCollection relatedEntities)
 		{
+			ValidateDeferredQueueState();
 			var token =
 				new OrganisationRequestToken<DisassociateResponse>
 				{
@@ -613,8 +648,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 						new DisassociateRequest
 						{
 							Target = new EntityReference(entityName, entityId),
-							Relationship = relationship,
-							RelatedEntities = relatedEntities
+							Relationship = relationship.Copy(),
+							RelatedEntities = relatedEntities.Copy()
 						}
 				};
 			deferredRequests.Add(token);
@@ -622,11 +657,168 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 		}
 
 		public OrganisationRequestToken<TResponse> ExecuteDeferred<TResponse>(OrganizationRequest request)
-		where TResponse : OrganizationResponse
+			where TResponse : OrganizationResponse
 		{
-			var token = new OrganisationRequestToken<TResponse> { Request = request };
+			ValidateDeferredQueueState();
+			var token = new OrganisationRequestToken<TResponse> { Request = request.Copy() };
 			deferredRequests.Add(token);
 			return token;
+		}
+
+		#endregion
+
+		#region Planned Execution
+
+		public IPlannedOrgService StartExecutionPlanning()
+		{
+			if (executionQueue == null)
+			{
+				executionQueue = new Queue<PlannedOperation>();
+				return this;
+			}
+
+			throw new InitialisationException("Planning has already been started.");
+		}
+
+		private void ValidateExecutionPlanState()
+		{
+			if (executionQueue == null)
+			{
+				throw new StateException("Execution planning is in an invalid state. Restart the plan first.");
+			}
+		}
+
+		public void CancelPlanning()
+		{
+			executionQueue = null;
+		}
+
+		public PlannedValue PlanCreate(Entity entity)
+		{
+			var request = new CreateRequest { Target = entity };
+			CreateResponse reponse;
+			return PlanOperation(request, pr => pr.GetPlannedValue<PlannedValue>(nameof(reponse.id)));
+		}
+
+		public PlannedEntity PlanRetrieve(string entityName, Guid id, ColumnSet columnSet)
+		{
+			var request =
+				new RetrieveRequest
+				{
+					Target = new EntityReference(entityName, id),
+					ColumnSet = columnSet
+				};
+			RetrieveResponse reponse;
+			return PlanOperation(request, pr => pr.GetPlannedValue<PlannedEntity>(nameof(reponse.Entity)));
+		}
+
+		public void PlanUpdate(Entity entity)
+		{
+			var request = new UpdateRequest { Target = entity };
+			PlanOperation(request);
+		}
+
+		public void PlanDelete(string entityName, Guid id)
+		{
+			var request = new DeleteRequest { Target = new EntityReference(entityName, id) };
+			PlanOperation(request);
+		}
+
+		public void PlanAssociate(string entityName, Guid entityId, Relationship relationship, EntityReferenceCollection relatedEntities)
+		{
+			var request =
+				new AssociateRequest
+				{
+					Target = new EntityReference(entityName, entityId),
+					Relationship = relationship,
+					RelatedEntities = relatedEntities
+				};
+			PlanOperation(request);
+		}
+
+		public void PlanDisassociate(string entityName, Guid entityId, Relationship relationship, EntityReferenceCollection relatedEntities)
+		{
+			var request =
+				new DisassociateRequest
+				{
+					Target = new EntityReference(entityName, entityId),
+					Relationship = relationship,
+					RelatedEntities = relatedEntities
+				};
+			PlanOperation(request);
+		}
+
+		public PlannedEntityCollection PlanRetrieveMultiple(QueryBase query)
+		{
+			var request = new RetrieveMultipleRequest { Query = query };
+			RetrieveMultipleResponse reponse;
+			return PlanOperation(request, pr => pr.GetPlannedValue<PlannedEntityCollection>(nameof(reponse.EntityCollection)));
+		}
+
+		public PlannedResponse PlanExecute(OrganizationRequest request)
+		{
+			return PlanOperation(request);
+		}
+
+		private PlannedResponse PlanOperation(OrganizationRequest plannedOperation)
+		{
+			return PlanOperation<PlannedResponse>(plannedOperation);
+		}
+
+		private T PlanOperation<T>(OrganizationRequest plannedOperation, Func<PlannedResponse, T> getPlannedValue = null)
+			where T : IPlannedValue
+		{
+			ValidateExecutionPlanState();
+
+			var plannedResponse = new PlannedResponse();
+			var plannedValue = getPlannedValue == null ? (IPlannedValue)plannedResponse : getPlannedValue(plannedResponse);
+
+			executionQueue.Enqueue(
+				new PlannedOperation
+				{
+					Request = plannedOperation.Copy().Mock<MockOrgRequest>(),
+					Response = plannedResponse
+				});
+
+			return (T)plannedValue;
+		}
+
+		public IDictionary<Guid, OrganizationResponse> ExecutePlan()
+		{
+			ValidateExecutionPlanState();
+
+			var serialised = executionQueue.ToList().SerialiseContractJson(true,
+				surrogate: new DateTimeCrmContractSurrogateCustom());
+
+			if (serialised.IsEmpty())
+			{
+				throw new InvalidPluginExecutionException("Could not deserialise planned execution operations."
+					+ " Possibly because one of the serialised types could not be found through the sandbox plugin.");
+			}
+
+			var request =
+				new OrganizationRequest("ys_LibrariesExecutePlannedOperations")
+				{
+					Parameters = new ParameterCollection { { "ExecutionPlan", serialised.Compress() } }
+				};
+
+			//using var service = GetService();
+			//var response = new Test().ProcessOperations(((string)request["ExecutionPlan"]).Decompress(), service)
+			//	.Compress();
+			//var result = response.Decompress()
+			//	.DeserialiseContractJson<IDictionary<Guid, OrganizationResponse>>(true,
+			//		surrogate: new SerialiserHelpers.DateTimeCrmContractSurrogate());
+
+			using var service = GetService();
+			var response = ((string)service.Execute(request)["SerialisedResult"]).Decompress();
+
+			var result = response.DeserialiseContractJson<MockDictionary>(true,
+				surrogate: new DateTimeCrmContractSurrogateCustom())
+				.ToDictionary(e => Guid.Parse(e.Key), e => e.Value.Unmock<OrganizationResponse>());
+
+			CancelPlanning();
+
+			return result;
 		}
 
 		#endregion
@@ -871,31 +1063,25 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 		{
 			ValidateState();
 
-			using (var service = GetService())
-			{
-				return RequestHelper.GetTotalRecordsCount(service, query);
-			}
+			using var service = GetService();
+			return RequestHelper.GetTotalRecordsCount(service, query);
 		}
 
 		public int GetPagesCount(QueryBase query, int pageSize = 5000)
 		{
 			ValidateState();
 
-			using (var service = GetService())
-			{
-				pageSize.RequireInRange(1, 5000, nameof(pageSize));
-				return RequestHelper.GetTotalPagesCount(service, query, pageSize);
-			}
+			using var service = GetService();
+			pageSize.RequireInRange(1, 5000, nameof(pageSize));
+			return RequestHelper.GetTotalPagesCount(service, query, pageSize);
 		}
 
 		public QueryExpression CloneQuery(QueryBase query)
 		{
 			ValidateState();
 
-			using (var service = GetService())
-			{
-				return RequestHelper.CloneQuery(service, query);
-			}
+			using var service = GetService();
+			return RequestHelper.CloneQuery(service, query);
 		}
 
 		#endregion

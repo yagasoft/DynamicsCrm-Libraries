@@ -18,14 +18,17 @@ using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.Caching;
 using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
+using System.Runtime.Serialization.Formatters.Binary;
 using System.Runtime.Serialization.Json;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Windows.Documents;
 using System.Xml;
 using System.Xml.Serialization;
 using Microsoft.Crm.Sdk.Messages;
@@ -95,7 +98,7 @@ namespace Yagasoft.Libraries.Common
 
 	#endregion
 
-	#region Extensions
+	#region Helpers
 
 	/// <summary>
 	///     Author: Ahmed Elsawalhy
@@ -590,6 +593,14 @@ namespace Yagasoft.Libraries.Common
 			return c == '\'' ? @"'\''" : string.Format("'{0}'", c);
 		}
 
+		public static string XmlEscape(this string unescaped)
+		{
+			var doc = new XmlDocument();
+			XmlNode node = doc.CreateElement("root");
+			node.InnerText = unescaped;
+			return node.InnerXml;
+		}
+
 		#endregion
 
 		#region METHOD THAT ACTUALLY THROWS EXCEPTION
@@ -612,9 +623,62 @@ namespace Yagasoft.Libraries.Common
 		}
 
 		#endregion METHOD THAT ACTUALLY THROWS EXCEPTION
-	}
 
-	#endregion
+		public static bool IsNumeric(this object obj)
+		{
+			switch (Type.GetTypeCode(obj.GetType()))
+			{
+				case TypeCode.Byte:
+				case TypeCode.SByte:
+				case TypeCode.UInt16:
+				case TypeCode.UInt32:
+				case TypeCode.UInt64:
+				case TypeCode.Int16:
+				case TypeCode.Int32:
+				case TypeCode.Int64:
+				case TypeCode.Decimal:
+				case TypeCode.Double:
+				case TypeCode.Single:
+					return true;
+				default:
+					return false;
+			}
+		}
+
+		public static bool IsDateTime(this object obj)
+		{
+			return Type.GetTypeCode(obj.GetType()) == TypeCode.DateTime;
+		}
+
+		public static string StringAggregate<T>(this T collection, string separator = ",")
+			where T : IEnumerable<string>
+		{
+			if (collection?.Any() != true)
+			{
+				return string.Empty;
+			}
+
+			return collection.Aggregate((e1, e2) => $"{e1}{separator}{e2}");
+		}
+
+		/// <summary>
+		/// Credit: Microsoft.Xrm.Client assembly
+		/// </summary>
+		public static TValue FirstNotNullOrDefault<TKey, TValue>(this IDictionary<TKey, TValue> dictionary, params TKey[] keys)
+			=> ((IEnumerable<TKey>)keys)
+				.Where<TKey>(new Func<TKey, bool>(dictionary.ContainsKey))
+				.Select<TKey, TValue>((Func<TKey, TValue>)(key => dictionary[key]))
+				.FirstOrDefault<TValue>();
+
+		/// <summary>
+		/// Credit: Microsoft.Xrm.Client assembly
+		/// </summary>
+		public static string FirstNotNullOrEmpty<TKey>(this IDictionary<TKey, string> dictionary, params TKey[] keys)
+			=> ((IEnumerable<TKey>)keys)
+				.Where<TKey>((Func<TKey, bool>)(key => dictionary.ContainsKey(key) && !string.IsNullOrEmpty(dictionary[key])))
+				.Select<TKey, string>((Func<TKey, string>)(key => dictionary[key]))
+				.FirstOrDefault<string>();
+	}
 
 	// -----------------------------------------------------------------------------------------------------------------------------------------------------------------
 	//
@@ -868,51 +932,264 @@ namespace Yagasoft.Libraries.Common
 		}
 	}
 
+	/// <summary>
+	///     Reference Article http://www.codeproject.com/KB/tips/SerializedObjectCloner.aspx
+	///     Provides a method for performing a deep copy of an object.
+	///     Binary Serialization is used to perform the copy.
+	/// </summary>
 	[ExcludeFromCodeCoverage]
 	[DebuggerNonUserCode]
 	[GeneratedCode("Not generated code, but used to exclude from Code Analysis.", "0.0.0.0")]
-	public static class ExtensionMethods
+	public static class ObjectCopier
 	{
-		public static bool IsNumeric(this object obj)
+		/// <summary>
+		///     Perform a deep Copy of the object.
+		/// </summary>
+		/// <typeparam name="T">The type of object being copied.</typeparam>
+		/// <param name="source">The object instance to copy.</param>
+		/// <returns>The copied object.</returns>
+		public static T Clone<T>(this T source) where T : ISerializable
 		{
-			switch (Type.GetTypeCode(obj.GetType()))
+			if (source == null)
 			{
-				case TypeCode.Byte:
-				case TypeCode.SByte:
-				case TypeCode.UInt16:
-				case TypeCode.UInt32:
-				case TypeCode.UInt64:
-				case TypeCode.Int16:
-				case TypeCode.Int32:
-				case TypeCode.Int64:
-				case TypeCode.Decimal:
-				case TypeCode.Double:
-				case TypeCode.Single:
-					return true;
-				default:
-					return false;
-			}
-		}
-
-		public static bool IsDateTime(this object obj)
-		{
-			return Type.GetTypeCode(obj.GetType()) == TypeCode.DateTime;
-		}
-
-		public static string StringAggregate<T>(this T collection, string separator = ",")
-			where T : IEnumerable<string>
-		{
-			if (collection?.Any() != true)
-			{
-				return string.Empty;
+				return default;
 			}
 
-			return collection.Aggregate((e1, e2) => $"{e1}{separator}{e2}");
-		}
+			IFormatter formatter = new BinaryFormatter();
+			Stream stream = new MemoryStream();
 
+			using (stream)
+			{
+				formatter.Serialize(stream, source);
+				stream.Seek(0, SeekOrigin.Begin);
+				return (T)formatter.Deserialize(stream);
+			}
+		}
 	}
 
-	#region Helpers
+	[ExcludeFromCodeCoverage]
+	[DebuggerNonUserCode]
+	[GeneratedCode("Not generated code, but used to exclude from Code Analysis.", "0.0.0.0")]
+	public static class ObjectExtensions
+	{
+		private static readonly MethodInfo cloneMethod = typeof(object).GetMethod("MemberwiseClone",
+			BindingFlags.NonPublic | BindingFlags.Instance);
+
+		public static bool IsPrimitive(this Type type)
+		{
+			if (type == typeof(string))
+			{
+				return true;
+			}
+
+			return type.IsValueType & type.IsPrimitive;
+		}
+
+		public static T Copy<T>(this T original)
+		{
+			return (T)Copy((object)original);
+		}
+
+		private static object Copy(object originalObject)
+		{
+			return InternalCopy(originalObject, new Dictionary<object, object>(new ReferenceEqualityComparer()));
+		}
+
+		private static object InternalCopy(object originalObject, IDictionary<object, object> visited)
+		{
+			if (originalObject == null)
+			{
+				return null;
+			}
+
+			var typeToReflect = originalObject.GetType();
+
+			if (IsPrimitive(typeToReflect))
+			{
+				return originalObject;
+			}
+
+			if (visited.ContainsKey(originalObject))
+			{
+				return visited[originalObject];
+			}
+
+			if (typeof(Delegate).IsAssignableFrom(typeToReflect))
+			{
+				return null;
+			}
+
+			var cloneObject = cloneMethod.Invoke(originalObject, null);
+
+			if (typeToReflect.IsArray)
+			{
+				var arrayType = typeToReflect.GetElementType();
+
+				if (IsPrimitive(arrayType) == false)
+				{
+					var clonedArray = (Array)cloneObject;
+					clonedArray.ForEach((array, indices) => array.SetValue(InternalCopy(clonedArray.GetValue(indices), visited), indices));
+				}
+			}
+
+			visited.Add(originalObject, cloneObject);
+			CopyFields(originalObject, visited, cloneObject, typeToReflect);
+			RecursiveCopyBaseTypePrivateFields(originalObject, visited, cloneObject, typeToReflect);
+
+			return cloneObject;
+		}
+
+		private static void RecursiveCopyBaseTypePrivateFields(object originalObject, IDictionary<object, object> visited,
+			object cloneObject, Type typeToReflect)
+		{
+			if (typeToReflect.BaseType == null)
+			{
+				return;
+			}
+
+			RecursiveCopyBaseTypePrivateFields(originalObject, visited, cloneObject, typeToReflect.BaseType);
+			CopyFields(originalObject, visited, cloneObject, typeToReflect.BaseType,
+				BindingFlags.Instance | BindingFlags.NonPublic, info => info.IsPrivate);
+		}
+
+		private static void CopyFields(object originalObject, IDictionary<object, object> visited, object cloneObject,
+			IReflect typeToReflect,
+			BindingFlags bindingFlags =
+				BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.FlattenHierarchy,
+			Func<FieldInfo, bool> filter = null)
+		{
+			foreach (var fieldInfo in typeToReflect.GetFields(bindingFlags))
+			{
+				if (filter != null && filter(fieldInfo) == false)
+				{
+					continue;
+				}
+
+				if (IsPrimitive(fieldInfo.FieldType))
+				{
+					continue;
+				}
+
+				var originalFieldValue = fieldInfo.GetValue(originalObject);
+				var clonedFieldValue = InternalCopy(originalFieldValue, visited);
+				fieldInfo.SetValue(cloneObject, clonedFieldValue);
+			}
+		}
+	}
+
+	[ExcludeFromCodeCoverage]
+	[DebuggerNonUserCode]
+	[GeneratedCode("Not generated code, but used to exclude from Code Analysis.", "0.0.0.0")]
+	public class ReferenceEqualityComparer : EqualityComparer<object>
+	{
+		public override bool Equals(object x, object y)
+		{
+			return ReferenceEquals(x, y);
+		}
+
+		public override int GetHashCode(object obj)
+		{
+			return obj.GetHashCode();
+		}
+	}
+
+	[ExcludeFromCodeCoverage]
+	[DebuggerNonUserCode]
+	[GeneratedCode("Not generated code, but used to exclude from Code Analysis.", "0.0.0.0")]
+	public static class ArrayExtensions
+	{
+		public static void ForEach(this Array array, Action<Array, int[]> action)
+		{
+			if (array.LongLength == 0)
+			{
+				return;
+			}
+
+			var walker = new ArrayTraverse(array);
+
+			do
+			{
+				action(array, walker.Position);
+			}
+			while (walker.Step());
+		}
+
+		private class ArrayTraverse
+		{
+			public int[] Position;
+			private readonly int[] maxLengths;
+
+			public ArrayTraverse(Array array)
+			{
+				maxLengths = new int[array.Rank];
+
+				for (var i = 0; i < array.Rank; ++i)
+				{
+					maxLengths[i] = array.GetLength(i) - 1;
+				}
+
+				Position = new int[array.Rank];
+			}
+
+			public bool Step()
+			{
+				for (var i = 0; i < Position.Length; ++i)
+				{
+					if (Position[i] >= maxLengths[i])
+					{
+						continue;
+					}
+
+					Position[i]++;
+
+					for (var j = 0; j < i; j++)
+					{
+						Position[j] = 0;
+					}
+
+					return true;
+				}
+				return false;
+			}
+		}
+	}
+
+	[ExcludeFromCodeCoverage]
+	[DebuggerNonUserCode]
+	[GeneratedCode("Not generated code, but used to exclude from Code Analysis.", "0.0.0.0")]
+	public static class StringHelpers
+	{
+	}
+
+	[ExcludeFromCodeCoverage]
+	[DebuggerNonUserCode]
+	[GeneratedCode("Not generated code, but used to exclude from Code Analysis.", "0.0.0.0")]
+	public static class TypeHelpers
+	{
+		public static IEnumerable<Type> GetHierarchyTree(this Type type)
+		{
+			return AppDomain.CurrentDomain.GetAssemblies().SelectMany(e => e.GetTypes())
+				.Where(t => type.IsAssignableFrom(t) && !t.IsGenericTypeDefinition);
+		}
+
+		public static Type GetType(string name, Type assemblyScope = null)
+		{
+			return assemblyScope == null
+				? AppDomain.CurrentDomain.GetAssemblies().SelectMany(a => a.GetTypes())
+					.FirstOrDefault(e => e.AssemblyQualifiedName == name || e.FullName == name || e.Name == name)
+				: assemblyScope.Assembly.GetTypes()
+					.FirstOrDefault(e => e.AssemblyQualifiedName == name || e.FullName == name || e.Name == name);
+		}
+
+		public static Type GetType(string name, params Assembly[] assembliesScope)
+		{
+			return assembliesScope == null
+				? AppDomain.CurrentDomain.GetAssemblies().SelectMany(a => a.GetTypes())
+					.FirstOrDefault(e => e.AssemblyQualifiedName == name || e.FullName == name || e.Name == name)
+				: assembliesScope.SelectMany(a => a.GetTypes())
+					.FirstOrDefault(e => e.AssemblyQualifiedName == name || e.FullName == name || e.Name == name);
+		}
+	}
 
 	[ExcludeFromCodeCoverage]
 	[DebuggerNonUserCode]
@@ -1615,65 +1892,66 @@ namespace Yagasoft.Libraries.Common
 	///     credit: http://pietschsoft.com/post/2008/02/net-35-json-serialization-using-the-datacontractjsonserializer <br />
 	///     Author: Ahmed Elsawalhy
 	/// </summary>
-	[ExcludeFromCodeCoverage]
-	[DebuggerNonUserCode]
-	[GeneratedCode("Not generated code, but used to exclude from Code Analysis.", "0.0.0.0")]
+	////[ExcludeFromCodeCoverage]
+	////[DebuggerNonUserCode]
+	////[GeneratedCode("Not generated code, but used to exclude from Code Analysis.", "0.0.0.0")]
 	public static partial class SerialiserHelpers
 	{
-		public static string SerialiseBase64(object value)
+		// credit: http://stackoverflow.com/a/12845153/1919456
+		public static string SerialiseBase64<T>(this T value) where T : class
 		{
 			using (var stream = new MemoryStream())
 			{
 				using (var writer = XmlDictionaryWriter.CreateBinaryWriter(stream))
 				{
-					var serializer = new DataContractSerializer(value.GetType());
-					serializer.WriteObject(writer, value);
+					var serialiser = new DataContractSerializer(value.GetType());
+					serialiser.WriteObject(writer, value);
 					return Convert.ToBase64String(stream.ToArray());
 				}
 			}
 		}
 
-		public static T DeserialiseBase64<T>(string base64)
+		public static T DeserialiseBase64<T>(this string base64) where T : class
 		{
 			using (var stream = new MemoryStream(Convert.FromBase64String(base64)))
 			{
 				using (var reader = XmlDictionaryReader
 					.CreateBinaryReader(stream, XmlDictionaryReaderQuotas.Max))
 				{
-					var serializer = new DataContractSerializer(typeof(T));
-					return (T)serializer.ReadObject(reader);
+					var serialiser = new DataContractSerializer(typeof(T));
+					return (T)serialiser.ReadObject(reader);
 				}
 			}
 		}
 
-		public static string SerialiseXml<T>(T obj)
+		public static string SerialiseStrictXml<T>(T obj) where T : class
 		{
 			using (var stream = new MemoryStream())
 			{
-				var serializer = new DataContractSerializer(obj.GetType());
-				serializer.WriteObject(stream, obj);
+				var serialiser = new DataContractSerializer(obj.GetType());
+				serialiser.WriteObject(stream, obj);
 				return Encoding.UTF8.GetString(stream.ToArray());
 			}
 		}
 
-		public static T DeserializeXml<T>(string xml)
+		public static T DeserialiseStrictXml<T>(string xml) where T : class
 		{
 			using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(xml)))
 			{
-				var serializer = new DataContractSerializer(typeof(T));
-				return (T)serializer.ReadObject(stream);
+				var serialiser = new DataContractSerializer(typeof(T));
+				return (T)serialiser.ReadObject(stream);
 			}
 		}
 
 		/// <summary>
 		///     Author: Ramy Victor
 		/// </summary>
-		public static string SerializeObject<T>(T serializableObject)
+		public static string SerialiseContractXml<T>(this T obj) where T : class
 		{
 			using (var stream = new MemoryStream())
 			{
-				var serializer = new XmlSerializer(typeof(T));
-				serializer.Serialize(stream, serializableObject);
+				var serialiser = new XmlSerializer(typeof(T));
+				serialiser.Serialize(stream, obj);
 				stream.Position = 0;
 				return Encoding.UTF8.GetString(stream.ToArray());
 			}
@@ -1682,14 +1960,14 @@ namespace Yagasoft.Libraries.Common
 		/// <summary>
 		///     Author: Ramy Victor
 		/// </summary>
-		public static T DeserializeObject<T>(string xml)
+		public static T DeserialiseContractXml<T>(this string xml) where T : class
 		{
 			using (var read = new StringReader(xml))
 			{
 				using (XmlReader reader = new XmlTextReader(read))
 				{
-					var serializer = new XmlSerializer(typeof(T));
-					return (T)serializer.Deserialize(reader);
+					var serialiser = new XmlSerializer(typeof(T));
+					return (T)serialiser.Deserialize(reader);
 				}
 			}
 		}
@@ -1737,15 +2015,238 @@ namespace Yagasoft.Libraries.Common
 			return dictionary;
 		}
 
-		public static string SerialiseJson<T>(T serializableObject)
+		/// <summary>
+		/// Serialises the object into JSON using the .NET <see cref="DataContractJsonSerializer" />.<br />
+		/// Classes must be decorated with <see cref="DataContract" /> and member with <see cref="DataMember" />.<br />
+		/// To aid in serialisation, known types can be passed, or pass null and the method will automatically
+		/// attempt to find the types. You can optionally limit the scope of the search to the provided type's assembly.
+		/// </summary>
+		/// <typeparam name="T">Return type.</typeparam>
+		/// <param name="obj">The object to serialise.</param>
+		/// <param name="isSerializeReadOnlyTypes">If set to <c>true</c> will serialise <c>readonly</c>
+		/// and properties with a <c>get</c> only.</param>
+		/// <param name="knownTypes">The known types to consider when serialising.</param>
+		/// <param name="assembliesScope">The assemblies scope.</param>
+		/// <param name="surrogate">The surrogate.</param>
+		/// <param name="latestError">The latest error.</param>
+		public static string SerialiseContractJson<T>(this T obj, bool isSerializeReadOnlyTypes = false, Type[] knownTypes = null,
+			Assembly[] assembliesScope = null, IDataContractSurrogate surrogate = null, string latestError = null)
+			where T : class
 		{
-			using (var memoryStream = new MemoryStream())
+			knownTypes = knownTypes ?? new Type[0];
+
+			try
 			{
-				var serializer = new DataContractJsonSerializer(typeof(T));
-				serializer.WriteObject(memoryStream, serializableObject);
-				return Encoding.Default.GetString(memoryStream.ToArray());
+				using (var memoryStream = new MemoryStream())
+				{
+					var serialiser = new DataContractJsonSerializer(typeof(T),
+						BuildSerialisationSettings(isSerializeReadOnlyTypes, knownTypes, surrogate));
+					serialiser.WriteObject(memoryStream, obj);
+					return Encoding.Default.GetString(memoryStream.ToArray());
+				}
+			}
+			catch (SerializationException ex)
+			{
+				var serialised = HandleSerialisationException(ref knownTypes, assembliesScope, ref latestError, ex);
+
+				if (serialised)
+				{
+					return obj.SerialiseContractJson(isSerializeReadOnlyTypes, knownTypes, assembliesScope, surrogate, latestError);
+				}
+
+				return null;
 			}
 		}
+
+		/// <summary>
+		/// Deserialises the object into JSON using the .NET <see cref="DataContractJsonSerializer" />.<br />
+		/// Classes must be decorated with <see cref="DataContract" /> and member with <see cref="DataMember" />.<br />
+		/// To aid in deserialisation, known types can be passed, or pass null and the method will automatically
+		/// attempt to find the types. You can optionally limit the scope of the search to the provided type's assembly.
+		/// </summary>
+		/// <typeparam name="T">Return type.</typeparam>
+		/// <param name="json">The json.</param>
+		/// <param name="isSerializeReadOnlyTypes">If set to <c>true</c> will deserialise <c>readonly</c>
+		/// and properties with a <c>get</c> only.</param>
+		/// <param name="knownTypes">The known types to consider when deserialising.</param>
+		/// <param name="assembliesScope">The assemblies scope.</param>
+		/// <param name="surrogate">The surrogate.</param>
+		/// <param name="latestError">The latest error.</param>
+		public static T DeserialiseContractJson<T>(this string json, bool isSerializeReadOnlyTypes = false, Type[] knownTypes = null,
+			Assembly[] assembliesScope = null, IDataContractSurrogate surrogate = null, string latestError = null)
+			where T : class
+		{
+			knownTypes = knownTypes ?? new Type[0];
+
+			try
+			{
+				using (var memoryStream = new MemoryStream(Encoding.UTF8.GetBytes(json)))
+				{
+					var serialiser = new DataContractJsonSerializer(typeof(T),
+						BuildSerialisationSettings(isSerializeReadOnlyTypes, knownTypes, surrogate));
+					return (T)serialiser.ReadObject(memoryStream);
+				}
+			}
+			catch (SerializationException ex)
+			{
+				var serialised = HandleSerialisationException(ref knownTypes, assembliesScope, ref latestError, ex);
+
+				if (serialised)
+				{
+					return json.DeserialiseContractJson<T>(isSerializeReadOnlyTypes, knownTypes, assembliesScope,
+						surrogate, latestError);
+				}
+
+				return null;
+			}
+		}
+
+		private static bool HandleSerialisationException(ref Type[] knownTypes, Assembly[] assembliesScope,
+			ref string latestError, SerializationException ex)
+		{
+			if (latestError == ex.Message)
+			{
+				throw new SerializationException($"Type is unsupported by [de]serialisation => '{latestError}'.");
+			}
+
+			latestError = ex.Message;
+
+			var match = Regex.Match(ex.Message, @"Type '(.+?)'");
+
+			if (match.Groups.Count <= 1)
+			{
+				match = Regex.Match(ex.Message, @"'https?://.*?/([\w\.]+:(\w+))'");
+			}
+
+			if (match.Groups.Count > 1)
+			{
+				knownTypes = knownTypes.Union(
+					new[]
+					{
+						TypeHelpers.GetType(match.Groups[1].ToString().Replace(':', '.'), assembliesScope)
+							?? TypeHelpers.GetType(match.Groups[2].ToString(), assembliesScope)
+					}).Where(e => e != null).ToArray();
+				return true;
+			}
+
+			throw new SerializationException($"Type is unsupported by [de]serialisation => '{latestError}'.");
+		}
+
+		private static DataContractJsonSerializerSettings BuildSerialisationSettings(bool isSerializeReadOnlyTypes,
+			Type[] knownTypes, IDataContractSurrogate surrogate)
+		{
+			return new DataContractJsonSerializerSettings
+				   {
+					   UseSimpleDictionaryFormat = true,
+					   SerializeReadOnlyTypes = isSerializeReadOnlyTypes,
+					   KnownTypes = knownTypes,
+					   DataContractSurrogate = surrogate
+				   };
+		}
+
+		/// <summary>
+		/// Credit: https://stackoverflow.com/a/9347678/1919456
+		/// </summary>
+		/// <seealso cref="System.Runtime.Serialization.IDataContractSurrogate" />
+		public class DateTimeCrmContractSurrogate : IDataContractSurrogate
+		{
+	        private static readonly Regex dateRegex = new Regex(@"/Date\((\d+)([-+])?(\d+)?\)/");
+	        private static readonly DateTime epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+	        public object GetCustomDataToExport(Type clrType, Type dataContractType)
+	        {
+	            // not used
+	            return null;
+	        }
+
+	        public object GetCustomDataToExport(System.Reflection.MemberInfo memberInfo, Type dataContractType)
+	        {
+	            // not used
+	            return null;
+	        }
+
+	        public Type GetDataContractType(Type type)
+	        {
+	            // not used
+	            return type;
+	        }
+
+	        public object GetDeserializedObject(object obj, Type targetType)
+	        {
+	            // for debugging
+	            //Console.WriteLine("GetDeserializedObject: obj = {0} ({1}), targetType = {2}", obj, obj.GetType(), targetType);
+
+	            if (obj is DataCollection<string, object> dataCollection)
+	            {
+		            foreach (var item in dataCollection.ToArray())
+		            {
+			            dataCollection[item.Key] = ConvertDate(item.Value as string) ?? item.Value;
+		            }
+	            }
+
+	            if (obj is IDictionary<string, object> dictionary)
+	            {
+		            foreach (var item in dictionary.ToArray())
+		            {
+			            dictionary[item.Key] = ConvertDate(item.Value as string) ?? item.Value;
+		            }
+	            }
+
+		        return CustomIterator(obj);
+	        }
+
+			protected virtual object CustomIterator(object obj)
+			{
+				return obj;
+			}
+
+			protected static DateTime? ConvertDate(string unparsedDate)
+			{
+				if (unparsedDate != null)
+				{
+					// check if we match the DateTime format
+					Match match = dateRegex.Match(unparsedDate);
+
+					if (match.Success)
+					{
+						// try to parse the string into a long. then create a datetime and convert to local time.
+						long msFromEpoch;
+
+						if (long.TryParse(match.Groups[1].Value, out msFromEpoch))
+						{
+							TimeSpan fromEpoch = TimeSpan.FromMilliseconds(msFromEpoch);
+							return TimeZoneInfo.ConvertTimeFromUtc(epoch.Add(fromEpoch), TimeZoneInfo.Local);
+						}
+					}
+				}
+
+				return null;
+			}
+
+			public void GetKnownCustomDataTypes(System.Collections.ObjectModel.Collection<Type> customDataTypes)
+	        {
+	            // not used   
+	        }
+
+	        public object GetObjectToSerialize(object obj, Type targetType)
+	        {
+	            // for debugging
+	            //Console.WriteLine("GetObjectToSerialize: obj = {0} ({1}), targetType = {2}", obj, obj.GetType(), targetType);
+	            return obj;
+	        }
+
+	        public Type GetReferencedTypeOnImport(string typeName, string typeNamespace, object customData)
+	        {
+	            // not used
+	            return null;
+	        }
+
+	        public System.CodeDom.CodeTypeDeclaration ProcessImportedType(System.CodeDom.CodeTypeDeclaration typeDeclaration, System.CodeDom.CodeCompileUnit compileUnit)
+	        {
+	            // not used
+	            return typeDeclaration;
+	        }
+	    }
 	}
 
 	/// <summary>
@@ -3564,6 +4065,21 @@ namespace Yagasoft.Libraries.Common
 			}
 
 			return query;
+		}
+
+		public static string SecureConnectionString(string connectionString)
+		{
+			return Regex
+				.Replace(Regex
+					.Replace(connectionString, @"Password\s*?=.*?(?:;{0,1}$|;)", "Password=********;")
+					.Replace("\r\n", " "),
+					@"\s+", " ")
+				.Replace(" = ", "=");
+		}
+
+		public static IEnumerable<TEntity> ToEntity<TEntity>(this IEnumerable<Entity> entities) where TEntity : Entity
+		{
+			return entities.Select(e => e.ToEntity<TEntity>());
 		}
 	}
 

@@ -1,17 +1,17 @@
-﻿using System;
+﻿#region Imports
+
+using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Yagasoft.Libraries.Common;
-using Yagasoft.Libraries.EnhancedOrgService.Transactions;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Messages;
 using Microsoft.Xrm.Sdk.Query;
-using Yagasoft.Libraries.EnhancedOrgService.Response;
-using Yagasoft.Libraries.EnhancedOrgService.Response.Tokens;
+using Yagasoft.Libraries.Common;
+using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Features;
+using Yagasoft.Libraries.EnhancedOrgService.Transactions;
 
-namespace Yagasoft.Libraries.EnhancedOrgService.Services
+#endregion
+
+namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 {
 	public interface IEnhancedOrgService : IOrganizationService, IDisposable
 	{
@@ -48,35 +48,42 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 		void EndTransaction(Transaction transaction = null);
 
 		/// <summary>
-		/// Removed an entity from cache.<br />
+		///     Removed an entity from cache.<br />
 		/// </summary>
 		void RemoveFromCache(Entity record);
 
-	    /// <summary>
-	    /// Removed an entity from cache.<br />
-	    /// </summary>
-	    void RemoveFromCache(EntityReference entity);
-
-	    /// <summary>
-	    /// Removed an entity from cache.<br />
-	    /// </summary>
-	    void RemoveFromCache(string entityLogicalName, Guid? id);
-
-	    /// <summary>
-	    /// Removed based on request from cache.<br />
-	    /// </summary>
-	    void RemoveFromCache(OrganizationRequest request);
-
-	    /// <summary>
-	    /// Removed all entities from cache.<br />
-	    /// </summary>
-	    void RemoveAllFromCache();
+		/// <summary>
+		///     Removed an entity from cache.<br />
+		/// </summary>
+		void RemoveFromCache(EntityReference entity);
 
 		/// <summary>
-        /// Clears the query's memory cache.<br />
-        ///  If the cache is not only scoped to this service (factory's 'PrivatePerInstance' setting), an exception is thrown.
-        /// </summary>
-        void ClearCache();
+		///     Removed an entity from cache.<br />
+		/// </summary>
+		void RemoveFromCache(string entityLogicalName, Guid? id);
+
+		/// <summary>
+		///     Removed based on request from cache.<br />
+		/// </summary>
+		void RemoveFromCache(OrganizationRequest request);
+
+		/// <summary>
+		///     Removed all entities from cache.<br />
+		/// </summary>
+		void RemoveAllFromCache();
+
+		/// <summary>
+		///     Clears the query's memory cache.<br />
+		///     If the cache is not only scoped to this service (factory's 'PrivatePerInstance' setting), an exception is thrown.
+		/// </summary>
+		void ClearCache();
+
+		/// <summary>
+		///     Calls <see cref="Entity.ToEntity{T}" /> after the retrieve operation.
+		///     <seealso cref="IOrganizationService.Retrieve" />
+		/// </summary>
+		/// <typeparam name="TEntity">Returned entity type.</typeparam>
+		public TEntity Retrieve<TEntity>(string entityName, Guid id, ColumnSet columnSet) where TEntity : Entity;
 
 		/// <summary>
 		///     Executes the specified request with support for reversion.
@@ -88,56 +95,15 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 			Func<IOrganizationService, OrganizationRequest, OrganizationRequest> undoFunction);
 
 		/// <summary>
-		///     Defers the create for later execution.
+		///     Casts the response after calling <see cref="Execute" />.
+		///     <seealso cref="Execute" />
 		/// </summary>
-		/// <returns>A token of the record's ID whose value can be accessed after the deferred execution has finished.</returns>
-		IEnumerable<OrganizationRequest> GetDeferredRequests();
-
-		/// <summary>
-		///     Executes all deferred requests in a transaction.
-		/// </summary>
-		/// <param name="bulkSize">[Optional] The number of requests to execute at once every internal iteration.</param>
-		/// <returns>A map of the deferred organisation requests and their response tokens.</returns>
-		IDictionary<OrganizationRequest, OrganisationRequestToken<OrganizationResponse>> ExecuteDeferredRequests(int bulkSize = 1000);
-
-		/// <summary>
-		///     Defers the create for later execution.
-		/// </summary>
-		/// <returns>A token of the record's ID whose value can be accessed after the deferred execution has finished.</returns>
-		OrganisationRequestToken<CreateResponse> CreateDeferred(Entity entity);
-
-		/// <summary>
-		///     Defers the update for later execution.
-		/// </summary>
-		OrganisationRequestToken<UpdateResponse> UpdateDeferred(Entity entity);
-
-		/// <summary>
-		///     Defers the upsert for later execution.
-		/// </summary>
-		OrganisationRequestToken<UpsertResponse> UpsertDeferred(Entity entity);
-
-		/// <summary>
-		///     Defers the delete for later execution.
-		/// </summary>
-		OrganisationRequestToken<DeleteResponse> DeleteDeferred(string entityName, Guid id);
-
-		/// <summary>
-		///     Defers the association for later execution.
-		/// </summary>
-		OrganisationRequestToken<AssociateResponse> AssociateDeferred(string entityName,
-			Guid entityId, Relationship relationship, EntityReferenceCollection relatedEntities);
-
-		/// <summary>
-		///     Defers the disassociation for later execution.
-		/// </summary>
-		OrganisationRequestToken<DisassociateResponse> DisassociateDeferred(string entityName,
-			Guid entityId, Relationship relationship, EntityReferenceCollection relatedEntities);
-
-		/// <summary>
-		///     Defers the Organisation Request for later execution.
-		/// </summary>
-		/// <returns>A token of the organisation response whose value can be accessed after the deferred execution has finished.</returns>
-		OrganisationRequestToken<TResponse> ExecuteDeferred<TResponse>(OrganizationRequest request)
+		/// <param name="request">The request to execute.</param>
+		/// <param name="undoFunction">The undo function to be used as an instruction on how to undo the given request.</param>
+		/// <returns>An typed organisation response.</returns>
+		TResponse Execute<TResponse, TRequest>(TRequest request,
+			Func<IOrganizationService, TRequest, OrganizationRequest> undoFunction = null)
+			where TRequest : OrganizationRequest
 			where TResponse : OrganizationResponse;
 
 		/// <summary>
@@ -229,7 +195,16 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 		///     Clones the query.
 		/// </summary>
 		/// <param name="query">The query.</param>
-		/// <returns></returns>
 		QueryExpression CloneQuery(QueryBase query);
+
+		/// <summary>
+		///     Returns an object that manages the deferred execution operations (single object per Org Service).
+		/// </summary>
+		IDeferredOrgService StartDeferredQueue();
+
+		/// <summary>
+		///     TODO
+		/// </summary>
+		IPlannedOrgService StartExecutionPlanning();
 	}
 }

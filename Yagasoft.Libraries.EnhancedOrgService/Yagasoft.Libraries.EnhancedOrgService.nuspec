@@ -3,7 +3,7 @@
 <package>
   <metadata>
     <id>Yagasoft.Libraries.EnhancedOrgService</id>
-    <version>2.5.1</version>
+    <version>3.1.1</version>
     <authors>Ahmed Elsawalhy</authors>
     <owners>Ahmed Elsawalhy</owners>
     <projectUrl>https://github.com/os008/DynamicsCrm-Libraries</projectUrl>
@@ -22,6 +22,8 @@
     </dependencies>
     <references />
     <releaseNotes>
+      * 3.1.1
+      Added: execution planning, where a plan is executed in CRM itself for performance and atomicity reasons
       * 2.5.1
       Added: use CrmServiceClient's Clone method internally for faster pooling of connections if available (SDK limits it for CRM Online only for now)
       Added: DotNet optimisation options

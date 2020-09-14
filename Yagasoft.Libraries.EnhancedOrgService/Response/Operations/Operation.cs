@@ -15,16 +15,16 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Response.Operations
 		private TResponseType response;
 
 		/// <summary>
-		/// Gets or sets the response. 'Get' blocks until the response is ready.
+		///     Gets or sets the response. 'Get' blocks until the response is ready.
 		/// </summary>
 		/// <value>
-		/// The response.
+		///     The response.
 		/// </value>
 		/// <exception cref="System.Exception">Can't set the response of a failed response: Exception.Message</exception>
 		public TResponseType Response
 		{
 			get
-			{ 	
+			{
 				if (Exception != null)
 				{
 					throw Exception;
@@ -51,8 +51,6 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Response.Operations
 
 		public Operation(OrganizationRequest request = null, OrganizationRequest undoRequest = null)
 			: base(request, undoRequest)
-		{
-		}
-
+		{ }
 	}
 }
