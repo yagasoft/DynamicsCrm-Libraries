@@ -2,7 +2,7 @@
 
 [![Join the chat at https://gitter.im/yagasoft/DynamicsCrm-Libraries](https://badges.gitter.im/yagasoft/DynamicsCrm-Libraries.svg)](https://gitter.im/yagasoft/DynamicsCrm-Libraries?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-### Version: 3.1.1
+### Version: 4.1.1
 ---
 
 A collection of libraries for common and extended operations in Dynamics CRM development that gives power to the developer and saves time.
@@ -33,6 +33,13 @@ A collection of libraries for common and extended operations in Dynamics CRM dev
 
 ## Changes
 
+#### _v4.1.1 (2020-10-02)_
++ Added: [EnhancedOrgService] CacheItemPriority to cache settings
++ Improved: [EnhancedOrgService] pool helpers
++ Improved: [EnhancedOrgService] generics and refactored
++ Fixed: [EnhancedOrgService] absolute expiration returns an absolute fixed date in the cache factory, now returns an absolute date from the time of call to the factory's 'get'
++ Fixed: [EnhancedOrgService] connection errors causing deadlocks
++ Fixed: [Common] caching issues
 #### _v3.1.1 (2020-09-14)_
 + Added: execution planning, where a plan is executed in CRM itself for performance and atomicity reasons
 + Added: more convenience methods

@@ -1,18 +1,17 @@
 ﻿#region Imports
 
+using Yagasoft.Libraries.EnhancedOrgService.Factories;
 using Yagasoft.Libraries.EnhancedOrgService.Params;
+using Yagasoft.Libraries.EnhancedOrgService.Pools;
 
 #endregion
 
 namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 {
-	/// <summary>
-	///     Author: Ahmed Elsawalhy<br />
-	///     Version: 4.1.1
-	/// </summary>
+	/// <inheritdoc cref="IEnhancedOrgService" />
 	public class EnhancedOrgService : EnhancedOrgServiceBase
 	{
-		public EnhancedOrgService(EnhancedServiceParams parameters) : base(parameters)
+		internal EnhancedOrgService(EnhancedServiceParams parameters) : base(parameters)
 		{ }
 	}
 }

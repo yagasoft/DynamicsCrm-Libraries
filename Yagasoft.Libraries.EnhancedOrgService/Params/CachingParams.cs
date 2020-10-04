@@ -58,11 +58,11 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 		}
 
 		/// <summary>
-		///     The time after which to remove the object from the cache. Not affected by the sliding expiration.<br />
+		///     The time after which to remove the object from the cache in seconds. Not affected by the sliding expiration.<br />
 		///     Default: infinite<br />
 		///     You can't use an offset with a sliding expiration together ('offset' will take precedence)
 		/// </summary>
-		public DateTimeOffset? Offset
+		public double? Offset
 		{
 			get => offset;
 			set
@@ -88,9 +88,25 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 			}
 		}
 
+		/// <summary>
+		///     The priority of keeping the item in the cache if it becomes filled.<br />
+		///     Default: Default
+		/// </summary>
+		public CacheItemPriority? Priority
+		{
+			get => priority;
+			set
+			{
+				ValidateLock();
+				value.Require(nameof(Priority));
+				priority = value;
+			}
+		}
+
 		private ObjectCache objectCache;
 		private CacheMode? cacheMode;
-		private DateTimeOffset? offset;
+		private double? offset;
 		private TimeSpan? slidingExpiration;
+		private CacheItemPriority? priority;
 	}
 }

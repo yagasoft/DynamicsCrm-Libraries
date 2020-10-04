@@ -10,36 +10,38 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Cache
 {
 	internal class CacheItemPolicyFactory : ICacheItemPolicyFactory
 	{
-		private readonly DateTimeOffset? offset;
+		private readonly double? absoluteExpirySecs;
 		private readonly TimeSpan? slidingExpiration;
+		private readonly CacheItemPriority? priority;
 
-		public CacheItemPolicyFactory(DateTimeOffset? offset)
+		public CacheItemPolicyFactory(double absoluteExpirySecs, CacheItemPriority? priority)
 		{
-			this.offset = offset;
+			this.absoluteExpirySecs = absoluteExpirySecs;
+			this.priority = priority;
 		}
 
-		public CacheItemPolicyFactory(TimeSpan? slidingExpiration)
+		public CacheItemPolicyFactory(TimeSpan slidingExpiration, CacheItemPriority? priority)
 		{
 			this.slidingExpiration = slidingExpiration;
-		}
-
-		public CacheItemPolicyFactory(DateTimeOffset? offset, TimeSpan? slidingExpiration)
-		{
-			this.offset = offset;
-			this.slidingExpiration = slidingExpiration;
+			this.priority = priority;
 		}
 
 		public CacheItemPolicy Create()
 		{
 			var policy = new CacheItemPolicy();
 
-			if (offset.HasValue)
+			if (absoluteExpirySecs.HasValue)
 			{
-				policy.AbsoluteExpiration = offset.Value;
+				policy.AbsoluteExpiration = DateTime.Now.AddSeconds(absoluteExpirySecs.Value);
 			}
 			else if (slidingExpiration.HasValue)
 			{
 				policy.SlidingExpiration = slidingExpiration.Value;
+			}
+
+			if (priority.HasValue)
+			{
+				policy.Priority = priority.Value;
 			}
 
 			return policy;

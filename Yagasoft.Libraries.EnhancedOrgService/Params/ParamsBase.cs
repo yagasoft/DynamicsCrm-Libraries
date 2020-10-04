@@ -1,5 +1,6 @@
 ﻿#region Imports
 
+using System;
 using Yagasoft.Libraries.EnhancedOrgService.Exceptions;
 
 #endregion
@@ -14,7 +15,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 		{
 			if (IsLocked)
 			{
-				throw new UnsupportedException("Cannot modify value because object is locked.");
+				throw new NotSupportedException("Cannot modify value because object is locked.");
 			}
 		}
 	}

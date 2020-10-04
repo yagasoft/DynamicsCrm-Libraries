@@ -3,25 +3,31 @@
 <package>
   <metadata>
     <id>Yagasoft.Libraries.EnhancedOrgService</id>
-    <version>3.1.1</version>
+    <version>4.1.1</version>
     <authors>Ahmed Elsawalhy</authors>
     <owners>Ahmed Elsawalhy</owners>
-    <projectUrl>https://github.com/os008/DynamicsCrm-Libraries</projectUrl>
+    <projectUrl>https://github.com/yagasoft/DynamicsCrm-Libraries</projectUrl>
     <license type="file">licence\LICENCE</license>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <summary>Dynamics CRM Enhanced Organisation Service.</summary>
     <description>Dynamics CRM Enhanced Organisation Service is an extension to the out-of-the-box IOrganizationService. It supports pooling, async operations, dependencies, transactions, deferred execution, and caching.</description>
     <copyright>Copyright Ahmed Elsawalhy</copyright>
-    <tags>organization, service, IOrganizationService, CrmServiceClient, CRM, Dynamics, 365, 2016, async, transaction, pool, bulk, cache, caching</tags>
+    <tags>organization,service,IOrganizationService,CrmServiceClient,CRM,Dynamics,365,async,transaction,pool,bulk,cache,caching</tags>
     <developmentDependency>true</developmentDependency>
     <dependencies>
       <group>
         <dependency id="Microsoft.CrmSdk.XrmTooling.CoreAssembly" version="9.0.2.12" />
-        <dependency id="Yagasoft.Libraries.Common" version="2.2.6" />
+        <dependency id="Yagasoft.Libraries.Common" version="2.3.2" />
       </group>
     </dependencies>
     <references />
     <releaseNotes>
+      * 4.1.1
+      Added: CacheItemPriority to cache settings
+      Improved: pool helpers
+      Improved: generics and refactored
+      Fixed: absolute expiration returns an absolute fixed date in the cache factory, now returns an absolute date from the time of call to the factory's 'get'
+      Fixed: connection errors causing deadlocks
       * 3.1.1
       Added: execution planning, where a plan is executed in CRM itself for performance and atomicity reasons
       * 2.5.1
@@ -38,7 +44,7 @@
       Added: pool dequeue timeout option
       Improved: connection error handling and message details
       Improved: service parameters definition
-      Changed: supported SDK to v9.1.0.26 for .NET Framework 4.6.2
+      Changed: upgrade supported SDK to v9.1.0.26 for .NET Framework 4.6.2
       * 2.2.4
       Fixed: ensure token is auto-refreshed internally as well
       * 2.2.3

@@ -8,7 +8,7 @@ using Yagasoft.Libraries.EnhancedOrgService.Response.Tokens;
 
 #endregion
 
-namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Features
+namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Deferred
 {
 	public interface IDeferredOrgService
 	{

@@ -5,7 +5,7 @@ using Microsoft.Xrm.Sdk.Query;
 using Yagasoft.Libraries.EnhancedOrgService.ExecutionPlan.Planning;
 using Yagasoft.Libraries.EnhancedOrgService.ExecutionPlan.SdkMocks;
 
-namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Features
+namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Planned
 {
 	public interface IPlannedOrgService
 	{

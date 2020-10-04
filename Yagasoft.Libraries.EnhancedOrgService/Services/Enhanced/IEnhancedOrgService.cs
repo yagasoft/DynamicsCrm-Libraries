@@ -6,78 +6,33 @@ using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Messages;
 using Microsoft.Xrm.Sdk.Query;
 using Yagasoft.Libraries.Common;
-using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Features;
-using Yagasoft.Libraries.EnhancedOrgService.Transactions;
+using Yagasoft.Libraries.EnhancedOrgService.Factories;
+using Yagasoft.Libraries.EnhancedOrgService.Params;
+using Yagasoft.Libraries.EnhancedOrgService.Pools;
+using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Deferred;
+using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Planned;
+using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Transactions;
 
 #endregion
 
 namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 {
-	public interface IEnhancedOrgService : IOrganizationService, IDisposable
+	/// <summary>
+	///     Dynamics CRM Enhanced Organisation Service is an extension to the out-of-the-box IOrganizationService. It supports
+	///     pooling, async operations, dependencies, transactions, deferred execution, and caching.<br />
+	///     Use one of the following methods to create a service:<br />
+	///     <c>    </c>1- Helpers: invoke one of the helpers in <see cref="Helpers.EnhancedServiceHelper" /><br />
+	///     <c>    </c>2- Manual:<br />
+	///     <c>        </c>a) Create a factory: create an object of
+	///     <see cref="EnhancedServiceFactory{TServiceInterface,TEnhancedOrgService}" />,
+	///     passing <see cref="EnhancedServiceParams" /> as a parameter to the constructor<br />
+	///     <c>        </c>b) Optionally, pool services created by the factory: create a pool object of
+	///     <see cref="EnhancedServicePool{TServiceInterface,TEnhancedOrgService}" />,
+	///     passing the factory as a parameter to the constructor<br />
+	///     Author: Ahmed Elsawalhy
+	/// </summary>
+	public interface IEnhancedOrgService : IOrganizationService, IDisposable, ITransactionOrgService
 	{
-		/// <summary>
-		///     Starts a new transaction. After calling this method, all service requests can be undone by calling
-		///     <see cref="EnhancedOrgServiceBase.UndoTransaction" />.
-		/// </summary>
-		/// <param name="transactionId">[OPTIONAL] The transaction ID.</param>
-		/// <returns>A new transaction object to use when reverting the transaction.</returns>
-		Transaction BeginTransaction(string transactionId = null);
-
-		/// <summary>
-		///     Reverts the transaction, which executes 'undo' requests for every service request made since the start of this
-		///     transaction.
-		///     If no transaction is given, it reverts ALL transactions.
-		/// </summary>
-		/// <param name="transaction">[OPTIONAL] The transaction to revert.</param>
-		void UndoTransaction(Transaction transaction = null);
-
-		/// <summary>
-		///     Adds undo logic for the request type given to the cache.
-		/// </summary>
-		/// <typeparam name="TRequestType">The type of the request to undo.</typeparam>
-		/// <param name="undoFunction">The undo function, which takes the original request and returns the undo request.</param>
-		void AddUndoLogicToCache<TRequestType>(
-			Func<IOrganizationService, OrganizationRequest, OrganizationRequest> undoFunction)
-			where TRequestType : OrganizationRequest;
-
-		/// <summary>
-		///     Ends the transaction, which excludes requests from future reverts; however, nested transactions can still be
-		///     reverted!
-		/// </summary>
-		/// <param name="transaction">The transaction to end.</param>
-		void EndTransaction(Transaction transaction = null);
-
-		/// <summary>
-		///     Removed an entity from cache.<br />
-		/// </summary>
-		void RemoveFromCache(Entity record);
-
-		/// <summary>
-		///     Removed an entity from cache.<br />
-		/// </summary>
-		void RemoveFromCache(EntityReference entity);
-
-		/// <summary>
-		///     Removed an entity from cache.<br />
-		/// </summary>
-		void RemoveFromCache(string entityLogicalName, Guid? id);
-
-		/// <summary>
-		///     Removed based on request from cache.<br />
-		/// </summary>
-		void RemoveFromCache(OrganizationRequest request);
-
-		/// <summary>
-		///     Removed all entities from cache.<br />
-		/// </summary>
-		void RemoveAllFromCache();
-
-		/// <summary>
-		///     Clears the query's memory cache.<br />
-		///     If the cache is not only scoped to this service (factory's 'PrivatePerInstance' setting), an exception is thrown.
-		/// </summary>
-		void ClearCache();
-
 		/// <summary>
 		///     Calls <see cref="Entity.ToEntity{T}" /> after the retrieve operation.
 		///     <seealso cref="IOrganizationService.Retrieve" />
@@ -203,7 +158,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 		IDeferredOrgService StartDeferredQueue();
 
 		/// <summary>
-		///     TODO
+		///     Returns an object that manages the deferred execution operations (single object per Org Service).
 		/// </summary>
 		IPlannedOrgService StartExecutionPlanning();
 	}

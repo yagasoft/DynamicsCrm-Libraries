@@ -62,7 +62,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Transactions
 					: undoFunction(service, request);
 
 				// register this response as the starting point of the latest transaction
-				transactionsStack.Peek().StartingPoint = transactionsStack.Peek().StartingPoint ?? operation;
+				transactionsStack.Peek().StartingPoint ??= operation;
 				operationsStack.Push(operation);
 			}
 			catch (Exception ex)

@@ -83,7 +83,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Builders
 
 			if (!parameters.IsConcurrencyEnabled)
 			{
-				throw new UnsupportedException("Concurrency is not enabled.");
+				throw new NotSupportedException("Concurrency is not enabled.");
 			}
 
 			parameters.ConcurrencyParams.IsAsyncAppHold = true;

@@ -1,6 +1,7 @@
 ﻿#region Imports
 
 using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced;
+using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Transactions;
 
 #endregion
 
@@ -11,8 +12,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 	///     Releasing the services to the pool is done manually, or through the 'using' keyword.<br />
 	///     Author: Ahmed Elsawalhy
 	/// </summary>
-	public interface IEnhancedServicePool<TService>
-		where TService : IEnhancedOrgService
+	public interface IEnhancedServicePool<out TService>
+		where TService : ITransactionOrgService
 	{
 		int CreatedServices { get; }
 		int CurrentPoolSize { get; }
@@ -48,6 +49,6 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 		///     The state of the service becomes invalid; so it should not be used after calling this method.
 		/// </summary>
 		/// <param name="service">Service to release.</param>
-		void ReleaseService(TService service);
+		void ReleaseService(ITransactionOrgService service);
 	}
 }

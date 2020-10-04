@@ -7,10 +7,11 @@ using Microsoft.Xrm.Client.Services;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
 using Yagasoft.Libraries.Common;
+using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Transactions;
 
 #endregion
 
-namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Features.Async
+namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Async
 {
 	public interface IAsyncOrgService : IEnhancedOrgService
 	{

@@ -11,18 +11,20 @@ using Yagasoft.Libraries.EnhancedOrgService.Factories;
 using Yagasoft.Libraries.EnhancedOrgService.Helpers;
 using Yagasoft.Libraries.EnhancedOrgService.Params;
 using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced;
+using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Transactions;
 
 #endregion
 
 namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 {
 	/// <inheritdoc cref="IEnhancedServicePool{TService}" />
-	public class EnhancedServicePool<TService> : IEnhancedServicePool<TService>
-		where TService : IEnhancedOrgService
+	public class EnhancedServicePool<TServiceInterface, TEnhancedOrgService> : IEnhancedServicePool<TServiceInterface>
+		where TServiceInterface : ITransactionOrgService
+		where TEnhancedOrgService : EnhancedOrgServiceBase, TServiceInterface
 	{
-		private readonly EnhancedServiceFactory<TService> factory;
+		private readonly EnhancedServiceFactory<TServiceInterface, TEnhancedOrgService> factory;
 
-		private readonly BlockingQueue<TService> servicesQueue = new BlockingQueue<TService>();
+		private readonly BlockingQueue<TServiceInterface> servicesQueue = new BlockingQueue<TServiceInterface>();
 		private readonly ConcurrentQueue<IOrganizationService> crmServicesQueue = new ConcurrentQueue<IOrganizationService>();
 
 		private readonly PoolParams poolParams;
@@ -31,13 +33,13 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 		private Thread warmupThread;
 		private bool isWarmUp;
 
-		public EnhancedServicePool(EnhancedServiceFactory<TService> factory, int poolSize = 2)
+		public EnhancedServicePool(EnhancedServiceFactory<TServiceInterface, TEnhancedOrgService> factory, int poolSize = 2)
 		{
 			this.factory = factory;
 			poolParams = new PoolParams { PoolSize = poolSize };
 		}
 
-		public EnhancedServicePool(EnhancedServiceFactory<TService> factory, PoolParams poolParams = null)
+		public EnhancedServicePool(EnhancedServiceFactory<TServiceInterface, TEnhancedOrgService> factory, PoolParams poolParams = null)
 		{
 			this.factory = factory;
 			this.poolParams = poolParams ?? new PoolParams();
@@ -46,7 +48,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 		public int CreatedServices { get; private set; }
 		public int CurrentPoolSize => servicesQueue.Count;
 
-		public TService GetService(int threads = 1)
+		public TServiceInterface GetService(int threads = 1)
 		{
 			servicesQueue.TryTake(out var service);
 			return GetInitialisedService(threads, service);
@@ -120,7 +122,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 			}
 		}
 
-		private TService GetInitialisedService(int threads, [Optional] TService enhancedService)
+		private TServiceInterface GetInitialisedService(int threads, [Optional] TServiceInterface enhancedService)
 		{
 			if (enhancedService == null)
 			{
@@ -147,14 +149,23 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 
 			if (enhancedService is EnhancedOrgServiceBase enhancedOrgServiceBase)
 			{
-				enhancedOrgServiceBase.FillServicesQueue(Enumerable.Range(0, threads).Select(e => GetCrmService()));
 				enhancedOrgServiceBase.ReleaseService = () => ReleaseService(enhancedService);
+
+				try
+				{
+					enhancedOrgServiceBase.FillServicesQueue(Enumerable.Range(0, threads).Select(e => GetCrmService()));
+				}
+				catch
+				{
+					enhancedOrgServiceBase.ReleaseService();
+					throw;
+				}
 			}
 
 			return enhancedService;
 		}
 
-		private TService GetEnhancedService()
+		private TServiceInterface GetEnhancedService()
 		{
 			var enhancedService = factory.CreateEnhancedServiceInternal(false);
 			CreatedServices++;
@@ -166,7 +177,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 			factory.ClearCache();
 		}
 
-		public void ReleaseService(TService enhancedService)
+		public void ReleaseService(ITransactionOrgService enhancedService)
 		{
 			lock (crmServicesQueue)
 			{
@@ -181,7 +192,10 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 				}
 			}
 
-			servicesQueue.Enqueue(enhancedService);
+			if (enhancedService is TServiceInterface thisService)
+			{
+				servicesQueue.Enqueue(thisService);
+			}
 		}
 	}
 }

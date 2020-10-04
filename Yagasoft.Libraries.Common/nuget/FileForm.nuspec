@@ -3,16 +3,16 @@
 <package>
   <metadata>
     <id>Yagasoft.Libraries.Common.File</id>
-    <version>4.3.1</version>
+    <version>4.3.2</version>
     <authors>Ahmed Elsawalhy</authors>
     <owners>Ahmed Elsawalhy</owners>
-    <projectUrl>https://github.com/os008/DynamicsCrm-Libraries</projectUrl>
+    <projectUrl>https://github.com/yagasoft/DynamicsCrm-Libraries</projectUrl>
     <license type="file">licence\LICENCE</license>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <summary>Dynamics CRM Common Library in the form of a CS file.</summary>
     <description>Dynamics CRM Common Library is a collection of generic functionalities that give power to developers. This package adds the library as a CS file in your project, instead of a assembly reference.</description>
     <copyright>Copyright Ahmed Elsawalhy</copyright>
-    <tags>common, library, CRM, Dynamics, 365, 2016</tags>
+    <tags>common,library,CRM,Dynamics,365,sdk,helpers</tags>
     <developmentDependency>true</developmentDependency>
     <dependencies>
       <group>
@@ -26,6 +26,8 @@
     </frameworkAssemblies>
     <references />
     <releaseNotes>
+      * 4.3.2
+      Fixed: [Common] caching issues
       * 4.3.1
       Added: more convenience methods
       Fixed: issues

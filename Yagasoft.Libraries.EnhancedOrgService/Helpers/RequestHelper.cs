@@ -105,13 +105,12 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 			}
 
 			// get the FetchXML to create new queries for each page
-			fetchXml = fetchXml
-				?? ((QueryExpressionToFetchXmlResponse)
-					service.Execute(
-						new QueryExpressionToFetchXmlRequest
-						{
-							Query = query
-						})).FetchXml;
+			fetchXml ??= ((QueryExpressionToFetchXmlResponse)
+				service.Execute(
+					new QueryExpressionToFetchXmlRequest
+					{
+						Query = query
+					})).FetchXml;
 
 			// create a new QueryExpression object
 			cachedQuery = ((FetchXmlToQueryExpressionResponse)
