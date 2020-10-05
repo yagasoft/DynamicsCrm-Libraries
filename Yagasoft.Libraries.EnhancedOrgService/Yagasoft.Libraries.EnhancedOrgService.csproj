@@ -144,12 +144,11 @@
     <Compile Include="Helpers\ProcessBase.cs" />
     <Compile Include="Helpers\EnhancedServiceHelper.cs" />
     <Compile Include="Params\CachingParams.cs" />
+    <Compile Include="Params\AutoRetryParams.cs" />
     <Compile Include="Params\PoolParams.cs" />
     <Compile Include="Params\ConnectionParams.cs" />
-    <Compile Include="Params\ConcurrencyParams.cs" />
     <Compile Include="Params\ParamsBase.cs" />
     <Compile Include="Params\EnhancedServiceParams.cs" />
-    <Compile Include="Builders\EnhancedServiceBuilder.cs" />
     <Compile Include="Params\TransactionParams.cs" />
     <Compile Include="Exceptions\InitialisationException.cs" />
     <Compile Include="Cache\QueryCacheControl.cs" />
@@ -158,7 +157,6 @@
     <Compile Include="Response\Tokens\IToken.cs" />
     <Compile Include="Response\Tokens\OrganisationRequestToken.cs" />
     <Compile Include="Response\Tokens\Token.cs" />
-    <Compile Include="Services\Enhanced\Cache\IAsyncCachingOrgService.cs" />
     <Compile Include="Services\Enhanced\EnhancedOrgServiceBase.cs" />
     <Compile Include="Services\Enhanced\EnhancedOrgService.cs" />
     <Compile Include="Factories\IEnhancedServiceFactory.cs" />
@@ -171,7 +169,6 @@
     <Compile Include="Services\Enhanced\Deferred\IDeferredOrgService.cs" />
     <Compile Include="Services\Enhanced\Planned\IPlannedOrgService.cs" />
     <Compile Include="Services\Enhanced\IEnhancedOrgService.cs" />
-    <Compile Include="Services\Enhanced\Async\IAsyncOrgService.cs" />
     <Compile Include="Services\Enhanced\Transactions\ITransactionOrgService.cs" />
     <Compile Include="Services\SelfEnqueuingService.cs" />
     <Compile Include="Test.cs" />

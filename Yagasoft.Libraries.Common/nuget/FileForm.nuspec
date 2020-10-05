@@ -3,7 +3,7 @@
 <package>
   <metadata>
     <id>Yagasoft.Libraries.Common.File</id>
-    <version>4.3.2</version>
+    <version>4.3.3</version>
     <authors>Ahmed Elsawalhy</authors>
     <owners>Ahmed Elsawalhy</owners>
     <projectUrl>https://github.com/yagasoft/DynamicsCrm-Libraries</projectUrl>
@@ -26,8 +26,10 @@
     </frameworkAssemblies>
     <references />
     <releaseNotes>
+      * 4.3.3
+      Fixed: RequireFormat helper
       * 4.3.2
-      Fixed: [Common] caching issues
+      Fixed: caching issues
       * 4.3.1
       Added: more convenience methods
       Fixed: issues

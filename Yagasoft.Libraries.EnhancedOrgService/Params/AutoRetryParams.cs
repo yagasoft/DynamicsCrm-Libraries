@@ -1,6 +1,6 @@
 ﻿namespace Yagasoft.Libraries.EnhancedOrgService.Params
 {
-	public class ConcurrencyParams : ParamsBase
+	public class AutoRetryParams : ParamsBase
 	{
 		public bool IsAsyncAppHold
 		{

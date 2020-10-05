@@ -2,7 +2,7 @@
 
 [![Join the chat at https://gitter.im/yagasoft/DynamicsCrm-Libraries](https://badges.gitter.im/yagasoft/DynamicsCrm-Libraries.svg)](https://gitter.im/yagasoft/DynamicsCrm-Libraries?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-### Version: 4.1.1
+### Version: 4.2.2
 ---
 
 A collection of libraries for common and extended operations in Dynamics CRM development that gives power to the developer and saves time.
@@ -19,7 +19,6 @@ A collection of libraries for common and extended operations in Dynamics CRM dev
       + Accumulate operations from across the application to be executed in one go
     + Planned execution to be sent to CRM for execution
       + Return values from mid-execution operations can be used in later operations within the same transaction
-    + Async operations with support for async/await and dependency definitions
   + Dynamics-CRM-specific code analysis rules
 
 ## Guide
@@ -33,6 +32,10 @@ A collection of libraries for common and extended operations in Dynamics CRM dev
 
 ## Changes
 
+#### _v4.2.2 (2020-10-06)_
++ Added: [EnhancedOrgService] exposed AutoSetMaxPerformanceParams through the Helper methods
++ Fixed: [Common] RequireFormat helper
++ Removed: [EnhancedOrgService] async operations (use Task.Run or similar methods from .NET instead)
 #### _v4.1.1 (2020-10-02)_
 + Added: [EnhancedOrgService] CacheItemPriority to cache settings
 + Improved: [EnhancedOrgService] pool helpers

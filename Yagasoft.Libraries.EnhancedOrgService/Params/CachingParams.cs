@@ -52,7 +52,6 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 			set
 			{
 				ValidateLock();
-				value.Require(nameof(CacheMode));
 				cacheMode = value;
 			}
 		}
@@ -68,7 +67,6 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 			set
 			{
 				ValidateLock();
-				value.Require(nameof(Offset));
 				offset = value;
 			}
 		}
@@ -83,7 +81,6 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 			set
 			{
 				ValidateLock();
-				value.Require(nameof(SlidingExpiration));
 				slidingExpiration = value;
 			}
 		}
@@ -98,7 +95,6 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 			set
 			{
 				ValidateLock();
-				value.Require(nameof(Priority));
 				priority = value;
 			}
 		}

@@ -6,7 +6,6 @@ using Yagasoft.Libraries.EnhancedOrgService.Factories;
 using Yagasoft.Libraries.EnhancedOrgService.Params;
 using Yagasoft.Libraries.EnhancedOrgService.Pools;
 using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced;
-using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Async;
 using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Cache;
 
 #endregion
@@ -19,6 +18,12 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 	/// </summary>
 	public static class EnhancedServiceHelper
 	{
+		/// <summary>
+		///     <inheritdoc cref="EnhancedServiceParams.AutoSetMaxPerformanceParams" /><br />
+		///     <b>Applies only when creating pools after setting this to 'true'.</b>
+		/// </summary>
+		public static bool AutoSetMaxPerformanceParams { get; set; }
+
 		public static IEnhancedServicePool<IEnhancedOrgService> GetPool(string connectionString, int poolSize = 2,
 			ConnectionParams connectionParams = null, TransactionParams transactionParams = null)
 		{
@@ -27,32 +32,13 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 			return new EnhancedServicePool<IEnhancedOrgService, Services.Enhanced.EnhancedOrgService>(factory, poolSize);
 		}
 
-		public static IEnhancedServicePool<IAsyncOrgService> GetPoolAsync(string connectionString, int poolSize = 2,
-			ConcurrencyParams concurrencyParams = null, ConnectionParams connectionParams = null, TransactionParams transactionParams = null)
-		{
-			var parameters = BuildBaseParams(connectionString, poolSize, null, connectionParams, transactionParams,
-				concurrencyParams ?? new ConcurrencyParams());
-			var factory = new EnhancedServiceFactory<IAsyncOrgService, Services.Enhanced.EnhancedOrgService>(parameters);
-			return new EnhancedServicePool<IAsyncOrgService, Services.Enhanced.EnhancedOrgService>(factory, poolSize);
-		}
-
 		public static IEnhancedServicePool<ICachingOrgService> GetPoolCaching(string connectionString, int poolSize = 2,
 			CachingParams cachingParams = null, ConnectionParams connectionParams = null, TransactionParams transactionParams = null)
 		{
 			var parameters = BuildBaseParams(connectionString, poolSize, null, connectionParams, transactionParams,
-				null, cachingParams ?? new CachingParams());
+				cachingParams ?? new CachingParams());
 			var factory = new EnhancedServiceFactory<ICachingOrgService, Services.Enhanced.EnhancedOrgService>(parameters);
 			return new EnhancedServicePool<ICachingOrgService, Services.Enhanced.EnhancedOrgService>(factory, poolSize);
-		}
-
-		public static IEnhancedServicePool<IAsyncCachingOrgService> GetPoolAsyncCaching(string connectionString, int poolSize = 2,
-			ConcurrencyParams concurrencyParams = null, CachingParams cachingParams = null,
-			ConnectionParams connectionParams = null, TransactionParams transactionParams = null)
-		{
-			var parameters = BuildBaseParams(connectionString, poolSize, null, connectionParams, transactionParams,
-				concurrencyParams ?? new ConcurrencyParams(), cachingParams ?? new CachingParams());
-			var factory = new EnhancedServiceFactory<IAsyncCachingOrgService, Services.Enhanced.EnhancedOrgService>(parameters);
-			return new EnhancedServicePool<IAsyncCachingOrgService, Services.Enhanced.EnhancedOrgService>(factory, poolSize);
 		}
 
 		public static IEnhancedServicePool<IEnhancedOrgService> GetPool(string connectionString, PoolParams poolParams,
@@ -63,32 +49,13 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 			return new EnhancedServicePool<IEnhancedOrgService, Services.Enhanced.EnhancedOrgService>(factory, poolParams);
 		}
 
-		public static IEnhancedServicePool<IAsyncOrgService> GetPoolAsync(string connectionString, PoolParams poolParams,
-			ConcurrencyParams concurrencyParams = null, ConnectionParams connectionParams = null, TransactionParams transactionParams = null)
-		{
-			var parameters = BuildBaseParams(connectionString, 2, poolParams, connectionParams, transactionParams,
-				concurrencyParams ?? new ConcurrencyParams());
-			var factory = new EnhancedServiceFactory<IAsyncOrgService, Services.Enhanced.EnhancedOrgService>(parameters);
-			return new EnhancedServicePool<IAsyncOrgService, Services.Enhanced.EnhancedOrgService>(factory, poolParams);
-		}
-
 		public static IEnhancedServicePool<ICachingOrgService> GetPoolCaching(string connectionString, PoolParams poolParams,
 			CachingParams cachingParams = null, ConnectionParams connectionParams = null, TransactionParams transactionParams = null)
 		{
 			var parameters = BuildBaseParams(connectionString, 2, null, connectionParams, transactionParams,
-				null, cachingParams ?? new CachingParams());
+				cachingParams ?? new CachingParams());
 			var factory = new EnhancedServiceFactory<ICachingOrgService, Services.Enhanced.EnhancedOrgService>(parameters);
 			return new EnhancedServicePool<ICachingOrgService, Services.Enhanced.EnhancedOrgService>(factory, poolParams);
-		}
-
-		public static IEnhancedServicePool<IAsyncCachingOrgService> GetPoolAsyncCaching(string connectionString, PoolParams poolParams,
-			ConcurrencyParams concurrencyParams = null, CachingParams cachingParams = null,
-			ConnectionParams connectionParams = null, TransactionParams transactionParams = null)
-		{
-			var parameters = BuildBaseParams(connectionString, 2, null, connectionParams, transactionParams,
-				concurrencyParams ?? new ConcurrencyParams(), cachingParams ?? new CachingParams());
-			var factory = new EnhancedServiceFactory<IAsyncCachingOrgService, Services.Enhanced.EnhancedOrgService>(parameters);
-			return new EnhancedServicePool<IAsyncCachingOrgService, Services.Enhanced.EnhancedOrgService>(factory, poolParams);
 		}
 
 		public static IEnhancedServicePool<IEnhancedOrgService> GetPool(ConnectionParams connectionParams, PoolParams poolParams,
@@ -99,37 +66,18 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 			return new EnhancedServicePool<IEnhancedOrgService, Services.Enhanced.EnhancedOrgService>(factory, poolParams);
 		}
 
-		public static IEnhancedServicePool<IAsyncOrgService> GetPoolAsync(ConnectionParams connectionParams, PoolParams poolParams,
-			ConcurrencyParams concurrencyParams = null, TransactionParams transactionParams = null)
-		{
-			var parameters = BuildBaseParams(string.Empty, 2, poolParams, connectionParams, transactionParams,
-				concurrencyParams ?? new ConcurrencyParams());
-			var factory = new EnhancedServiceFactory<IAsyncOrgService, Services.Enhanced.EnhancedOrgService>(parameters);
-			return new EnhancedServicePool<IAsyncOrgService, Services.Enhanced.EnhancedOrgService>(factory, poolParams);
-		}
-
 		public static IEnhancedServicePool<ICachingOrgService> GetPoolCaching(ConnectionParams connectionParams, PoolParams poolParams,
 			CachingParams cachingParams = null, TransactionParams transactionParams = null)
 		{
 			var parameters = BuildBaseParams(string.Empty, 2, null, connectionParams, transactionParams,
-				null, cachingParams ?? new CachingParams());
+				cachingParams ?? new CachingParams());
 			var factory = new EnhancedServiceFactory<ICachingOrgService, Services.Enhanced.EnhancedOrgService>(parameters);
 			return new EnhancedServicePool<ICachingOrgService, Services.Enhanced.EnhancedOrgService>(factory, poolParams);
 		}
 
-		public static IEnhancedServicePool<IAsyncCachingOrgService> GetPoolAsyncCaching(ConnectionParams connectionParams, PoolParams poolParams,
-			ConcurrencyParams concurrencyParams = null, CachingParams cachingParams = null,
-			TransactionParams transactionParams = null)
-		{
-			var parameters = BuildBaseParams(string.Empty, 2, null, connectionParams, transactionParams,
-				concurrencyParams ?? new ConcurrencyParams(), cachingParams ?? new CachingParams());
-			var factory = new EnhancedServiceFactory<IAsyncCachingOrgService, Services.Enhanced.EnhancedOrgService>(parameters);
-			return new EnhancedServicePool<IAsyncCachingOrgService, Services.Enhanced.EnhancedOrgService>(factory, poolParams);
-		}
-
 		private static EnhancedServiceParams BuildBaseParams(string connectionString, int poolSize,
-			PoolParams poolParams = null, ConnectionParams connectionParams = null, TransactionParams transactionParams = null,
-			ConcurrencyParams concurrencyParams = null, CachingParams cachingParams = null)
+			PoolParams poolParams = null, ConnectionParams connectionParams = null,
+			TransactionParams transactionParams = null, CachingParams cachingParams = null)
 		{
 			var parameters =
 				new EnhancedServiceParams
@@ -144,16 +92,15 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 				parameters.TransactionParams = transactionParams;
 			}
 
-			if (concurrencyParams != null)
-			{
-				parameters.IsConcurrencyEnabled = true;
-				parameters.ConcurrencyParams = concurrencyParams;
-			}
-
 			if (cachingParams != null)
 			{
 				parameters.IsCachingEnabled = true;
 				parameters.CachingParams = cachingParams;
+			}
+
+			if (AutoSetMaxPerformanceParams)
+			{
+				parameters.AutoSetMaxPerformanceParams();
 			}
 
 			return parameters;

@@ -15,7 +15,6 @@ using Yagasoft.Libraries.EnhancedOrgService.Cache;
 using Yagasoft.Libraries.EnhancedOrgService.Helpers;
 using Yagasoft.Libraries.EnhancedOrgService.Params;
 using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced;
-using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Async;
 using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Cache;
 using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Transactions;
 using Yagasoft.Libraries.EnhancedOrgService.Transactions;
@@ -50,13 +49,6 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 			if (parameters.IsCachingEnabled && !isCachingService)
 			{
 				throw new NotSupportedException("Cannot create a caching service factory unless the given service is caching.");
-			}
-
-			var isAsyncService = typeof(IAsyncOrgService).IsAssignableFrom(typeof(TEnhancedOrgService));
-
-			if (parameters.IsConcurrencyEnabled && !isAsyncService)
-			{
-				throw new NotSupportedException("Cannot create an async service factory unless the given service is async.");
 			}
 
 			SetPerformanceParams(parameters);
@@ -107,7 +99,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 				service = serviceCloneBase.Clone();
 			}
 
-			if (service.EnsureTokenValid(parameters.PoolParams.TokenExpiryCheckSecs ?? 0) == false)
+			if (service.EnsureTokenValid(parameters.PoolParams?.TokenExpiryCheckSecs ?? 0) == false)
 			{
 				service = null;
 			}

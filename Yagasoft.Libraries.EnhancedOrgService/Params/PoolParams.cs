@@ -17,7 +17,6 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 			set
 			{
 				ValidateLock();
-				value.Require(nameof(PoolSize));
 				value?.RequireAtLeast(1, nameof(PoolSize));
 				poolSize = value;
 			}
@@ -34,7 +33,6 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 			set
 			{
 				ValidateLock();
-				value.Require(nameof(TokenExpiryCheckSecs));
 				value?.RequireAtLeast(1, nameof(TokenExpiryCheckSecs));
 				tokenExpiryCheckSecs = value;
 			}
@@ -51,7 +49,6 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 			set
 			{
 				ValidateLock();
-				value.Require(nameof(DequeueTimeoutInMillis));
 				value?.RequireAtLeast(1, nameof(DequeueTimeoutInMillis));
 				dequeueTimeoutInMillis = value;
 			}
@@ -67,7 +64,6 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 			set
 			{
 				ValidateLock();
-				value.Require(nameof(DotNetSetMinAppReservedThreads));
 				value?.RequireAtLeast(1, nameof(DotNetSetMinAppReservedThreads));
 				dotNetSetMinAppReservedThreads = value;
 			}

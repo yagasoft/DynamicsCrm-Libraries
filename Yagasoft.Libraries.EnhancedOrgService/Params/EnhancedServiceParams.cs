@@ -29,9 +29,9 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 					TransactionParams.IsLocked = value;
 				}
 
-				if (ConcurrencyParams != null)
+				if (AutoRetryParams != null)
 				{
-					ConcurrencyParams.IsLocked = value;
+					AutoRetryParams.IsLocked = value;
 				}
 
 				if (PoolParams != null)
@@ -66,13 +66,12 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 
 		public CachingParams CachingParams
 		{
-			get => cachingParams ??= new CachingParams();
+			get => cachingParams;
 			set
 			{
 				ValidateLock();
-				value.Require(nameof(CachingParams));
 				cachingParams = value;
-				IsCachingEnabled = true;
+				IsCachingEnabled = value != null;
 			}
 		}
 
@@ -88,52 +87,50 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 
 		public TransactionParams TransactionParams
 		{
-			get => transactionParams ??= new TransactionParams();
+			get => transactionParams;
 			set
 			{
 				ValidateLock();
-				value.Require(nameof(TransactionParams));
 				transactionParams = value;
-				IsTransactionsEnabled = true;
+				IsTransactionsEnabled = value != null;
 			}
 		}
 
-		public bool IsConcurrencyEnabled
+		public bool IsAutoRetryEnabled
 		{
-			get => isConcurrencyEnabled;
+			get => isAutoRetryEnabled;
 			set
 			{
 				ValidateLock();
 
-				if (isConcurrencyEnabled && ConcurrencyParams == null)
+				if (isAutoRetryEnabled && AutoRetryParams == null)
 				{
-					throw new ArgumentNullException(nameof(ConcurrencyParams),
+					throw new ArgumentNullException(nameof(AutoRetryParams),
 						"Must set concurrency parameters first before enabling concurrency.");
 				}
 
-				isConcurrencyEnabled = value;
+				isAutoRetryEnabled = value;
 			}
 		}
 
-		public ConcurrencyParams ConcurrencyParams
+		public AutoRetryParams AutoRetryParams
 		{
-			get => concurrencyParams ??= new ConcurrencyParams();
+			get => autoRetryParams ??= new AutoRetryParams();
 			set
 			{
 				ValidateLock();
-				value.Require(nameof(ConcurrencyParams));
-				concurrencyParams = value;
-				IsConcurrencyEnabled = true;
+				value.Require(nameof(AutoRetryParams));
+				autoRetryParams = value;
+				IsAutoRetryEnabled = true;
 			}
 		}
 
 		public PoolParams PoolParams
 		{
-			get => poolParams ??= new PoolParams();
+			get => poolParams;
 			set
 			{
 				ValidateLock();
-				value.Require(nameof(PoolParams));
 				poolParams = value;
 			}
 		}
@@ -148,8 +145,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 		private bool isTransactionsEnabled;
 		private TransactionParams transactionParams;
 
-		private bool isConcurrencyEnabled;
-		private ConcurrencyParams concurrencyParams;
+		private bool isAutoRetryEnabled;
+		private AutoRetryParams autoRetryParams;
 
 		private PoolParams poolParams;
 

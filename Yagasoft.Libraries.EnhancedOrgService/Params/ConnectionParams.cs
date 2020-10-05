@@ -31,7 +31,6 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 			set
 			{
 				ValidateLock();
-				value.Require(nameof(DotNetDefaultConnectionLimit));
 				value?.RequireAtLeast(1, nameof(DotNetDefaultConnectionLimit));
 				dotNetDefaultConnectionLimit = value;
 			}
@@ -48,7 +47,6 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 			set
 			{
 				ValidateLock();
-				value.Require(nameof(IsDotNetDisableWaitForConnectConfirm));
 				isDotNetDisableWaitForConnectConfirm = value;
 			}
 		}
@@ -64,7 +62,6 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 			set
 			{
 				ValidateLock();
-				value.Require(nameof(IsDotNetDisableNagleAlgorithm));
 				isDotNetDisableNagleAlgorithm = value;
 			}
 		}
@@ -78,7 +75,6 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 			set
 			{
 				ValidateLock();
-				value.Require(nameof(CustomIOrgSvcFactory));
 				customIOrgSvcFactory = value;
 			}
 		}

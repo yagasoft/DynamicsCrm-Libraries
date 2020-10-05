@@ -1,16 +1,11 @@
 ﻿#region Imports
 
 using System;
-using System.Collections;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Caching;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.Xrm.Client;
 using Microsoft.Xrm.Client.Caching;
 using Microsoft.Xrm.Client.Services;
 using Microsoft.Xrm.Client.Services.Messages;
@@ -19,7 +14,6 @@ using Microsoft.Xrm.Sdk.Messages;
 using Microsoft.Xrm.Sdk.Query;
 using Yagasoft.Libraries.Common;
 using Yagasoft.Libraries.EnhancedOrgService.Exceptions;
-using Yagasoft.Libraries.EnhancedOrgService.ExecutionPlan.Base;
 using Yagasoft.Libraries.EnhancedOrgService.ExecutionPlan.Planning;
 using Yagasoft.Libraries.EnhancedOrgService.ExecutionPlan.SdkMocks;
 using Yagasoft.Libraries.EnhancedOrgService.ExecutionPlan.SerialiseWorkarounds;
@@ -27,7 +21,6 @@ using Yagasoft.Libraries.EnhancedOrgService.Helpers;
 using Yagasoft.Libraries.EnhancedOrgService.Params;
 using Yagasoft.Libraries.EnhancedOrgService.Response.Operations;
 using Yagasoft.Libraries.EnhancedOrgService.Response.Tokens;
-using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Async;
 using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Cache;
 using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Deferred;
 using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Planned;
@@ -38,7 +31,7 @@ using Yagasoft.Libraries.EnhancedOrgService.Transactions;
 namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 {
 	/// <inheritdoc cref="IEnhancedOrgService" />
-	public abstract class EnhancedOrgServiceBase : StateBase, IAsyncCachingOrgService, IDeferredOrgService, IPlannedOrgService
+	public abstract class EnhancedOrgServiceBase : StateBase, ICachingOrgService, IDeferredOrgService, IPlannedOrgService
 	{
 		internal ITransactionManager TransactionManager { get; set; }
 		protected int OperationIndex;
@@ -54,8 +47,6 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 
 		private List<IToken<OrganizationResponse>> deferredRequests;
 		private Queue<PlannedOperation> executionQueue;
-
-		private bool IsAsyncEnabled => Parameters.IsConcurrencyEnabled;
 
 		protected EnhancedOrgServiceBase(EnhancedServiceParams parameters)
 		{
@@ -229,16 +220,19 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 		{
 			ValidateState();
 
-			var request = new CreateRequest
-						  {
-							  Target = entity
-						  };
-			var operation = new Operation<Guid>(request)
-							{
-								Index = OperationIndex++
-							};
+			var request =
+				new CreateRequest
+				{
+					Target = entity
+				};
+			var operation =
+				new Operation<Guid>(request)
+				{
+					Index = OperationIndex++
+				};
 
 			using var service = GetService();
+
 			if (TransactionManager?.IsTransactionInEffect() == true)
 			{
 				TransactionManager.ProcessRequest(service, operation);
@@ -266,16 +260,19 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 		{
 			ValidateState();
 
-			var request = new UpdateRequest
-						  {
-							  Target = entity
-						  };
-			var operation = new Operation<object>(request)
-							{
-								Index = OperationIndex++
-							};
+			var request =
+				new UpdateRequest
+				{
+					Target = entity
+				};
+			var operation =
+				new Operation<object>(request)
+				{
+					Index = OperationIndex++
+				};
 
 			using var service = GetService();
+
 			if (TransactionManager?.IsTransactionInEffect() == true)
 			{
 				TransactionManager.ProcessRequest(service, operation);
@@ -302,16 +299,19 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 		{
 			ValidateState();
 
-			var request = new DeleteRequest
-						  {
-							  Target = new EntityReference(entityName, id)
-						  };
-			var operation = new Operation<object>(request)
-							{
-								Index = OperationIndex++
-							};
+			var request =
+				new DeleteRequest
+				{
+					Target = new EntityReference(entityName, id)
+				};
+			var operation =
+				new Operation<object>(request)
+				{
+					Index = OperationIndex++
+				};
 
 			using var service = GetService();
+
 			if (TransactionManager?.IsTransactionInEffect() == true)
 			{
 				TransactionManager.ProcessRequest(service, operation);
@@ -339,18 +339,21 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 		{
 			ValidateState();
 
-			var request = new AssociateRequest
-						  {
-							  Target = new EntityReference(entityName, entityId),
-							  Relationship = relationship,
-							  RelatedEntities = relatedEntities
-						  };
-			var operation = new Operation<object>(request)
-							{
-								Index = OperationIndex++
-							};
+			var request =
+				new AssociateRequest
+				{
+					Target = new EntityReference(entityName, entityId),
+					Relationship = relationship,
+					RelatedEntities = relatedEntities
+				};
+			var operation =
+				new Operation<object>(request)
+				{
+					Index = OperationIndex++
+				};
 
 			using var service = GetService();
+
 			try
 			{
 				service.Associate(entityName, entityId, relationship, relatedEntities);
@@ -374,18 +377,21 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 		{
 			ValidateState();
 
-			var request = new DisassociateRequest
-						  {
-							  Target = new EntityReference(entityName, entityId),
-							  Relationship = relationship,
-							  RelatedEntities = relatedEntities
-						  };
-			var operation = new Operation<object>(request)
-							{
-								Index = OperationIndex++
-							};
+			var request =
+				new DisassociateRequest
+				{
+					Target = new EntityReference(entityName, entityId),
+					Relationship = relationship,
+					RelatedEntities = relatedEntities
+				};
+			var operation =
+				new Operation<object>(request)
+				{
+					Index = OperationIndex++
+				};
 
 			using var service = GetService();
+
 			try
 			{
 				service.Disassociate(entityName, entityId, relationship, relatedEntities);
@@ -413,11 +419,12 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 				return Execute<RetrieveResponse>(
 					new RetrieveRequest
 					{
-						Target = new EntityReference
-								 {
-									 LogicalName = entityName,
-									 Id = id
-								 },
+						Target =
+							new EntityReference
+							{
+								LogicalName = entityName,
+								Id = id
+							},
 						ColumnSet = columnSet
 					})?.Entity;
 			}
@@ -466,18 +473,17 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 
 			try
 			{
-				using (var service = GetService())
-				{
-					// add to transaction if there is one
-					if (TransactionManager?.IsTransactionInEffect() == true)
-					{
-						TransactionManager.ProcessRequest(service, operation, undoFunction);
-					}
+				using var service = GetService();
 
-					if (!IsCacheEnabled)
-					{
-						return operation.Response = service.Execute(request);
-					}
+				// add to transaction if there is one
+				if (TransactionManager?.IsTransactionInEffect() == true)
+				{
+					TransactionManager.ProcessRequest(service, operation, undoFunction);
+				}
+
+				if (!IsCacheEnabled)
+				{
+					return operation.Response = service.Execute(request);
 				}
 
 				return operation.Response = Execute<OrganizationResponse>(request);
@@ -498,200 +504,6 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 		}
 
 		#endregion
-
-		#region Async
-
-		private Task GetDependenciesTask(params Task[] dependencies)
-		{
-			return dependencies.Aggregate<Task, Task>(null, (current, task) =>
-				current?.ContinueWith(taskQ => task.Wait()) ?? Task.Run((Action)task.Wait));
-		}
-
-		private Task<TResult> GetDependentResult<TResult>(Func<TResult> function, params Task[] dependencies)
-		{
-			ValidateAsync();
-			var task = GetDependenciesTask(dependencies)?.ContinueWith(taskQ => function()) ?? Task.Run(function);
-			CheckAppHold(task);
-			return task;
-		}
-
-		private void ValidateAsync()
-		{
-			if (!IsAsyncEnabled)
-			{
-				throw new NotSupportedException("Concurrency operations are not enabled.");
-			}
-		}
-
-		public async Task<Guid> CreateAsync(Entity entity, params Task[] dependencies)
-		{
-			ValidateState();
-			return await GetDependentResult(() => Create(entity), dependencies);
-		}
-
-		public async Task<Entity> RetrieveAsync(string entityName, Guid id, ColumnSet columnSet,
-			params Task[] dependencies)
-		{
-			ValidateState();
-			return await GetDependentResult(() => Retrieve(entityName, id, columnSet), dependencies);
-		}
-
-		public async Task<object> UpdateAsync(Entity entity, params Task[] dependencies)
-		{
-			ValidateState();
-			return await GetDependentResult<object>(
-				() =>
-				{
-					Update(entity);
-					return null;
-				}, dependencies);
-		}
-
-		public async Task<object> DeleteAsync(string entityName, Guid id, params Task[] dependencies)
-		{
-			ValidateState();
-			return await GetDependentResult<object>(
-				() =>
-				{
-					Delete(entityName, id);
-					return null;
-				}, dependencies);
-		}
-
-		public async Task<object> AssociateAsync(string entityName, Guid entityId, Relationship relationship,
-			EntityReferenceCollection relatedEntities, params Task[] dependencies)
-		{
-			ValidateState();
-			return await GetDependentResult<object>(
-				() =>
-				{
-					Associate(entityName, entityId, relationship, relatedEntities);
-					return null;
-				}, dependencies);
-		}
-
-		public async Task<object> DisassociateAsync(string entityName, Guid entityId, Relationship relationship,
-			EntityReferenceCollection relatedEntities, params Task[] dependencies)
-		{
-			ValidateState();
-			return await GetDependentResult<object>(
-				() =>
-				{
-					Disassociate(entityName, entityId, relationship, relatedEntities);
-					return null;
-				}, dependencies);
-		}
-
-		public async Task<EntityCollection> RetrieveMultipleAsync(QueryBase query, params Task[] dependencies)
-		{
-			ValidateState();
-			return await GetDependentResult(() => RetrieveMultiple(query), dependencies);
-		}
-
-		public Task<TResponseType> ExecuteAsync<TResponseType>(OrganizationRequest request,
-			params Task[] dependencies)
-			where TResponseType : OrganizationResponse
-		{
-			ValidateState();
-			return ExecuteAsync<TResponseType>(request, null, dependencies);
-		}
-
-		public async Task<TResponseType> ExecuteAsync<TResponseType>(OrganizationRequest request,
-			Func<IOrganizationService, OrganizationRequest, OrganizationRequest> undoFunction,
-			params Task[] dependencies)
-			where TResponseType : OrganizationResponse
-		{
-			ValidateState();
-			return await GetDependentResult(() => (TResponseType)Execute(request, undoFunction), dependencies);
-		}
-
-		#region Execute bulk
-
-		public Task<IDictionary<OrganizationRequest, ExecuteBulkResponse>> ExecuteBulkAsync(
-			List<OrganizationRequest> requestsList, bool isReturnResponses, params Task[] dependencies)
-		{
-			ValidateState();
-			ValidateAsync();
-			return ExecuteBulkAsync(requestsList, isReturnResponses, 1000, true, null, dependencies);
-		}
-
-		public Task<IDictionary<OrganizationRequest, ExecuteBulkResponse>> ExecuteBulkAsync(
-			List<OrganizationRequest> requestsList, bool isReturnResponses, int bulkSize, params Task[] dependencies)
-		{
-			ValidateState();
-			ValidateAsync();
-			return ExecuteBulkAsync(requestsList, isReturnResponses, bulkSize, true, null, dependencies);
-		}
-
-		public async Task<IDictionary<OrganizationRequest, ExecuteBulkResponse>> ExecuteBulkAsync(
-			List<OrganizationRequest> requests,
-			bool isReturnResponses = false, int batchSize = 1000, bool isContinueOnError = true,
-			Action<int, int, IDictionary<OrganizationRequest, ExecuteBulkResponse>> bulkFinishHandler = null,
-			params Task[] dependencies)
-		{
-			ValidateState();
-			ValidateAsync();
-			return await GetDependentResult(() =>
-				ExecuteBulk(requests, isReturnResponses, batchSize, isContinueOnError, bulkFinishHandler), dependencies);
-		}
-
-		#endregion
-
-		#region Retrieve multiple
-
-		public async Task<IEnumerable<TEntityType>> RetrieveMultipleAsync<TEntityType>(QueryExpression query,
-			int limit = -1, params Task[] dependencies)
-			where TEntityType : Entity
-		{
-			ValidateState();
-
-			QueryExpression clonedQuery;
-
-			using (var service = GetService())
-			{
-				clonedQuery = RequestHelper.CloneQuery(service, query);
-			}
-
-			return await GetDependentResult(() => RetrieveMultiple<TEntityType>(clonedQuery, limit), dependencies);
-		}
-
-		public async Task<IEnumerable<TEntityType>> RetrieveMultipleRangePagedAsync<TEntityType>(QueryExpression query,
-			int pageStart = 1, int pageEnd = 1, int pageSize = 5000, params Task[] dependencies)
-			where TEntityType : Entity
-		{
-			ValidateState();
-
-			QueryExpression clonedQuery;
-
-			using (var service = GetService())
-			{
-				clonedQuery = RequestHelper.CloneQuery(service, query);
-			}
-
-			return await GetDependentResult(() => RetrieveMultipleRangePaged<TEntityType>(clonedQuery, pageStart, pageEnd, pageSize),
-				dependencies);
-		}
-
-		public async Task<IEnumerable<TEntityType>> RetrieveMultiplePageAsync<TEntityType>(QueryExpression query,
-			int pageSize = 5000, int page = 1, params Task[] dependencies)
-			where TEntityType : Entity
-		{
-			ValidateState();
-
-			QueryExpression clonedQuery;
-
-			using (var service = GetService())
-			{
-				clonedQuery = RequestHelper.CloneQuery(service, query);
-			}
-
-			return await GetDependentResult(() => RetrieveMultiplePage<TEntityType>(clonedQuery, pageSize, page), dependencies);
-		}
-
-		#endregion
-
-		#endregion
-
 
 		#region Deferred
 
@@ -935,7 +747,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 			PlanOperation(request);
 		}
 
-		public void PlanDisassociate(string entityName, Guid entityId, Relationship relationship, EntityReferenceCollection relatedEntities)
+		public void PlanDisassociate(string entityName, Guid entityId, Relationship relationship,
+			EntityReferenceCollection relatedEntities)
 		{
 			var request =
 				new DisassociateRequest
@@ -1001,13 +814,6 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 					Parameters = new ParameterCollection { { "ExecutionPlan", serialised.Compress() } }
 				};
 
-			//using var service = GetService();
-			//var response = new Test().ProcessOperations(((string)request["ExecutionPlan"]).Decompress(), service)
-			//	.Compress();
-			//var result = response.Decompress()
-			//	.DeserialiseContractJson<IDictionary<Guid, OrganizationResponse>>(true,
-			//		surrogate: new SerialiserHelpers.DateTimeCrmContractSurrogate());
-
 			using var service = GetService();
 			var response = ((string)service.Execute(request)["SerialisedResult"]).Decompress();
 
@@ -1042,15 +848,17 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 			batchSize.RequireAbove(0, "requests");
 			batchSize.RequireInRange(1, 1000, "bulkSize");
 
-			var bulkRequest = new ExecuteMultipleRequest
-							  {
-								  Requests = new OrganizationRequestCollection(),
-								  Settings = new ExecuteMultipleSettings
-											 {
-												 ContinueOnError = isContinueOnError,
-												 ReturnResponses = isReturnResponses
-											 }
-							  };
+			var bulkRequest =
+				new ExecuteMultipleRequest
+				{
+					Requests = new OrganizationRequestCollection(),
+					Settings =
+						new ExecuteMultipleSettings
+						{
+							ContinueOnError = isContinueOnError,
+							ReturnResponses = isReturnResponses
+						}
+				};
 
 			var responses = new Dictionary<OrganizationRequest, ExecuteBulkResponse>();
 			var perBulkResponses = new Dictionary<OrganizationRequest, ExecuteBulkResponse>();
@@ -1071,10 +879,11 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 
 				var service = servicesQueue.Dequeue();
 
-				var operation = new Operation<OrganizationResponse>(bulkRequest)
-								{
-									Index = OperationIndex++
-								};
+				var operation =
+					new Operation<OrganizationResponse>(bulkRequest)
+					{
+						Index = OperationIndex++
+					};
 
 				// add to transaction if there is one
 				if (TransactionManager?.IsTransactionInEffect() == true)
@@ -1095,15 +904,17 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 
 				var innerRequests = bulkRequest.Requests;
 
-				bulkRequest = new ExecuteMultipleRequest
-							  {
-								  Requests = new OrganizationRequestCollection(),
-								  Settings = new ExecuteMultipleSettings
-											 {
-												 ContinueOnError = isContinueOnError,
-												 ReturnResponses = isReturnResponses
-											 }
-							  };
+				bulkRequest =
+					new ExecuteMultipleRequest
+					{
+						Requests = new OrganizationRequestCollection(),
+						Settings =
+							new ExecuteMultipleSettings
+							{
+								ContinueOnError = isContinueOnError,
+								ReturnResponses = isReturnResponses
+							}
+					};
 
 				// no need to build a response
 				if (!isReturnResponses)
@@ -1152,14 +963,15 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 						faultMessage = builder.ToString();
 					}
 
-					var response = new ExecuteBulkResponse
-								   {
-									   RequestType = request.GetType(),
-									   Response = bulkResponse.Response,
-									   ResponseType = bulkResponse.Response?.GetType(),
-									   Fault = fault,
-									   FaultMessage = faultMessage
-								   };
+					var response =
+						new ExecuteBulkResponse
+						{
+							RequestType = request.GetType(),
+							Response = bulkResponse.Response,
+							ResponseType = bulkResponse.Response?.GetType(),
+							Fault = fault,
+							FaultMessage = faultMessage
+						};
 					responses[request] = response;
 					perBulkResponses[request] = response;
 				}
@@ -1283,51 +1095,12 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 			return RequestHelper.CloneQuery(service, query);
 		}
 
-		public async Task<int> GetRecordsCountAsync(QueryBase query)
-		{
-			ValidateState();
-			ValidateAsync();
-
-			var task = Task.Run(() => GetRecordsCount(query));
-			CheckAppHold(task);
-
-			return await task;
-		}
-
-		public async Task<int> GetPagesCountAsync(QueryBase query, int pageSize = 5000)
-		{
-			ValidateState();
-			ValidateAsync();
-
-			var task = Task.Run(() => GetPagesCount(query, pageSize));
-			CheckAppHold(task);
-
-			return await Task.Run(() => GetPagesCount(query, pageSize));
-		}
-
-		public async Task<QueryExpression> CloneQueryAsync(QueryBase query)
-		{
-			ValidateState();
-			ValidateAsync();
-
-			var task = Task.Run(() => CloneQuery(query));
-			CheckAppHold(task);
-
-			return await Task.Run(() => CloneQuery(query));
-		}
-
 		#endregion
-
-		private void CheckAppHold(Task task)
-		{
-			if (Parameters.ConcurrencyParams.IsAsyncAppHold)
-			{
-				new Thread(task.Wait).Start();
-			}
-		}
 
 		public void Dispose()
 		{
+			CancelPlanning();
+			CancelDeferredRequests();
 			ReleaseService?.Invoke();
 			IsValid = false;
 		}
