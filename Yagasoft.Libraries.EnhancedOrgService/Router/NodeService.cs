@@ -41,13 +41,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 		public virtual event EventHandler<OperationStatusEventArgs> OperationStatusChanged;
 		public virtual event EventHandler<OperationFailedEventArgs> OperationFailed;
 
-		public virtual int RequestCount => Pool.RequestCount;
-		public virtual int FailureCount => Pool.FailureCount;
-		public virtual double FailureRate => Pool.FailureRate;
-		public virtual int RetryCount => Pool.RetryCount;
-
-		public virtual IEnumerable<Operation> PendingOperations => Pool.PendingOperations;
-		public virtual IEnumerable<Operation> ExecutedOperations => Pool.ExecutedOperations;
+		public IOperationStats Stats => Pool.Stats;
 
 		protected internal Thread LatencyEvaluator;
 		protected internal IOrganizationService LatencyEvaluatorService;

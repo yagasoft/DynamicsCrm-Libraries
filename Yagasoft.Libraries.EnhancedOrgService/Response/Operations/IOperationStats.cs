@@ -10,9 +10,6 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Response.Operations
 {
 	public interface IOperationStats
 	{
-		event EventHandler<OperationStatusEventArgs> OperationStatusChanged;
-		event EventHandler<OperationFailedEventArgs> OperationFailed;
-
 		/// <summary>
 		///     Total number of core operations performed by this service.
 		/// </summary>

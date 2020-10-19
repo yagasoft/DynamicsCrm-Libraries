@@ -46,13 +46,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 		}
 		private event EventHandler<OperationFailedEventArgs> InnerOperationFailed;
 
-		public IEnumerable<Operation> PendingOperations => statServices.SelectMany(e => e.PendingOperations);
-		public IEnumerable<Operation> ExecutedOperations => statServices.SelectMany(e => e.ExecutedOperations);
-
-		public int RequestCount => statServices.Sum(e => e.RequestCount);
-		public int FailureCount => statServices.Sum(e => e.FailureCount);
-		public double FailureRate => FailureCount / (double)(RequestCount == 0 ? 1 : RequestCount);
-		public int RetryCount => statServices.Sum(e => e.RetryCount);
+		public IOperationStats Stats => new OperationStats(statServices);
 
 		public IEnhancedServiceFactory<TServiceInterface> Factory => factory;
 
@@ -205,13 +199,13 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 				}
 			}
 
-			if (enhancedService is IOperationStats statService)
+			if (enhancedService is EnhancedOrgServiceBase eventService)
 			{
 				if (InnerOperationStatusChanged != null)
 				{
 					foreach (EventHandler<OperationStatusEventArgs> invocation in InnerOperationStatusChanged.GetInvocationList())
 					{
-						statService.OperationStatusChanged += invocation;
+						eventService.OperationStatusChanged += invocation;
 					}
 				}
 
@@ -219,11 +213,11 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 				{
 					foreach (EventHandler<OperationFailedEventArgs> invocation in InnerOperationFailed.GetInvocationList())
 					{
-						statService.OperationFailed += invocation;
+						eventService.OperationFailed += invocation;
 					}
 				}
 
-				statServices.Add(statService);
+				statServices.Add(eventService);
 			}
 
 			return enhancedService;

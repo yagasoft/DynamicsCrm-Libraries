@@ -54,13 +54,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 		}
 		private event EventHandler<OperationFailedEventArgs> InnerOperationFailed;
 
-		public IEnumerable<Operation> PendingOperations => statServices.SelectMany(e => e.PendingOperations);
-		public IEnumerable<Operation> ExecutedOperations => statServices.SelectMany(e => e.ExecutedOperations);
-
-		public int RequestCount => statServices.Sum(e => e.RequestCount);
-		public int FailureCount => statServices.Sum(e => e.FailureCount);
-		public double FailureRate => FailureCount / (double)(RequestCount == 0 ? 1 : RequestCount);
-		public int RetryCount => statServices.Sum(e => e.RetryCount);
+		public IOperationStats Stats => new OperationStats(statServices);
 
 		internal readonly EnhancedServiceParams Parameters;
 

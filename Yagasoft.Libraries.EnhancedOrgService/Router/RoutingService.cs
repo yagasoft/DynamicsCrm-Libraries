@@ -26,14 +26,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 		public virtual event EventHandler<OperationStatusEventArgs> OperationStatusChanged;
 		public virtual event EventHandler<OperationFailedEventArgs> OperationFailed;
 
-		public virtual int RequestCount => NodeQueue.Sum(n => n.Pool.RequestCount);
-		public virtual int FailureCount => NodeQueue.Sum(n => n.Pool.FailureCount);
-		public virtual double FailureRate => NodeQueue.Sum(n => n.Pool.FailureRate);
-		public virtual int RetryCount => NodeQueue.Sum(n => n.Pool.RetryCount);
-
-		public virtual IEnumerable<Operation> PendingOperations => NodeQueue.SelectMany(n => n.Pool.PendingOperations);
-		public virtual IEnumerable<Operation> ExecutedOperations => NodeQueue.SelectMany(n => n.Pool.ExecutedOperations);
-
+		public IOperationStats Stats => new OperationStats(NodeQueue);
+		
 		protected internal readonly ConcurrentQueue<NodeService> NodeQueue = new ConcurrentQueue<NodeService>();
 
 		protected internal readonly ConcurrentDictionary<Func<OrganizationRequest, IEnhancedOrgService, bool>, INodeService> Exceptions =
@@ -251,8 +245,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 							{
 								var currentNode = NodeQueue.FirstOrDefault();
 								var latestNode = NodeQueue.LastOrDefault();
-								var currentNodeExecutions = currentNode?.Pool.RequestCount;
-								var latestNodeExecutions = latestNode?.Pool.RequestCount;
+								var currentNodeExecutions = currentNode?.Pool.Stats.RequestCount;
+								var latestNodeExecutions = latestNode?.Pool.Stats.RequestCount;
 
 								if (currentNode?.Status == NodeStatus.Online
 									&& (currentNodeExecutions / (double?)latestNodeExecutions) < (currentNode?.Weight / (double?)latestNode?.Weight))
@@ -284,7 +278,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 									new
 									{
 										n,
-										load = n.Pool.PendingOperations
+										load = n.Pool.Stats.PendingOperations
 											.Count(o => o.OperationStatus != OperationStatus.Success
 												&& o.OperationStatus != OperationStatus.Failure)
 									})

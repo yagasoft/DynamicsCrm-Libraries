@@ -157,6 +157,10 @@
     <Compile Include="Params\TransactionParams.cs" />
     <Compile Include="Exceptions\InitialisationException.cs" />
     <Compile Include="Cache\QueryCacheControl.cs" />
+    <Compile Include="Response\Operations\IOpStatsContainer.cs" />
+    <Compile Include="Response\Operations\OperationEvents.cs" />
+    <Compile Include="Response\Operations\IOperationEvents.cs" />
+    <Compile Include="Response\Operations\OperationStats.cs" />
     <Compile Include="Response\Operations\IOperationStats.cs" />
     <Compile Include="Response\Operations\Operation.cs" />
     <Compile Include="Response\Operations\OperationStatusEventArgs.cs" />

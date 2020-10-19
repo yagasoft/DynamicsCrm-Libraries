@@ -11,7 +11,7 @@ using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced;
 
 namespace Yagasoft.Libraries.EnhancedOrgService.Router
 {
-	public interface IRoutingService : IOperationStats
+	public interface IRoutingService : IOpStatsContainer
 	{
 		RouterRules Rules { get; }
 		bool IsRunning { get; }

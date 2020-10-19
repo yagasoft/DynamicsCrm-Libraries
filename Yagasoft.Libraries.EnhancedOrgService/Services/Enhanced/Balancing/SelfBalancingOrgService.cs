@@ -21,21 +21,21 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Balancing
 		public override event EventHandler<OperationStatusEventArgs> OperationStatusChanged;
 		public override event EventHandler<OperationFailedEventArgs> OperationFailed;
 
-		public override int RequestCount => (RoutingService as RoutingService)?.RequestCount
+		public override int RequestCount => (RoutingService as RoutingService)?.Stats.RequestCount
 			?? throw new NotSupportedException(NotSupportedOperation);
 
-		public override int FailureCount => (RoutingService as RoutingService)?.FailureCount
+		public override int FailureCount => (RoutingService as RoutingService)?.Stats.FailureCount
 			?? throw new NotSupportedException(NotSupportedOperation);
 
-		public override double FailureRate => (RoutingService as RoutingService)?.FailureRate
+		public override double FailureRate => (RoutingService as RoutingService)?.Stats.FailureRate
 			?? throw new NotSupportedException(NotSupportedOperation);
 
-		public override int RetryCount => (RoutingService as RoutingService)?.RetryCount
+		public override int RetryCount => (RoutingService as RoutingService)?.Stats.RetryCount
 			?? throw new NotSupportedException(NotSupportedOperation);
 
-		public override IEnumerable<Operation> PendingOperations => (RoutingService as RoutingService)?.PendingOperations;
+		public override IEnumerable<Operation> PendingOperations => (RoutingService as RoutingService)?.Stats.PendingOperations;
 
-		public override IEnumerable<Operation> ExecutedOperations => (RoutingService as RoutingService)?.ExecutedOperations;
+		public override IEnumerable<Operation> ExecutedOperations => (RoutingService as RoutingService)?.Stats.ExecutedOperations;
 
 		public override IEnumerable<OrganizationRequest> DeferredRequests => throw new NotSupportedException(NotSupportedOperation);
 
