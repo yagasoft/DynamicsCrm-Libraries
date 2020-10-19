@@ -57,7 +57,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Planned
 		/// <summary>
 		///     Executes the plan in CRM, and returns the result as operation ID and <see cref="OrganizationResponse" /> map.<br />
 		///     Create, Retrieve ... etc. return <see cref="PlannedValue" /> not <see cref="PlannedOperation" /> (unlike Execute);
-		///     so access the <see cref="PlannedValue.ParentId" /> property instead to get the operation ID.
+		///     so access the <see cref="PlannedValue.ParentId" /> property instead to get the operation ID.<br />
+		///     Does not support auto retry.
 		/// </summary>
 		IDictionary<Guid, OrganizationResponse> ExecutePlan();
 	}

@@ -1,13 +1,13 @@
 ﻿#region Imports
 
-using System;
 using Yagasoft.Libraries.Common;
+using Yagasoft.Libraries.EnhancedOrgService.Response.Operations;
 
 #endregion
 
 namespace Yagasoft.Libraries.EnhancedOrgService.Params
 {
-	public class EnhancedServiceParams : ParamsBase
+	public class EnhancedServiceParams : EnhancedServiceParamsBase
 	{
 		public override bool IsLocked
 		{
@@ -54,16 +54,6 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 			}
 		}
 
-		public bool IsCachingEnabled
-		{
-			get => isCachingEnabled;
-			set
-			{
-				ValidateLock();
-				isCachingEnabled = value;
-			}
-		}
-
 		public CachingParams CachingParams
 		{
 			get => cachingParams;
@@ -72,16 +62,6 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 				ValidateLock();
 				cachingParams = value;
 				IsCachingEnabled = value != null;
-			}
-		}
-
-		public bool IsTransactionsEnabled
-		{
-			get => isTransactionsEnabled;
-			set
-			{
-				ValidateLock();
-				isTransactionsEnabled = value;
 			}
 		}
 
@@ -96,32 +76,14 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 			}
 		}
 
-		public bool IsAutoRetryEnabled
-		{
-			get => isAutoRetryEnabled;
-			set
-			{
-				ValidateLock();
-
-				if (isAutoRetryEnabled && AutoRetryParams == null)
-				{
-					throw new ArgumentNullException(nameof(AutoRetryParams),
-						"Must set concurrency parameters first before enabling concurrency.");
-				}
-
-				isAutoRetryEnabled = value;
-			}
-		}
-
 		public AutoRetryParams AutoRetryParams
 		{
 			get => autoRetryParams ??= new AutoRetryParams();
 			set
 			{
 				ValidateLock();
-				value.Require(nameof(AutoRetryParams));
 				autoRetryParams = value;
-				IsAutoRetryEnabled = true;
+				IsAutoRetryEnabled = value != null;
 			}
 		}
 
@@ -135,20 +97,28 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 			}
 		}
 
+		/// <summary>
+		///     Sets a limit on the number of operations to keep in <see cref="IOperationStats.ExecutedOperations" /><br />
+		///     Default: <see cref="int.MaxValue" />.
+		/// </summary>
+		public int? OperationHistoryLimit
+		{
+			get => operationHistoryLimit;
+			set
+			{
+				ValidateLock();
+				value?.RequireAtLeast(0, nameof(OperationHistoryLimit));
+				operationHistoryLimit = value;
+			}
+		}
+
 		private bool isLocked;
-
 		private ConnectionParams connectionParams;
-
-		private bool isCachingEnabled;
 		private CachingParams cachingParams;
-
-		private bool isTransactionsEnabled;
 		private TransactionParams transactionParams;
-
-		private bool isAutoRetryEnabled;
 		private AutoRetryParams autoRetryParams;
-
 		private PoolParams poolParams;
+		private int? operationHistoryLimit;
 
 		public EnhancedServiceParams()
 		{ }

@@ -8,13 +8,13 @@ using Yagasoft.Libraries.EnhancedOrgService.Response.Operations;
 
 namespace Yagasoft.Libraries.EnhancedOrgService.Transactions
 {
-	internal interface ITransactionManager
+	public interface ITransactionManager
 	{
 		bool IsTransactionInEffect();
 
-		Transaction BeginTransaction(string transactionId = null, OperationBase startingPoint = null);
+		Transaction BeginTransaction(string transactionId = null, Operation startingPoint = null);
 
-		void ProcessRequest(IOrganizationService service, OperationBase operation,
+		void ProcessRequest(IOrganizationService service, Operation operation,
 			Func<IOrganizationService, OrganizationRequest, OrganizationRequest> undoFunction = null);
 
 		void UndoTransaction(IOrganizationService service, Transaction transaction = null);

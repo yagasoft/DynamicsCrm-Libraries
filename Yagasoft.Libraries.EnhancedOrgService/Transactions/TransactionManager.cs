@@ -16,7 +16,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Transactions
 	/// </summary>
 	internal class TransactionManager : ITransactionManager
 	{
-		private readonly Stack<OperationBase> operationsStack = new Stack<OperationBase>();
+		private readonly Stack<Operation> operationsStack = new Stack<Operation>();
 		private readonly Stack<Transaction> transactionsStack = new Stack<Transaction>();
 
 		public bool IsTransactionInEffect()
@@ -25,7 +25,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Transactions
 		}
 
 		public Transaction BeginTransaction(string transactionId = null,
-			OperationBase startingPoint = null)
+			Operation startingPoint = null)
 		{
 			if (transactionsStack.Any(transactionQ => transactionQ.Id == transactionId))
 			{
@@ -43,7 +43,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Transactions
 			return transaction;
 		}
 
-		public void ProcessRequest(IOrganizationService service, OperationBase operation,
+		public void ProcessRequest(IOrganizationService service, Operation operation,
 			Func<IOrganizationService, OrganizationRequest, OrganizationRequest> undoFunction = null)
 		{
 			if (!IsTransactionInEffect())
@@ -98,7 +98,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Transactions
 						throw new Exception("Check-point does not exist!");
 					}
 
-					OperationBase operation;
+					Operation operation;
 
 					do
 					{

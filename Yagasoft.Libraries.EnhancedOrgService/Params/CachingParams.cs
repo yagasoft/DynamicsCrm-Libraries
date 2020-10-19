@@ -3,27 +3,30 @@
 using System;
 using System.Runtime.Caching;
 using Yagasoft.Libraries.Common;
+using Yagasoft.Libraries.EnhancedOrgService.Factories;
+using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced;
+using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Transactions;
 
 #endregion
 
 namespace Yagasoft.Libraries.EnhancedOrgService.Params
 {
-	public enum CacheMode
+	public enum CacheScope
 	{
 		/// <summary>
-		///     Will use ID shared with all connections<br />
+		///     Cache shared between all services.
 		/// </summary>
 		Global,
 
 		/// <summary>
-		///     Will use own ID isolated from all others
+		///     Cache limited to services within a factory.
 		/// </summary>
-		Private,
+		Factory,
 
 		/// <summary>
-		///     Each connection will have its own ID isolated from all others
+		///     Each service will have its own cache, isolated from all others.
 		/// </summary>
-		PrivatePerInstance
+		Service
 	}
 
 	public class CachingParams : ParamsBase
@@ -44,11 +47,11 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 		/// <summary>
 		///     The mode determines the extra string added to the key to uniquely identify each query.<br />
 		///     If an ID is shared, then a query run from different services, will have the same result from the cache.<br />
-		///     Default: Private
+		///     Default: Factory.
 		/// </summary>
-		public CacheMode? CacheMode
+		public CacheScope CacheScope
 		{
-			get => cacheMode ?? Params.CacheMode.Private;
+			get => cacheMode ?? CacheScope.Factory;
 			set
 			{
 				ValidateLock();
@@ -58,8 +61,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 
 		/// <summary>
 		///     The time after which to remove the object from the cache in seconds. Not affected by the sliding expiration.<br />
-		///     Default: infinite<br />
-		///     You can't use an offset with a sliding expiration together ('offset' will take precedence)
+		///     Default: infinite.<br />
+		///     You can't use an offset with a sliding expiration together ('offset' will take precedence).
 		/// </summary>
 		public double? Offset
 		{
@@ -67,13 +70,14 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 			set
 			{
 				ValidateLock();
+				value?.RequireAtLeast(0, nameof(Offset));
 				offset = value;
 			}
 		}
 
 		/// <summary>
 		///     The duration after which to remove the object from cache, if it was not accessed for that duration.<br />
-		///     You can't use an offset with a sliding expiration together ('offset' will take precedence)
+		///     You can't use an offset with a sliding expiration together ('offset' will take precedence).
 		/// </summary>
 		public TimeSpan? SlidingExpiration
 		{
@@ -81,13 +85,14 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 			set
 			{
 				ValidateLock();
+				value?.TotalMilliseconds.RequireAtLeast(0, nameof(SlidingExpiration));
 				slidingExpiration = value;
 			}
 		}
 
 		/// <summary>
 		///     The priority of keeping the item in the cache if it becomes filled.<br />
-		///     Default: Default
+		///     Default: Default.
 		/// </summary>
 		public CacheItemPriority? Priority
 		{
@@ -99,10 +104,24 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 			}
 		}
 
+		/// <summary>
+		///     Custom cache to use instead of <see cref="MemoryCache"/> or the <see cref="ObjectCache"/>.
+		/// </summary>
+		public Func<IServiceFactory, EnhancedServiceParams, IEnhancedOrgService, ObjectCache> CustomCacheFactory
+		{
+			get => customCacheFactory;
+			set
+			{
+				ValidateLock();
+				customCacheFactory = value;
+			}
+		}
+
 		private ObjectCache objectCache;
-		private CacheMode? cacheMode;
+		private CacheScope? cacheMode;
 		private double? offset;
 		private TimeSpan? slidingExpiration;
 		private CacheItemPriority? priority;
+		private Func<IServiceFactory, EnhancedServiceParams, IEnhancedOrgService, ObjectCache> customCacheFactory;
 	}
 }

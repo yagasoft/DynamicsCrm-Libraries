@@ -38,7 +38,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Cache
 
 		/// <summary>
 		///     Clears the query's memory cache.<br />
-		///     If the cache is not only scoped to this service (factory's 'PrivatePerInstance' setting), an exception is thrown.
+		///     If the cache is not only scoped to this service ('Service' CacheScope setting), an exception is thrown.
 		/// </summary>
 		void ClearCache();
 	}

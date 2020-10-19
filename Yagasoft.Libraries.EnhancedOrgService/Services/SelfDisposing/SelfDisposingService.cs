@@ -7,17 +7,20 @@ using Yagasoft.Libraries.Common;
 
 #endregion
 
-namespace Yagasoft.Libraries.EnhancedOrgService.Services
+namespace Yagasoft.Libraries.EnhancedOrgService.Services.SelfDisposing
 {
-	internal class SelfEnqueuingService : IOrganizationService, IDisposable
+	public class SelfDisposingService : IDisposableService
 	{
-		private readonly BlockingQueue<IOrganizationService> queue;
 		private readonly IOrganizationService service;
+		private readonly Action disposer;
 
-		internal SelfEnqueuingService(BlockingQueue<IOrganizationService> queue, IOrganizationService service)
+		internal SelfDisposingService(IOrganizationService service, Action disposer)
 		{
-			this.queue = queue;
+			service.Require(nameof(service));
+			disposer.Require(nameof(disposer));
+
 			this.service = service;
+			this.disposer = disposer;
 		}
 
 		public Guid Create(Entity entity)
@@ -62,7 +65,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services
 
 		public void Dispose()
 		{
-			queue.Enqueue(service);
+			disposer.Invoke();
 		}
 	}
 }

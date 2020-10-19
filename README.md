@@ -11,10 +11,11 @@ A collection of libraries for common and extended operations in Dynamics CRM dev
 
   + Massive JS and CS libraries of common and generic functions and classes
   + An extension to the out-of-the-box IOrganizationService
-    + Automatic pool/queue handling
-    + Automatic thread handling
+    + Automatic service pool/queue handling
     + Connection warmup to improve caching performance
     + Caching of operation results
+    + Load balancer algorithms for multi-node environments
+    + Automatic retry of failed operations
     + Deferred operations to run in a transaction
       + Accumulate operations from across the application to be executed in one go
     + Planned execution to be sent to CRM for execution
@@ -32,9 +33,23 @@ A collection of libraries for common and extended operations in Dynamics CRM dev
 
 ## Changes
 
-#### _v4.2.2 (2020-10-06)_
-+ Added: [EnhancedOrgService] exposed AutoSetMaxPerformanceParams through the Helper methods
+#### _v5.1.1 (2020-10-07)_
++ Added: [EnhancedOrgService] node load balancer
++ Added: [EnhancedOrgService] self-balancing service
++ Added: [EnhancedOrgService] auto-retry mechanism
++ Added: [EnhancedOrgService] auto-retry failure events
++ Added: [EnhancedOrgService] operation-specific options
++ Added: [EnhancedOrgService] operation status events
++ Added: [EnhancedOrgService] operation statistics on all levels: service, pool, and factory
++ Added: [EnhancedOrgService] operation history to the service
++ Added: [EnhancedOrgService] deferred support for SDK methods (in addition to the custom ones that return a 'token')
++ Added: [EnhancedOrgService] custom cache factory parameter
++ Added: [EnhancedOrgService] exposed AutoSetMaxPerformanceParams through the pool 'helper' class
++ Improved: [EnhancedOrgService] optimised the interfaces and refactored
++ Improved: [EnhancedOrgService] internal calls by switching them to pass through service features
++ Changed: [EnhancedOrgService] tighten the service validity check to avoid internal operations triggering after Dispose; user must wait for all operations to finish
 + Fixed: [Common] RequireFormat helper
++ Fixed: [EnhancedOrgService] params default values
 + Removed: [EnhancedOrgService] async operations (use Task.Run or similar methods from .NET instead)
 #### _v4.1.1 (2020-10-02)_
 + Added: [EnhancedOrgService] CacheItemPriority to cache settings

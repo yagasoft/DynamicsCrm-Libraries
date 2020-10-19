@@ -1,6 +1,7 @@
 ﻿#region Imports
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Reflection;
@@ -14,7 +15,10 @@ using Yagasoft.Libraries.Common;
 using Yagasoft.Libraries.EnhancedOrgService.Cache;
 using Yagasoft.Libraries.EnhancedOrgService.Helpers;
 using Yagasoft.Libraries.EnhancedOrgService.Params;
+using Yagasoft.Libraries.EnhancedOrgService.Response.Operations;
+using Yagasoft.Libraries.EnhancedOrgService.Router;
 using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced;
+using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Balancing;
 using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Cache;
 using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Transactions;
 using Yagasoft.Libraries.EnhancedOrgService.Transactions;
@@ -25,13 +29,69 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 {
 	/// <inheritdoc cref="IEnhancedServiceFactory{TEnhancedOrgService}" />
 	public class EnhancedServiceFactory<TServiceInterface, TEnhancedOrgService> : IEnhancedServiceFactory<TServiceInterface>
-		where TServiceInterface : ITransactionOrgService
+		where TServiceInterface : IEnhancedOrgService
 		where TEnhancedOrgService : EnhancedOrgServiceBase, TServiceInterface
 	{
-		private readonly EnhancedServiceParams parameters;
+		public event EventHandler<OperationStatusEventArgs> OperationStatusChanged
+		{
+			add
+			{
+				InnerOperationStatusChanged -= value;
+				InnerOperationStatusChanged += value;
+			}
+			remove => InnerOperationStatusChanged -= value;
+		}
+		private event EventHandler<OperationStatusEventArgs> InnerOperationStatusChanged;
+
+		public event EventHandler<OperationFailedEventArgs> OperationFailed
+		{
+			add
+			{
+				InnerOperationFailed -= value;
+				InnerOperationFailed += value;
+			}
+			remove => InnerOperationFailed -= value;
+		}
+		private event EventHandler<OperationFailedEventArgs> InnerOperationFailed;
+
+		public IEnumerable<Operation> PendingOperations => statServices.SelectMany(e => e.PendingOperations);
+		public IEnumerable<Operation> ExecutedOperations => statServices.SelectMany(e => e.ExecutedOperations);
+
+		public int RequestCount => statServices.Sum(e => e.RequestCount);
+		public int FailureCount => statServices.Sum(e => e.FailureCount);
+		public double FailureRate => FailureCount / (double)(RequestCount == 0 ? 1 : RequestCount);
+		public int RetryCount => statServices.Sum(e => e.RetryCount);
+
+		internal readonly EnhancedServiceParams Parameters;
+
 		private readonly ObjectCache factoryCache;
+		private readonly List<ObjectCache> customFactoryCaches = new List<ObjectCache>();
+		private readonly Func<IServiceFactory, EnhancedServiceParams, IEnhancedOrgService, ObjectCache> customCacheFactory;
+
 		private readonly Func<string, IOrganizationService> customServiceFactory = ConnectionHelpers.CreateCrmService;
 		private CrmServiceClient serviceCloneBase;
+
+		private readonly HashSet<IOperationStats> statServices = new HashSet<IOperationStats>();
+
+		private readonly IRoutingService routeringService;
+
+		public EnhancedServiceFactory(IRoutingService routeringService)
+		{
+			this.routeringService = routeringService;
+			var enhancedOrgType = typeof(TEnhancedOrgService);
+
+			if (enhancedOrgType.IsAbstract)
+			{
+				throw new NotSupportedException("Given Enhanced Org type must be concrete.");
+			}
+
+			if (!typeof(ISelfBalancingOrgService).IsAssignableFrom(typeof(TServiceInterface)))
+			{
+				throw new NotSupportedException("Given Enhanced Org interface must be self-balancing.");
+			}
+
+			routeringService.Require(nameof(routeringService));
+		}
 
 		public EnhancedServiceFactory(EnhancedServiceParams parameters)
 		{
@@ -46,33 +106,37 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 
 			var isCachingService = typeof(ICachingOrgService).IsAssignableFrom(typeof(TEnhancedOrgService));
 
-			if (parameters.IsCachingEnabled && !isCachingService)
+			if (parameters.IsCachingEnabled == true && !isCachingService)
 			{
 				throw new NotSupportedException("Cannot create a caching service factory unless the given service is caching.");
 			}
 
 			SetPerformanceParams(parameters);
 
-			this.parameters = parameters;
+			parameters.IsLocked = true;
+			Parameters = parameters;
 
-			if (parameters.IsCachingEnabled)
+			customCacheFactory = parameters.CachingParams.CustomCacheFactory;
+
+			if (parameters.IsCachingEnabled == true)
 			{
-				switch (parameters.CachingParams.CacheMode)
+				switch (parameters.CachingParams.CacheScope)
 				{
-					case CacheMode.Global:
-						factoryCache = MemoryCache.Default;
+					case CacheScope.Global:
+						factoryCache = customCacheFactory == null ? MemoryCache.Default : customCacheFactory(this, Parameters, null);
 						break;
 
-					case CacheMode.Private:
-						factoryCache = parameters.CachingParams.ObjectCache
-							?? new MemoryCache(parameters.ConnectionParams.ConnectionString);
+					case CacheScope.Factory:
+						factoryCache = customCacheFactory == null
+							? (parameters.CachingParams.ObjectCache ?? new MemoryCache(parameters.ConnectionParams.ConnectionString))
+							: customCacheFactory(this, Parameters, null);
 						break;
 
-					case CacheMode.PrivatePerInstance:
+					case CacheScope.Service:
 						break;
 
 					default:
-						throw new ArgumentOutOfRangeException(nameof(parameters.CachingParams.CacheMode));
+						throw new ArgumentOutOfRangeException(nameof(parameters.CachingParams.CacheScope));
 				}
 			}
 
@@ -81,6 +145,18 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 
 		public virtual TServiceInterface CreateEnhancedService(int threads = 1)
 		{
+			threads.RequireAtLeast(1);
+
+			if (routeringService != null)
+			{
+				if (threads > 1)
+				{
+					throw new NotSupportedException($"Self-balancing services don't require the '{nameof(threads)}' parameter to be defined.");
+				}
+
+
+			}
+
 			return CreateEnhancedServiceInternal(true, threads);
 		}
 
@@ -90,7 +166,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 
 			if (serviceCloneBase == null)
 			{
-				service = customServiceFactory(parameters.ConnectionParams.ConnectionString);
+				service = customServiceFactory(Parameters.ConnectionParams.ConnectionString);
 				serviceCloneBase = service as CrmServiceClient;
 			}
 
@@ -99,25 +175,34 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 				service = serviceCloneBase.Clone();
 			}
 
-			if (service.EnsureTokenValid(parameters.PoolParams?.TokenExpiryCheckSecs ?? 0) == false)
+			if (service.EnsureTokenValid(Parameters.PoolParams?.TokenExpiryCheckSecs ?? 0) == false)
 			{
 				service = null;
 			}
 
-			return service ?? customServiceFactory(parameters.ConnectionParams.ConnectionString);
+			return service ?? customServiceFactory(Parameters.ConnectionParams.ConnectionString);
 		}
 
 		internal virtual TServiceInterface CreateEnhancedServiceInternal(bool isInitialiseCrmServices = true, int threads = 1)
 		{
-			var enhancedService = (TEnhancedOrgService)Activator.CreateInstance(typeof(TEnhancedOrgService),
-				BindingFlags.NonPublic | BindingFlags.Instance, null, new object[] { parameters }, null);
+			if (routeringService != null)
+			{
+				var balancingService = (TEnhancedOrgService)Activator.CreateInstance(typeof(TEnhancedOrgService),
+					BindingFlags.NonPublic | BindingFlags.Instance, null, new object[] { routeringService }, null);
 
-			if (parameters.IsTransactionsEnabled)
+				return balancingService;
+				// TODO propagate events
+			}
+
+			var enhancedService = (TEnhancedOrgService)Activator.CreateInstance(typeof(TEnhancedOrgService),
+				BindingFlags.NonPublic | BindingFlags.Instance, null, new object[] { Parameters }, null);
+
+			if (Parameters.IsTransactionsEnabled == true)
 			{
 				enhancedService.TransactionManager = new TransactionManager();
 			}
 
-			if (parameters.IsCachingEnabled)
+			if (Parameters.IsCachingEnabled == true)
 			{
 				InitialiseCaching(enhancedService);
 			}
@@ -127,51 +212,71 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 				enhancedService.FillServicesQueue(Enumerable.Range(0, threads).Select(e => CreateCrmService()));
 			}
 
+			if (InnerOperationStatusChanged != null)
+			{
+				foreach (EventHandler<OperationStatusEventArgs> invocation in InnerOperationStatusChanged.GetInvocationList())
+				{
+					enhancedService.OperationStatusChanged += invocation;
+				}
+			}
+
+			if (InnerOperationFailed != null)
+			{
+				foreach (EventHandler<OperationFailedEventArgs> invocation in InnerOperationFailed.GetInvocationList())
+				{
+					enhancedService.OperationFailed += invocation;
+				}
+			}
+
+			statServices.Add(enhancedService);
+
 			return enhancedService;
 		}
 
 		private void InitialiseCaching(TEnhancedOrgService enhancedService)
 		{
-			if (!parameters.IsCachingEnabled)
+			if (Parameters.IsCachingEnabled == true)
 			{
 				return;
 			}
 
 			ObjectCache cache;
 
-			switch (parameters.CachingParams.CacheMode)
+			switch (Parameters.CachingParams.CacheScope)
 			{
-				case CacheMode.Global:
-				case CacheMode.Private:
+				case CacheScope.Global:
+				case CacheScope.Factory:
 					cache = factoryCache;
 					break;
 
-				case CacheMode.PrivatePerInstance:
-					cache = new MemoryCache(parameters.ConnectionParams.ConnectionString);
+				case CacheScope.Service:
+					cache = customCacheFactory == null
+						? new MemoryCache(Parameters.ConnectionParams.ConnectionString)
+						: customCacheFactory(this, Parameters, enhancedService);
 					break;
 
 				default:
-					throw new ArgumentOutOfRangeException(nameof(parameters.CachingParams.CacheMode));
+					throw new ArgumentOutOfRangeException(nameof(Parameters.CachingParams.CacheScope));
 			}
 
 			OrganizationServiceCacheSettings cacheSettings = null;
 
-			if (parameters.CachingParams.Offset.HasValue)
+			if (Parameters.CachingParams.Offset.HasValue)
 			{
 				cacheSettings =
 					new OrganizationServiceCacheSettings
 					{
-						PolicyFactory = new CacheItemPolicyFactory(parameters.CachingParams.Offset.Value, parameters.CachingParams.Priority)
+						PolicyFactory = new CacheItemPolicyFactory(Parameters.CachingParams.Offset.Value, Parameters.CachingParams.Priority)
 					};
 			}
 
-			if (parameters.CachingParams.SlidingExpiration.HasValue)
+			if (Parameters.CachingParams.SlidingExpiration.HasValue)
 			{
 				cacheSettings =
 					new OrganizationServiceCacheSettings
 					{
-						PolicyFactory = new CacheItemPolicyFactory(parameters.CachingParams.SlidingExpiration.Value,
-							parameters.CachingParams.Priority)
+						PolicyFactory = new CacheItemPolicyFactory(Parameters.CachingParams.SlidingExpiration.Value,
+							Parameters.CachingParams.Priority)
 					};
 			}
 
@@ -209,18 +314,25 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 		/// </summary>
 		public void ClearCache()
 		{
-			if (!parameters.IsCachingEnabled)
+			if (Parameters.IsCachingEnabled == true)
 			{
 				throw new NotSupportedException("Cannot clear the cache because caching is not enabled.");
 			}
 
-			if (factoryCache == null)
+			if (Parameters.CachingParams.CacheScope == CacheScope.Service)
 			{
-				throw new NotSupportedException("Cache is scoped to service instances."
-					+ " Use each instance's method to clear the cache instead");
+				foreach (var service in statServices.OfType<ICachingOrgService>())
+				{
+					service.ClearCache();
+				}
 			}
 
-			factoryCache.Clear();
+			factoryCache?.Clear();
+
+			foreach (var cache in customFactoryCaches)
+			{
+				cache?.Clear();
+			}
 		}
 	}
 }

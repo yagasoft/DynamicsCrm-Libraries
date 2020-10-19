@@ -12,10 +12,11 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Deferred
 {
 	public interface IDeferredOrgService
 	{
-		IEnumerable<OrganizationRequest> GetDeferredRequests();
+		IEnumerable<OrganizationRequest> DeferredRequests { get; }
 
 		/// <summary>
-		///     Executes all deferred requests in a transaction.
+		///     Executes all deferred requests in a transaction (<see cref="ExecuteTransactionRequest" />).<br />
+		///     Does not support auto retry.
 		/// </summary>
 		/// <param name="bulkSize">[Optional] The number of requests to execute at once every internal iteration.</param>
 		/// <returns>A map of the deferred organisation requests and their response tokens.</returns>

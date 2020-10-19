@@ -11,7 +11,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 	/// <inheritdoc cref="IEnhancedOrgService" />
 	public class EnhancedOrgService : EnhancedOrgServiceBase
 	{
-		internal EnhancedOrgService(EnhancedServiceParams parameters) : base(parameters)
+		protected internal EnhancedOrgService(EnhancedServiceParams parameters) : base(parameters)
 		{ }
 	}
 }

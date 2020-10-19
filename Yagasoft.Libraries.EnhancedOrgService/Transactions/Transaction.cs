@@ -18,9 +18,9 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Transactions
 		/// </summary>
 		public bool Current = true;
 
-		internal OperationBase StartingPoint;
+		internal Operation StartingPoint;
 
-		internal Transaction(string id, OperationBase startingPoint = null)
+		internal Transaction(string id, Operation startingPoint = null)
 		{
 			Id = id;
 			StartingPoint = startingPoint;

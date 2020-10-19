@@ -114,6 +114,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Exceptions\FinalisationException.cs" />
+    <Compile Include="Exceptions\NodeSelectException.cs" />
+    <Compile Include="Exceptions\NodeInitException.cs" />
     <Compile Include="Exceptions\StateException.cs" />
     <Compile Include="Cache\CacheItemPolicyFactory.cs" />
     <Compile Include="ExecutionPlan\Base\PlannedCollection.cs" />
@@ -139,12 +141,15 @@
     <Compile Include="ExecutionPlan\SerialiseWorkarounds\MockOrgResponse.cs" />
     <Compile Include="ExecutionPlan\SerialiseWorkarounds\MockOrgRequest.cs" />
     <Compile Include="Factories\EnhancedServiceFactory.cs" />
+    <Compile Include="Factories\IServiceFactory.cs" />
     <Compile Include="Helpers\ConnectionHelpers.cs" />
-    <Compile Include="Helpers\StateBase.cs" />
     <Compile Include="Helpers\ProcessBase.cs" />
     <Compile Include="Helpers\EnhancedServiceHelper.cs" />
     <Compile Include="Params\CachingParams.cs" />
     <Compile Include="Params\AutoRetryParams.cs" />
+    <Compile Include="Params\BasicConnectionParams.cs" />
+    <Compile Include="Params\EnhancedServiceParamsBase.cs" />
+    <Compile Include="Params\ExecuteParams.cs" />
     <Compile Include="Params\PoolParams.cs" />
     <Compile Include="Params\ConnectionParams.cs" />
     <Compile Include="Params\ParamsBase.cs" />
@@ -152,11 +157,21 @@
     <Compile Include="Params\TransactionParams.cs" />
     <Compile Include="Exceptions\InitialisationException.cs" />
     <Compile Include="Cache\QueryCacheControl.cs" />
+    <Compile Include="Response\Operations\IOperationStats.cs" />
     <Compile Include="Response\Operations\Operation.cs" />
-    <Compile Include="Response\Operations\OperationBase.cs" />
+    <Compile Include="Response\Operations\OperationStatusEventArgs.cs" />
     <Compile Include="Response\Tokens\IToken.cs" />
     <Compile Include="Response\Tokens\OrganisationRequestToken.cs" />
     <Compile Include="Response\Tokens\Token.cs" />
+    <Compile Include="Response\Operations\OperationFailedEventArgs.cs" />
+    <Compile Include="Router\IRoutingService.cs" />
+    <Compile Include="Router\NodeService.cs" />
+    <Compile Include="Router\RouterRules.cs" />
+    <Compile Include="Router\RoutingService.cs" />
+    <Compile Include="Services\Enhanced\Balancing\ISelfBalancingOrgService.cs" />
+    <Compile Include="Services\Enhanced\Balancing\SelfBalancingOrgService.cs" />
+    <Compile Include="Services\Enhanced\Cache\CachingOrgService.cs" />
+    <Compile Include="Services\Enhanced\Deferred\DeferredOrgService.cs" />
     <Compile Include="Services\Enhanced\EnhancedOrgServiceBase.cs" />
     <Compile Include="Services\Enhanced\EnhancedOrgService.cs" />
     <Compile Include="Factories\IEnhancedServiceFactory.cs" />
@@ -169,8 +184,12 @@
     <Compile Include="Services\Enhanced\Deferred\IDeferredOrgService.cs" />
     <Compile Include="Services\Enhanced\Planned\IPlannedOrgService.cs" />
     <Compile Include="Services\Enhanced\IEnhancedOrgService.cs" />
+    <Compile Include="Services\Enhanced\Planned\PlannedOrgService.cs" />
     <Compile Include="Services\Enhanced\Transactions\ITransactionOrgService.cs" />
-    <Compile Include="Services\SelfEnqueuingService.cs" />
+    <Compile Include="Router\INodeService.cs" />
+    <Compile Include="Services\SelfDisposing\IDisposableService.cs" />
+    <Compile Include="Services\SelfDisposing\SelfDisposingService.cs" />
+    <Compile Include="State\IStateful.cs" />
     <Compile Include="Test.cs" />
     <Compile Include="Transactions\ITransactionManager.cs" />
     <Compile Include="Transactions\Transaction.cs" />
@@ -206,8 +225,10 @@
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>$(SolutionDir)lib/nuget.exe pack $(ProjectPath) -Prop Configuration=Release
-copy /Y "$(TargetDir)*.nupkg" "C:\Nuget.Local\"
+    <PostBuildEvent>IF "$(ConfigurationName)" == "Release" (
+  $(SolutionDir)lib/nuget.exe pack $(ProjectPath) -Prop Configuration=Release
+  copy /Y "$(TargetDir)*.nupkg" "C:\Nuget.Local\"
+)
 </PostBuildEvent>
   </PropertyGroup>
   <PropertyGroup>

@@ -39,15 +39,17 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 
 			if (request is ExecuteMultipleRequest)
 			{
-				var reversedRequest = new ExecuteMultipleRequest
-									  {
-										  Requests = new OrganizationRequestCollection(),
-										  Settings = new ExecuteMultipleSettings
-													 {
-														 ContinueOnError = true,
-														 ReturnResponses = false
-													 }
-									  };
+				var reversedRequest =
+					new ExecuteMultipleRequest
+					{
+						Requests = new OrganizationRequestCollection(),
+						Settings =
+							new ExecuteMultipleSettings
+							{
+								ContinueOnError = true,
+								ReturnResponses = false
+							}
+					};
 
 				var requests = ((ExecuteMultipleRequest)request).Requests.ToList();
 

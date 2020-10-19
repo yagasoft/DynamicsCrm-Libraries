@@ -140,9 +140,12 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>$(SolutionDir)lib/nuget.exe pack $(ProjectPath) -Prop Configuration=Release
-$(SolutionDir)lib/nuget.exe pack $(ProjectDir)nuget\FileForm.nuspec -OutputDirectory $(TargetDir)
-copy /Y "$(TargetDir)*.nupkg" "C:\Nuget.Local\"</PostBuildEvent>
+    <PostBuildEvent>IF "$(ConfigurationName)" == "Release" (
+  $(SolutionDir)lib/nuget.exe pack $(ProjectPath) -Prop Configuration=Release
+  $(SolutionDir)lib/nuget.exe pack $(ProjectDir)nuget\FileForm.nuspec -OutputDirectory $(TargetDir)
+  copy /Y "$(TargetDir)*.nupkg" "C:\Nuget.Local\"
+)
+</PostBuildEvent>
   </PropertyGroup>
   <PropertyGroup>
     <PreBuildEvent>del "$(TargetDir)*.nupkg"</PreBuildEvent>

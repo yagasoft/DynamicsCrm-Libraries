@@ -1,11 +1,14 @@
 ﻿#region Imports
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Caching;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Xrm.Client.Caching;
 using Microsoft.Xrm.Client.Services;
 using Microsoft.Xrm.Client.Services.Messages;
@@ -24,59 +27,123 @@ using Yagasoft.Libraries.EnhancedOrgService.Response.Tokens;
 using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Cache;
 using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Deferred;
 using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Planned;
+using Yagasoft.Libraries.EnhancedOrgService.Services.SelfDisposing;
+using Yagasoft.Libraries.EnhancedOrgService.State;
 using Yagasoft.Libraries.EnhancedOrgService.Transactions;
+using OperationStatus = Yagasoft.Libraries.EnhancedOrgService.Response.Operations.OperationStatus;
 
 #endregion
 
 namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 {
 	/// <inheritdoc cref="IEnhancedOrgService" />
-	public abstract class EnhancedOrgServiceBase : StateBase, ICachingOrgService, IDeferredOrgService, IPlannedOrgService
+	public abstract class EnhancedOrgServiceBase : IStateful, IEnhancedOrgService
 	{
-		internal ITransactionManager TransactionManager { get; set; }
-		protected int OperationIndex;
+		public virtual event EventHandler<OperationStatusEventArgs> OperationStatusChanged
+		{
+			add
+			{
+				InnerOperationStatusChanged -= value;
+				InnerOperationStatusChanged += value;
+			}
+			remove => InnerOperationStatusChanged -= value;
+		}
+		private event EventHandler<OperationStatusEventArgs> InnerOperationStatusChanged;
+
+		public virtual event EventHandler<OperationFailedEventArgs> OperationFailed
+		{
+			add
+			{
+				InnerOperationFailed -= value;
+				InnerOperationFailed += value;
+			}
+			remove => InnerOperationFailed -= value;
+		}
+		private event EventHandler<OperationFailedEventArgs> InnerOperationFailed;
+
+		public virtual IEnumerable<Operation> PendingOperations => pendingOperations;
+		public virtual IEnumerable<Operation> ExecutedOperations => executedOperations;
+
+		public virtual IEnumerable<OrganizationRequest> DeferredRequests
+		{
+			get
+			{
+				ValidateDeferredQueueState();
+				return deferredOrgService?.DeferredRequests;
+			}
+		}
+
+		public virtual int RequestCount { get; protected internal set; }
+		public virtual int FailureCount { get; protected internal set; }
+		public virtual double FailureRate => FailureCount / (double)(RequestCount == 0 ? 1 : RequestCount);
+		public virtual int RetryCount { get; protected internal set; }
+
+		public EnhancedServiceParams Parameters { get; protected internal set; }
+
+		protected internal virtual ITransactionManager TransactionManager { get; set; }
+
+		protected internal static int OperationIndex;
+
+		protected internal Action ReleaseService;
+
+		protected internal virtual IOrganizationServiceCache Cache { get; set; }
+		protected internal virtual ObjectCache ObjectCache { get; set; }
+		protected internal virtual bool IsCacheEnabled => Parameters.IsCachingEnabled == true && Cache != null;
+
+		private readonly List<Operation> pendingOperations;
+		private readonly FixedSizeQueue<Operation> executedOperations;
 
 		private readonly BlockingQueue<IOrganizationService> servicesQueue = new BlockingQueue<IOrganizationService>();
-		internal Action ReleaseService;
 
-		private bool IsCacheEnabled => Cache != null;
-		internal IOrganizationServiceCache Cache { get; set; }
-		internal ObjectCache ObjectCache { get; set; }
+		private IDeferredOrgService deferredOrgService;
+		private bool isUseSdkDeferredOperations;
 
-		protected EnhancedServiceParams Parameters;
+		private IPlannedOrgService plannedOrgService;
 
-		private List<IToken<OrganizationResponse>> deferredRequests;
-		private Queue<PlannedOperation> executionQueue;
+		private bool IsRetryEnabled => Parameters.IsAutoRetryEnabled ?? false;
+		private int MaxRetryCount => Parameters.AutoRetryParams?.MaxRetryCount ?? 1;
+		private TimeSpan RetryInterval => Parameters.AutoRetryParams?.RetryInterval ?? TimeSpan.FromSeconds(5);
+		private double RetryBackoffMultiplier => Parameters.AutoRetryParams?.BackoffMultiplier ?? 1;
+		private TimeSpan? MaxmimumRetryInterval => Parameters.AutoRetryParams?.MaxmimumRetryInterval;
+		private IEnumerable<Func<Func<IOrganizationService, object>, Operation, ExecuteParams, Exception, object>> CustomRetryFunctions
+			 => Parameters.AutoRetryParams.CustomRetryFunctions;
 
-		protected EnhancedOrgServiceBase(EnhancedServiceParams parameters)
+		protected internal EnhancedOrgServiceBase(EnhancedServiceParams parameters)
 		{
 			Parameters = parameters;
+			pendingOperations = new List<Operation>();
+			executedOperations = new FixedSizeQueue<Operation>(parameters.OperationHistoryLimit ?? int.MaxValue);
+		}
+		
+		public virtual void ValidateState(bool isValid = true)
+		{
+			if (Parameters == null || !servicesQueue.Any())
+			{
+				throw new StateException("Service is not ready. Try to get a new service from the factory.");
+			}
 		}
 
 		#region Service
 
-		internal void FillServicesQueue(IEnumerable<IOrganizationService> services)
+		protected internal virtual void FillServicesQueue(IEnumerable<IOrganizationService> services)
 		{
 			foreach (var service in services)
 			{
 				servicesQueue.Add(service);
 			}
-
-			if (servicesQueue.Any())
-			{
-				IsValid = true;
-			}
 		}
 
-		internal IOrganizationService[] ClearServicesQueue()
+		protected internal virtual IOrganizationService[] ClearServicesQueue()
 		{
 			var services = servicesQueue.ToArray();
 			servicesQueue.Clear();
 			return services;
 		}
 
-		internal SelfEnqueuingService GetService()
+		protected internal virtual IDisposableService GetService()
 		{
+			ValidateState();
+
 			var service = servicesQueue.Dequeue();
 
 			if (service.EnsureTokenValid() == false)
@@ -84,14 +151,14 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 				throw new Exception("Service token has expired.");
 			}
 
-			return new SelfEnqueuingService(servicesQueue, service);
+			return new SelfDisposingService(service, () => servicesQueue.Enqueue(service));
 		}
 
 		#endregion
 
 		#region Transactions
 
-		public Transaction BeginTransaction(string transactionId = null)
+		public virtual Transaction BeginTransaction(string transactionId = null)
 		{
 			ValidateTransactionSupport();
 			ValidateState();
@@ -99,7 +166,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 			return TransactionManager.BeginTransaction(transactionId);
 		}
 
-		public void UndoTransaction(Transaction transaction = null)
+		public virtual void UndoTransaction(Transaction transaction = null)
 		{
 			ValidateTransactionSupport();
 			ValidateState();
@@ -108,7 +175,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 			TransactionManager.UndoTransaction(service, transaction);
 		}
 
-		public void AddUndoLogicToCache<TRequestType>(
+		public virtual void AddUndoLogicToCache<TRequestType>(
 			Func<IOrganizationService, OrganizationRequest, OrganizationRequest> undoFunction)
 			where TRequestType : OrganizationRequest
 		{
@@ -125,7 +192,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 			UndoHelper.UndoLogicCache.Add(requestType, undoFunction);
 		}
 
-		public void EndTransaction(Transaction transaction = null)
+		public virtual void EndTransaction(Transaction transaction = null)
 		{
 			ValidateTransactionSupport();
 			ValidateState();
@@ -133,7 +200,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 			TransactionManager.EndTransaction(transaction);
 		}
 
-		private void ValidateTransactionSupport()
+		protected virtual void ValidateTransactionSupport()
 		{
 			if (TransactionManager == null)
 			{
@@ -141,48 +208,18 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 			}
 		}
 
+		protected virtual void AddToTransaction(Operation operation, ExecuteParams executeParams)
+		{
+			if (executeParams?.IsTransactionsEnabled != false && TransactionManager?.IsTransactionInEffect() == true)
+			{
+				using var service = GetService();
+				TransactionManager.ProcessRequest(service, operation);
+			}
+		}
+
 		#endregion
 
-		#region Caching
-
-		public void RemoveFromCache(Entity record)
-		{
-			Cache.Remove(record);
-		}
-
-		public void RemoveFromCache(EntityReference entity)
-		{
-			Cache.Remove(entity);
-		}
-
-		public void RemoveFromCache(string entityLogicalName, Guid? id)
-		{
-			Cache.Remove(entityLogicalName, id);
-		}
-
-		public void RemoveFromCache(OrganizationRequest request)
-		{
-			Cache.Remove(request);
-		}
-
-		public void RemoveAllFromCache()
-		{
-			Cache.Remove(new OrganizationServiceCachePluginMessage { Category = CacheItemCategory.All });
-		}
-
-		/// <inheritdoc />
-		public void ClearCache()
-		{
-			if (ObjectCache == null)
-			{
-				throw new NotSupportedException("The query's memory cache is not limited to this service's scope."
-					+ " Use the factory's method to clear the cache instead.");
-			}
-
-			ObjectCache.Clear();
-		}
-
-		private T Execute<T>(OrganizationRequest request, Func<OrganizationResponse, T> selector, string selectorCacheKey)
+		protected virtual T InnerExecute<T>(OrganizationRequest request, Func<OrganizationResponse, T> selector, string selectorCacheKey)
 		{
 			var execute = Cache == null
 				? null
@@ -190,15 +227,15 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 					<OrganizationRequest, Func<OrganizationRequest, OrganizationResponse>, Func<OrganizationResponse, T>, string, T>
 					(Cache.Execute);
 
-			return Execute(request, execute, selector, selectorCacheKey);
+			return InnerExecute(request, execute, selector, selectorCacheKey);
 		}
 
-		private T Execute<T>(OrganizationRequest request) where T : OrganizationResponse
+		protected virtual T InnerExecute<T>(OrganizationRequest request) where T : OrganizationResponse
 		{
-			return Execute(request, response => response as T, null);
+			return InnerExecute(request, response => response as T, null);
 		}
 
-		private T Execute<T>(OrganizationRequest request,
+		protected virtual T InnerExecute<T>(OrganizationRequest request,
 			Func<OrganizationRequest, Func<OrganizationRequest, OrganizationResponse>, Func<OrganizationResponse, T>, string, T>
 				execute,
 			Func<OrganizationResponse, T> selector, string selectorCacheKey)
@@ -206,17 +243,117 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 			return execute == null ? selector(InnerExecute(request)) : execute(request, InnerExecute, selector, selectorCacheKey);
 		}
 
-		private OrganizationResponse InnerExecute(OrganizationRequest request)
+		protected virtual OrganizationResponse InnerExecute(OrganizationRequest request)
 		{
 			using var service = GetService();
 			return service.Execute(request is KeyedRequest keyedRequest ? keyedRequest.Request : request);
 		}
 
+		#region SDK Operations
+
+		public virtual Guid Create(Entity entity)
+		{
+			return CreateAsOperation(entity).Response?.id ?? Guid.Empty;
+		}
+
+		public virtual void Update(Entity entity)
+		{
+			Update(entity, null);
+		}
+
+		public virtual void Delete(string entityName, Guid id)
+		{
+			Delete(entityName, id, null);
+		}
+
+		public virtual void Associate(string entityName, Guid entityId, Relationship relationship, EntityReferenceCollection relatedEntities)
+		{
+			Associate(entityName, entityId, relationship, relatedEntities, null);
+		}
+
+		public virtual void Disassociate(string entityName, Guid entityId, Relationship relationship, EntityReferenceCollection relatedEntities)
+		{
+			Disassociate(entityName, entityId, relationship, relatedEntities, null);
+		}
+
+		public virtual Entity Retrieve(string entityName, Guid id, ColumnSet columnSet)
+		{
+			return RetrieveAsOperation(entityName, id, columnSet).Response?.Entity
+				?? new Entity(entityName, id);
+		}
+
+		public virtual EntityCollection RetrieveMultiple(QueryBase query)
+		{
+			return RetrieveMultipleAsOperation(query).Response?.EntityCollection
+				?? new EntityCollection();
+		}
+
+		public virtual OrganizationResponse Execute(OrganizationRequest request)
+		{
+			return Execute(request, null, null);
+		}
+
 		#endregion
 
-		#region Sync
+		#region Enhanced Operations
 
-		public Guid Create(Entity entity)
+		public virtual Guid Create(Entity entity, ExecuteParams executeParams)
+		{
+			return CreateAsOperation(entity, executeParams).Response?.id ?? Guid.Empty;
+		}
+
+		public virtual Operation<UpdateResponse> Update(Entity entity, ExecuteParams executeParams)
+		{
+			return UpdateAsOperation(entity, executeParams);
+		}
+
+		public virtual Operation<DeleteResponse> Delete(string entityName, Guid id, ExecuteParams executeParams)
+		{
+			return DeleteAsOperation(entityName, id, executeParams);
+		}
+
+		public virtual Operation<AssociateResponse> Associate(string entityName, Guid entityId, Relationship relationship,
+			EntityReferenceCollection relatedEntities, ExecuteParams executeParams)
+		{
+			return AssociateAsOperation(entityName, entityId, relationship, relatedEntities, executeParams);
+		}
+
+		public virtual Operation<DisassociateResponse> Disassociate(string entityName, Guid entityId, Relationship relationship,
+			EntityReferenceCollection relatedEntities, ExecuteParams executeParams)
+		{
+			return DisassociateAsOperation(entityName, entityId, relationship, relatedEntities, executeParams);
+		}
+
+		public virtual Entity Retrieve(string entityName, Guid id, ColumnSet columnSet, ExecuteParams executeParams)
+		{
+			return RetrieveAsOperation(entityName, id, columnSet, executeParams).Response?.Entity
+				?? new Entity(entityName, id);
+		}
+
+		public virtual TEntity Retrieve<TEntity>(string entityName, Guid id, ColumnSet columnSet, ExecuteParams executeParams)
+			where TEntity : Entity
+		{
+			return Retrieve(entityName, id, columnSet, executeParams).ToEntity<TEntity>();
+		}
+
+		public virtual EntityCollection RetrieveMultiple(QueryBase query, ExecuteParams executeParams)
+		{
+			return RetrieveMultipleAsOperation(query, executeParams).Response?.EntityCollection
+				?? new EntityCollection();
+		}
+
+		public virtual OrganizationResponse Execute(OrganizationRequest request, ExecuteParams executeParams)
+		{
+			return Execute(request, executeParams, null);
+		}
+
+		public virtual OrganizationResponse Execute(OrganizationRequest request, ExecuteParams executeParams,
+			Func<IOrganizationService, OrganizationRequest, OrganizationRequest> undoFunction)
+		{
+			return ExecuteAsOperation(request, executeParams, undoFunction).Response;
+		}
+
+		public virtual Operation<CreateResponse> CreateAsOperation(Entity entity, ExecuteParams executeParams = null)
 		{
 			ValidateState();
 
@@ -225,38 +362,39 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 				{
 					Target = entity
 				};
-			var operation =
-				new Operation<Guid>(request)
+			var operation = PrepOperation<CreateResponse>(request);
+
+			if (executeParams?.IsNotDeferred != true && isUseSdkDeferredOperations)
+			{
+				deferredOrgService.Require(nameof(deferredOrgService), "Deferred operations must be initialised first.");
+				deferredOrgService.CreateDeferred(entity);
+				return operation as Operation<CreateResponse>;
+			}
+
+			AddToTransaction(operation, executeParams);
+
+			TryRunOperation(
+				service =>
 				{
-					Index = OperationIndex++
-				};
+					var result = service.Create(entity);
+					operation.Response =
+						new CreateResponse
+						{
+							[nameof(CreateResponse.id)] = result
+						};
+					return result;
+				},
+				operation, executeParams);
 
-			using var service = GetService();
-
-			if (TransactionManager?.IsTransactionInEffect() == true)
+			if (IsCacheEnabled)
 			{
-				TransactionManager.ProcessRequest(service, operation);
+				Cache.Remove(entity);
 			}
 
-			try
-			{
-				var id = operation.Response = service.Create(entity);
-
-				if (IsCacheEnabled)
-				{
-					Cache.Remove(entity);
-				}
-
-				return id;
-			}
-			catch (Exception ex)
-			{
-				operation.Exception = ex;
-				throw;
-			}
+			return operation as Operation<CreateResponse>;
 		}
 
-		public void Update(Entity entity)
+		public virtual Operation<UpdateResponse> UpdateAsOperation(Entity entity, ExecuteParams executeParams = null)
 		{
 			ValidateState();
 
@@ -265,37 +403,36 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 				{
 					Target = entity
 				};
-			var operation =
-				new Operation<object>(request)
+			var operation = PrepOperation<UpdateResponse>(request);
+
+			if (executeParams?.IsNotDeferred != true && isUseSdkDeferredOperations)
+			{
+				deferredOrgService.Require(nameof(deferredOrgService), "Deferred operations must be initialised first.");
+				deferredOrgService.UpdateDeferred(entity);
+				return operation as Operation<UpdateResponse>;
+			}
+
+			AddToTransaction(operation, executeParams);
+
+			TryRunOperation(
+				service =>
 				{
-					Index = OperationIndex++
-				};
+					service.Update(entity);
+					return 0;
+				},
+				operation, executeParams);
 
-			using var service = GetService();
+			operation.Response = new UpdateResponse();
 
-			if (TransactionManager?.IsTransactionInEffect() == true)
+			if (IsCacheEnabled)
 			{
-				TransactionManager.ProcessRequest(service, operation);
+				Cache.Remove(entity);
 			}
 
-			try
-			{
-				service.Update(entity);
-				operation.Response = new object();
-
-				if (IsCacheEnabled)
-				{
-					Cache.Remove(entity);
-				}
-			}
-			catch (Exception ex)
-			{
-				operation.Exception = ex;
-				throw;
-			}
+			return operation as Operation<UpdateResponse>;
 		}
 
-		public void Delete(string entityName, Guid id)
+		public virtual Operation<DeleteResponse> DeleteAsOperation(string entityName, Guid id, ExecuteParams executeParams = null)
 		{
 			ValidateState();
 
@@ -304,38 +441,37 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 				{
 					Target = new EntityReference(entityName, id)
 				};
-			var operation =
-				new Operation<object>(request)
+			var operation = PrepOperation<DeleteResponse>(request);
+
+			if (executeParams?.IsNotDeferred != true && isUseSdkDeferredOperations)
+			{
+				deferredOrgService.Require(nameof(deferredOrgService), "Deferred operations must be initialised first.");
+				deferredOrgService.DeleteDeferred(entityName, id);
+				return operation as Operation<DeleteResponse>;
+			}
+
+			AddToTransaction(operation, executeParams);
+
+			TryRunOperation(
+				service =>
 				{
-					Index = OperationIndex++
-				};
+					service.Delete(entityName, id);
+					return 0;
+				},
+				operation, executeParams);
 
-			using var service = GetService();
+			operation.Response = new DeleteResponse();
 
-			if (TransactionManager?.IsTransactionInEffect() == true)
+			if (IsCacheEnabled)
 			{
-				TransactionManager.ProcessRequest(service, operation);
+				Cache.Remove(entityName, id);
 			}
 
-			try
-			{
-				service.Delete(entityName, id);
-				operation.Response = new object();
-
-				if (IsCacheEnabled)
-				{
-					Cache.Remove(entityName, id);
-				}
-			}
-			catch (Exception ex)
-			{
-				operation.Exception = ex;
-				throw;
-			}
+			return operation as Operation<DeleteResponse>;
 		}
 
-		public void Associate(string entityName, Guid entityId, Relationship relationship,
-			EntityReferenceCollection relatedEntities)
+		public virtual Operation<AssociateResponse> AssociateAsOperation(string entityName, Guid entityId, Relationship relationship,
+			EntityReferenceCollection relatedEntities, ExecuteParams executeParams = null)
 		{
 			ValidateState();
 
@@ -346,34 +482,32 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 					Relationship = relationship,
 					RelatedEntities = relatedEntities
 				};
-			var operation =
-				new Operation<object>(request)
+			var operation = PrepOperation<AssociateResponse>(request);
+
+			if (executeParams?.IsNotDeferred != true && isUseSdkDeferredOperations)
+			{
+				deferredOrgService.Require(nameof(deferredOrgService), "Deferred operations must be initialised first.");
+				deferredOrgService.AssociateDeferred(entityName, entityId, relationship, relatedEntities);
+				return operation as Operation<AssociateResponse>;
+			}
+
+			TryRunOperation(
+				service =>
 				{
-					Index = OperationIndex++
-				};
+					service.Associate(entityName, entityId, relationship, relatedEntities);
+					return 0;
+				},
+				operation, executeParams);
 
-			using var service = GetService();
+			AddToTransaction(operation, executeParams);
 
-			try
-			{
-				service.Associate(entityName, entityId, relationship, relatedEntities);
-			}
-			catch (Exception ex)
-			{
-				operation.Exception = ex;
-				throw;
-			}
+			operation.Response = new AssociateResponse();
 
-			if (TransactionManager?.IsTransactionInEffect() == true)
-			{
-				TransactionManager.ProcessRequest(service, operation);
-			}
-
-			operation.Response = new object();
+			return operation as Operation<AssociateResponse>;
 		}
 
-		public void Disassociate(string entityName, Guid entityId, Relationship relationship,
-			EntityReferenceCollection relatedEntities)
+		public virtual Operation<DisassociateResponse> DisassociateAsOperation(string entityName, Guid entityId, Relationship relationship,
+			EntityReferenceCollection relatedEntities, ExecuteParams executeParams = null)
 		{
 			ValidateState();
 
@@ -384,464 +518,287 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 					Relationship = relationship,
 					RelatedEntities = relatedEntities
 				};
-			var operation =
-				new Operation<object>(request)
+			var operation = PrepOperation<DisassociateResponse>(request);
+
+			if (executeParams?.IsNotDeferred != true && isUseSdkDeferredOperations)
+			{
+				deferredOrgService.Require(nameof(deferredOrgService), "Deferred operations must be initialised first.");
+				deferredOrgService.DisassociateDeferred(entityName, entityId, relationship, relatedEntities);
+				return operation as Operation<DisassociateResponse>;
+			}
+
+			TryRunOperation(
+				service =>
 				{
-					Index = OperationIndex++
+					service.Disassociate(entityName, entityId, relationship, relatedEntities);
+					return 0;
+				},
+				operation, executeParams);
+
+			AddToTransaction(operation, executeParams);
+
+			operation.Response = new DisassociateResponse();
+
+			return operation as Operation<DisassociateResponse>;
+		}
+
+		public virtual Operation<RetrieveResponse> RetrieveAsOperation(string entityName, Guid id, ColumnSet columnSet,
+			ExecuteParams executeParams = null)
+		{
+			ValidateState();
+
+			var request =
+				new RetrieveRequest
+				{
+					Target =
+						new EntityReference
+						{
+							LogicalName = entityName,
+							Id = id
+						},
+					ColumnSet = columnSet
+				};
+			var operation = PrepOperation<RetrieveResponse>(request);
+
+			var result =
+				TryRunOperation(
+					service =>
+					{
+					Entity resultInner;
+
+					if (IsCacheEnabled && executeParams?.IsCachingEnabled != false)
+					{
+						resultInner = InnerExecute<RetrieveResponse>(request)?.Entity;
+					}
+					else
+					{
+						resultInner = service.Retrieve(entityName, id, columnSet);
+					}
+
+					return resultInner;
+				},
+				operation, executeParams);
+
+			operation.Response =
+				new RetrieveResponse
+				{
+					[nameof(RetrieveResponse.Entity)] = result
 				};
 
-			using var service = GetService();
-
-			try
-			{
-				service.Disassociate(entityName, entityId, relationship, relatedEntities);
-			}
-			catch (Exception ex)
-			{
-				operation.Exception = ex;
-				throw;
-			}
-
-			if (TransactionManager?.IsTransactionInEffect() == true)
-			{
-				TransactionManager.ProcessRequest(service, operation);
-			}
-
-			operation.Response = new object();
+			return operation as Operation<RetrieveResponse>;
 		}
 
-		public Entity Retrieve(string entityName, Guid id, ColumnSet columnSet)
+		public virtual Operation<RetrieveMultipleResponse> RetrieveMultipleAsOperation(QueryBase query, ExecuteParams executeParams = null)
 		{
 			ValidateState();
 
-			if (IsCacheEnabled)
-			{
-				return Execute<RetrieveResponse>(
-					new RetrieveRequest
+			var request =
+				new RetrieveMultipleRequest
+				{
+					Query = query
+				};
+			var operation = PrepOperation<RetrieveMultipleResponse>(request);
+
+			var result =
+				TryRunOperation(
+					service =>
 					{
-						Target =
-							new EntityReference
-							{
-								LogicalName = entityName,
-								Id = id
-							},
-						ColumnSet = columnSet
-					})?.Entity;
-			}
+					EntityCollection resultInner;
 
-			using var service = GetService();
-			return service.Retrieve(entityName, id, columnSet);
-		}
-
-		public virtual TEntity Retrieve<TEntity>(string entityName, Guid id, ColumnSet columnSet) where TEntity : Entity
-		{
-			return Retrieve(entityName, id, columnSet).ToEntity<TEntity>();
-		}
-
-		public EntityCollection RetrieveMultiple(QueryBase query)
-		{
-			ValidateState();
-
-			if (IsCacheEnabled)
-			{
-				return Execute<RetrieveMultipleResponse>(
-					new RetrieveMultipleRequest
+					if (IsCacheEnabled && executeParams?.IsCachingEnabled != false)
 					{
-						Query = query
-					})?.EntityCollection;
-			}
+						resultInner = InnerExecute<RetrieveMultipleResponse>(request)?.EntityCollection;
+					}
+					else
+					{
+						resultInner = service.RetrieveMultiple(query);
+					}
 
-			using var service = GetService();
-			return service.RetrieveMultiple(query);
+					return resultInner;
+				},
+				operation, executeParams);
+
+			operation.Response =
+				new RetrieveMultipleResponse
+				{
+					[nameof(RetrieveMultipleResponse.EntityCollection)] = result
+				};
+
+			return operation as Operation<RetrieveMultipleResponse>;
 		}
 
-		public OrganizationResponse Execute(OrganizationRequest request)
+		public virtual Operation ExecuteAsOperation(OrganizationRequest request, ExecuteParams executeParams = null)
 		{
-			return Execute(request, null);
+			return ExecuteAsOperation(request, executeParams, null);
 		}
 
-		public virtual OrganizationResponse Execute(OrganizationRequest request,
+		public virtual Operation ExecuteAsOperation(OrganizationRequest request, ExecuteParams executeParams,
 			Func<IOrganizationService, OrganizationRequest, OrganizationRequest> undoFunction)
 		{
 			ValidateState();
 
-			var operation =
-				new Operation<OrganizationResponse>(request)
-				{
-					Index = OperationIndex++
-				};
-
-			try
+			if (executeParams?.IsNotDeferred != true && isUseSdkDeferredOperations)
 			{
-				using var service = GetService();
-
-				// add to transaction if there is one
-				if (TransactionManager?.IsTransactionInEffect() == true)
-				{
-					TransactionManager.ProcessRequest(service, operation, undoFunction);
-				}
-
-				if (!IsCacheEnabled)
-				{
-					return operation.Response = service.Execute(request);
-				}
-
-				return operation.Response = Execute<OrganizationResponse>(request);
+				deferredOrgService.Require(nameof(deferredOrgService), "Deferred operations must be initialised first.");
+				deferredOrgService.ExecuteDeferred<OrganizationResponse>(request);
+				return null;
 			}
-			catch (Exception ex)
-			{
-				operation.Exception = ex;
-				throw;
-			}
-		}
 
-		public virtual TResponse Execute<TResponse, TRequest>(TRequest request,
-			Func<IOrganizationService, TRequest, OrganizationRequest> undoFunction = null)
-			where TRequest : OrganizationRequest
-			where TResponse : OrganizationResponse
-		{
-			return (TResponse)Execute(request, (Func<IOrganizationService, OrganizationRequest, OrganizationRequest>)undoFunction);
+			var operation = PrepOperation<OrganizationResponse>(request);
+
+			AddToTransaction(operation, executeParams);
+
+			operation.Response =
+				TryRunOperation(
+					service =>
+					{
+						OrganizationResponse resultInner;
+
+						if (IsCacheEnabled && executeParams?.IsCachingEnabled != false)
+						{
+							resultInner = operation.Response = InnerExecute<OrganizationResponse>(request);
+						}
+						else
+						{
+							resultInner = operation.Response = service.Execute(request);
+						}
+
+						return resultInner;
+					},
+					operation, executeParams);
+
+			return operation;
 		}
 
 		#endregion
 
 		#region Deferred
 
-		public IDeferredOrgService StartDeferredQueue()
+		public virtual void StartSdkOpDeferredQueue()
 		{
-			if (deferredRequests == null)
+			StartDeferredQueueInner(true);
+		}
+
+		public virtual IDeferredOrgService StartDeferredQueue()
+		{
+			return StartDeferredQueueInner(false);
+		}
+
+		protected internal virtual IDeferredOrgService StartDeferredQueueInner(bool isSdk)
+		{
+			if (deferredOrgService == null)
 			{
-				deferredRequests = new List<IToken<OrganizationResponse>>();
-				return this;
+				isUseSdkDeferredOperations = isSdk;
+				return deferredOrgService = new DeferredOrgService(this,
+					() =>
+					{
+						deferredOrgService = null;
+						isUseSdkDeferredOperations = false;
+					});
 			}
 
 			throw new InitialisationException("Queue has already been started.");
 		}
 
-		private void ValidateDeferredQueueState()
+		protected virtual void ValidateDeferredQueueState()
 		{
-			if (deferredRequests == null)
+			if (deferredOrgService == null)
 			{
 				throw new StateException("Deferred queue is in an invalid state. Restart the queue first.");
 			}
 		}
 
-		public IEnumerable<OrganizationRequest> GetDeferredRequests()
+		public virtual IDictionary<OrganizationRequest, OrganisationRequestToken<OrganizationResponse>> ExecuteDeferredRequests(int bulkSize = 1000)
 		{
 			ValidateDeferredQueueState();
-			return deferredRequests
-				.Cast<OrganisationRequestToken<OrganizationResponse>>()
-				.Select(e => e.Request);
+			return deferredOrgService?.ExecuteDeferredRequests(bulkSize);
 		}
 
-		public IDictionary<OrganizationRequest, OrganisationRequestToken<OrganizationResponse>>
-			ExecuteDeferredRequests(int bulkSize = 1000)
+		public virtual void CancelDeferredRequests()
 		{
-			ValidateDeferredQueueState();
-
-			var bulkResponse = deferredRequests
-				.Cast<OrganisationRequestToken<OrganizationResponse>>()
-				.Select(e => e.Request)
-				.ExecuteTransaction(this, true, bulkSize);
-
-			var responses = deferredRequests
-				.Cast<OrganisationRequestToken<OrganizationResponse>>()
-				.ToDictionary(
-					e => e.Request,
-					e =>
-					{
-						e.Value = bulkResponse[e.Request].Response;
-						return e;
-					});
-			// TODO set response token as ready for consumption, else error
-			CancelDeferredRequests();
-
-			return responses;
-		}
-
-		public void CancelDeferredRequests()
-		{
-			deferredRequests?.Clear();
-			deferredRequests = null;
-		}
-
-		public OrganisationRequestToken<CreateResponse> CreateDeferred(Entity entity)
-		{
-			ValidateDeferredQueueState();
-			var token =
-				new OrganisationRequestToken<CreateResponse>
-				{
-					Request =
-						new CreateRequest
-						{
-							Target = entity.Copy()
-						}
-				};
-			deferredRequests.Add(token);
-			return token;
-		}
-
-		public OrganisationRequestToken<UpdateResponse> UpdateDeferred(Entity entity)
-		{
-			ValidateDeferredQueueState();
-			var token =
-				new OrganisationRequestToken<UpdateResponse>
-				{
-					Request =
-						new UpdateRequest
-						{
-							Target = entity.Copy()
-						}
-				};
-			deferredRequests.Add(token);
-			return token;
-		}
-
-		public OrganisationRequestToken<UpsertResponse> UpsertDeferred(Entity entity)
-		{
-			ValidateDeferredQueueState();
-			var token =
-				new OrganisationRequestToken<UpsertResponse>
-				{
-					Request =
-						new UpsertRequest
-						{
-							Target = entity.Copy()
-						}
-				};
-			deferredRequests.Add(token);
-			return token;
-		}
-
-		public OrganisationRequestToken<DeleteResponse> DeleteDeferred(string entityName, Guid id)
-		{
-			ValidateDeferredQueueState();
-			var token =
-				new OrganisationRequestToken<DeleteResponse>
-				{
-					Request =
-						new DeleteRequest
-						{
-							Target = new EntityReference(entityName, id)
-						}
-				};
-			deferredRequests.Add(token);
-			return token;
-		}
-
-		public OrganisationRequestToken<AssociateResponse> AssociateDeferred(string entityName,
-			Guid entityId, Relationship relationship, EntityReferenceCollection relatedEntities)
-		{
-			ValidateDeferredQueueState();
-			var token =
-				new OrganisationRequestToken<AssociateResponse>
-				{
-					Request =
-						new AssociateRequest
-						{
-							Target = new EntityReference(entityName, entityId),
-							Relationship = relationship.Copy(),
-							RelatedEntities = relatedEntities.Copy()
-						}
-				};
-			deferredRequests.Add(token);
-			return token;
-		}
-
-		public OrganisationRequestToken<DisassociateResponse> DisassociateDeferred(string entityName,
-			Guid entityId, Relationship relationship, EntityReferenceCollection relatedEntities)
-		{
-			ValidateDeferredQueueState();
-			var token =
-				new OrganisationRequestToken<DisassociateResponse>
-				{
-					Request =
-						new DisassociateRequest
-						{
-							Target = new EntityReference(entityName, entityId),
-							Relationship = relationship.Copy(),
-							RelatedEntities = relatedEntities.Copy()
-						}
-				};
-			deferredRequests.Add(token);
-			return token;
-		}
-
-		public OrganisationRequestToken<TResponse> ExecuteDeferred<TResponse>(OrganizationRequest request)
-			where TResponse : OrganizationResponse
-		{
-			ValidateDeferredQueueState();
-			var token = new OrganisationRequestToken<TResponse> { Request = request.Copy() };
-			deferredRequests.Add(token);
-			return token;
+			deferredOrgService?.CancelDeferredRequests();
 		}
 
 		#endregion
 
 		#region Planned Execution
 
-		public IPlannedOrgService StartExecutionPlanning()
+		public virtual IPlannedOrgService StartExecutionPlanning()
 		{
-			if (executionQueue == null)
+			if (plannedOrgService == null)
 			{
-				executionQueue = new Queue<PlannedOperation>();
-				return this;
+				return plannedOrgService = new PlannedOrgService(this, () => plannedOrgService = null);
 			}
 
 			throw new InitialisationException("Planning has already been started.");
 		}
 
-		private void ValidateExecutionPlanState()
+		protected virtual void ValidateExecutionPlanState()
 		{
-			if (executionQueue == null)
+			if (plannedOrgService == null)
 			{
 				throw new StateException("Execution planning is in an invalid state. Restart the plan first.");
 			}
 		}
 
-		public void CancelPlanning()
+		public virtual void CancelPlanning()
 		{
-			executionQueue = null;
+			plannedOrgService?.CancelPlanning();
 		}
 
-		public PlannedValue PlanCreate(Entity entity)
-		{
-			var request = new CreateRequest { Target = entity };
-			CreateResponse reponse;
-			return PlanOperation(request, pr => pr.GetPlannedValue<PlannedValue>(nameof(reponse.id)));
-		}
-
-		public PlannedEntity PlanRetrieve(string entityName, Guid id, ColumnSet columnSet)
-		{
-			var request =
-				new RetrieveRequest
-				{
-					Target = new EntityReference(entityName, id),
-					ColumnSet = columnSet
-				};
-			RetrieveResponse reponse;
-			return PlanOperation(request, pr => pr.GetPlannedValue<PlannedEntity>(nameof(reponse.Entity)));
-		}
-
-		public void PlanUpdate(Entity entity)
-		{
-			var request = new UpdateRequest { Target = entity };
-			PlanOperation(request);
-		}
-
-		public void PlanDelete(string entityName, Guid id)
-		{
-			var request = new DeleteRequest { Target = new EntityReference(entityName, id) };
-			PlanOperation(request);
-		}
-
-		public void PlanAssociate(string entityName, Guid entityId, Relationship relationship, EntityReferenceCollection relatedEntities)
-		{
-			var request =
-				new AssociateRequest
-				{
-					Target = new EntityReference(entityName, entityId),
-					Relationship = relationship,
-					RelatedEntities = relatedEntities
-				};
-			PlanOperation(request);
-		}
-
-		public void PlanDisassociate(string entityName, Guid entityId, Relationship relationship,
-			EntityReferenceCollection relatedEntities)
-		{
-			var request =
-				new DisassociateRequest
-				{
-					Target = new EntityReference(entityName, entityId),
-					Relationship = relationship,
-					RelatedEntities = relatedEntities
-				};
-			PlanOperation(request);
-		}
-
-		public PlannedEntityCollection PlanRetrieveMultiple(QueryBase query)
-		{
-			var request = new RetrieveMultipleRequest { Query = query };
-			RetrieveMultipleResponse reponse;
-			return PlanOperation(request, pr => pr.GetPlannedValue<PlannedEntityCollection>(nameof(reponse.EntityCollection)));
-		}
-
-		public PlannedResponse PlanExecute(OrganizationRequest request)
-		{
-			return PlanOperation(request);
-		}
-
-		private PlannedResponse PlanOperation(OrganizationRequest plannedOperation)
-		{
-			return PlanOperation<PlannedResponse>(plannedOperation);
-		}
-
-		private T PlanOperation<T>(OrganizationRequest plannedOperation, Func<PlannedResponse, T> getPlannedValue = null)
-			where T : IPlannedValue
+		public virtual IDictionary<Guid, OrganizationResponse> ExecutePlan()
 		{
 			ValidateExecutionPlanState();
-
-			var plannedResponse = new PlannedResponse();
-			var plannedValue = getPlannedValue == null ? (IPlannedValue)plannedResponse : getPlannedValue(plannedResponse);
-
-			executionQueue.Enqueue(
-				new PlannedOperation
-				{
-					Request = plannedOperation.Copy().Mock<MockOrgRequest>(),
-					Response = plannedResponse
-				});
-
-			return (T)plannedValue;
-		}
-
-		public IDictionary<Guid, OrganizationResponse> ExecutePlan()
-		{
-			ValidateExecutionPlanState();
-
-			var serialised = executionQueue.ToList().SerialiseContractJson(true,
-				surrogate: new DateTimeCrmContractSurrogateCustom());
-
-			if (serialised.IsEmpty())
-			{
-				throw new InvalidPluginExecutionException("Could not deserialise planned execution operations."
-					+ " Possibly because one of the serialised types could not be found through the sandbox plugin.");
-			}
-
-			var request =
-				new OrganizationRequest("ys_LibrariesExecutePlannedOperations")
-				{
-					Parameters = new ParameterCollection { { "ExecutionPlan", serialised.Compress() } }
-				};
-
-			using var service = GetService();
-			var response = ((string)service.Execute(request)["SerialisedResult"]).Decompress();
-
-			var result = response.DeserialiseContractJson<MockDictionary>(true,
-				surrogate: new DateTimeCrmContractSurrogateCustom())
-				.ToDictionary(e => Guid.Parse(e.Key), e => e.Value.Unmock<OrganizationResponse>());
-
-			CancelPlanning();
-
-			return result;
+			return plannedOrgService?.ExecutePlan();
 		}
 
 		#endregion
 
 		#region Convenience
 
-		public UpsertResponse Upsert(Entity entity)
+		public virtual UpsertResponse Upsert(Entity entity, ExecuteParams executeParams = null)
 		{
-			return (UpsertResponse)Execute(
+			return Execute<UpsertResponse>(
 				new UpsertRequest
 				{
 					Target = entity
-				});
+				}, executeParams);
 		}
 
-		public IDictionary<OrganizationRequest, ExecuteBulkResponse> ExecuteBulk(List<OrganizationRequest> requests,
+		public virtual TResponse Execute<TResponse>(OrganizationRequest request, ExecuteParams executeParams = null)
+			where TResponse : OrganizationResponse
+		{
+			return (TResponse)Execute(request, executeParams, null);
+		}
+
+		public virtual TResponse Execute<TResponse, TRequest>(OrganizationRequest request, ExecuteParams executeParams = null,
+			Func<IOrganizationService, TRequest, OrganizationRequest> undoFunction = null) 
+			where TResponse : OrganizationResponse
+			where TRequest : OrganizationRequest
+		{
+			return (TResponse)Execute(request, executeParams,
+				(Func<IOrganizationService, OrganizationRequest, OrganizationRequest>)undoFunction);
+		}
+
+		public virtual Operation<TResponse> ExecuteAsOperation<TResponse>(OrganizationRequest request, ExecuteParams executeParams = null)
+			where TResponse : OrganizationResponse
+		{
+			return ExecuteAsOperation(request, executeParams, null) as Operation<TResponse>;
+		}
+
+		public virtual Operation<TResponse> ExecuteAsOperation<TResponse, TRequest>(OrganizationRequest request,
+			ExecuteParams executeParams = null, Func<IOrganizationService, TRequest, OrganizationRequest> undoFunction = null)
+			where TRequest : OrganizationRequest
+			where TResponse : OrganizationResponse
+		{
+			return ExecuteAsOperation(request, executeParams,
+				(Func<IOrganizationService, OrganizationRequest, OrganizationRequest>)undoFunction) as Operation<TResponse>;
+		}
+
+		public virtual IDictionary<OrganizationRequest, ExecuteBulkResponse> ExecuteBulk(List<OrganizationRequest> requests,
 			bool isReturnResponses = false, int batchSize = 1000, bool isContinueOnError = true,
-			Action<int, int, IDictionary<OrganizationRequest, ExecuteBulkResponse>> bulkFinishHandler = null)
+			Action<int, int, IDictionary<OrganizationRequest, ExecuteBulkResponse>> bulkFinishHandler = null,
+			ExecuteParams executeParams = null)
 		{
 			ValidateState();
 
@@ -875,31 +832,12 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 				// take batches
 				bulkRequest.Requests.AddRange(requests.Skip(i * batchSize).Take(batchSize));
 
-				ExecuteMultipleResponse bulkResponses;
+				var operation = ExecuteAsOperation<ExecuteMultipleResponse>(bulkRequest, executeParams);
+				var bulkResponses = operation?.Response;
 
-				var service = servicesQueue.Dequeue();
-
-				var operation =
-					new Operation<OrganizationResponse>(bulkRequest)
-					{
-						Index = OperationIndex++
-					};
-
-				// add to transaction if there is one
-				if (TransactionManager?.IsTransactionInEffect() == true)
+				if (bulkResponses == null)
 				{
-					TransactionManager.ProcessRequest(service, operation);
-				}
-
-				if (IsCacheEnabled)
-				{
-					operation.Response = bulkResponses = (ExecuteMultipleResponse)Execute(bulkRequest);
-				}
-				else
-				{
-					operation.Response = bulkResponses = (ExecuteMultipleResponse)service.Execute(bulkRequest);
-					servicesQueue.Enqueue(service);
-					service = null;
+					continue;
 				}
 
 				var innerRequests = bulkRequest.Requests;
@@ -920,15 +858,14 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 				if (!isReturnResponses)
 				{
 					// break on error and no 'continue on error' option
-					if (!isContinueOnError && (bulkResponses.IsFaulted || bulkResponses.Responses.Any(e => e.Fault != null)))
+					if (!isContinueOnError && (bulkResponses.IsFaulted
+						|| bulkResponses.Responses.Any(e => e.Fault != null)))
 					{
 						break;
 					}
-					else
-					{
-						bulkFinishHandler?.Invoke(i + 1, (int)batchCount, perBulkResponses);
-						continue;
-					}
+
+					bulkFinishHandler?.Invoke(i + 1, (int)batchCount, perBulkResponses);
+					continue;
 				}
 
 				for (var j = 0; j < bulkResponses.Responses.Count; j++)
@@ -990,18 +927,19 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 
 		#region Retrieve multiple
 
-		public IEnumerable<TEntityType> RetrieveMultiple<TEntityType>(QueryExpression query, int limit = -1)
+		public virtual IEnumerable<TEntityType> RetrieveMultiple<TEntityType>(QueryExpression query, int limit = -1,
+			ExecuteParams executeParams = null)
 			where TEntityType : Entity
 		{
 			ValidateState();
 
 			return RetrieveMultipleRangePaged<TEntityType>(query, 1,
 				limit <= 0 ? int.MaxValue : (int)Math.Ceiling(limit / 5000d),
-				limit <= 0 ? int.MaxValue : 5000);
+				limit <= 0 ? int.MaxValue : 5000, executeParams);
 		}
 
-		public IEnumerable<TEntityType> RetrieveMultipleRangePaged<TEntityType>(QueryExpression query,
-			int pageStart = 1, int pageEnd = 1, int pageSize = 5000)
+		public virtual IEnumerable<TEntityType> RetrieveMultipleRangePaged<TEntityType>(QueryExpression query,
+			int pageStart = 1, int pageEnd = 1, int pageSize = 5000, ExecuteParams executeParams = null)
 			where TEntityType : Entity
 		{
 			ValidateState();
@@ -1013,7 +951,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 
 			for (var i = pageStart; i <= pageEnd; i++)
 			{
-				var result = RetrieveMultiplePage<TEntityType>(query, pageSize, i)
+				var result = RetrieveMultiplePage<TEntityType>(query, pageSize, i, executeParams)
 					.ToArray();
 				entities.AddRange(result);
 
@@ -1026,7 +964,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 			return entities;
 		}
 
-		public IEnumerable<TEntityType> RetrieveMultiplePage<TEntityType>(QueryExpression query, int pageSize = 5000, int page = 1)
+		public virtual IEnumerable<TEntityType> RetrieveMultiplePage<TEntityType>(QueryExpression query, int pageSize = 5000, int page = 1,
+			ExecuteParams executeParams = null)
 			where TEntityType : Entity
 		{
 			ValidateState();
@@ -1034,33 +973,28 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 			page.RequireAtLeast(1, nameof(page));
 			page.RequireInRange(0, 5000, nameof(pageSize));
 
-			EntityCollection result;
+			query.PageInfo ??= new PagingInfo();
+			query.PageInfo.Count = pageSize;
+			query.PageInfo.PageNumber = page;
 
-			using (var service = GetService())
+			var currentCookie = query.PageInfo.PagingCookie;
+
+			if (page > 1
+				&& (currentCookie == null
+					|| page - 1 != int.Parse(Regex.Match(currentCookie, @"page=""(.*?)""").Groups[1].ToString())))
 			{
-				query.PageInfo ??= new PagingInfo();
-				query.PageInfo.Count = pageSize;
-				query.PageInfo.PageNumber = page;
-
-				var currentCookie = query.PageInfo.PagingCookie;
-
-				if (page > 1
-					&& (currentCookie == null
-						|| page - 1 != int.Parse(Regex.Match(currentCookie, @"page=""(.*?)""").Groups[1].ToString())))
-				{
-					query.PageInfo.PagingCookie = RequestHelper.GetCookie(service, query, pageSize, page);
-				}
-
-				if (!IsCacheEnabled)
-				{
-					result = service.RetrieveMultiple(query);
-					query.PageInfo.PagingCookie = result.PagingCookie;
-					return result.Entities.Select(entity => entity.ToEntity<TEntityType>()).ToList();
-				}
+				query.PageInfo.PagingCookie = RequestHelper.GetCookie(this, query, pageSize, page);
 			}
 
-			result = RetrieveMultiple(query);
+			var result = RetrieveMultipleAsOperation(query, executeParams)?.Response?.EntityCollection;
+
+			if (result == null)
+			{
+				return new List<TEntityType>();
+			}
+
 			query.PageInfo.PagingCookie = result.PagingCookie;
+
 			return result.Entities.Select(entity => entity.ToEntity<TEntityType>()).ToList();
 		}
 
@@ -1070,39 +1004,137 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 
 		#region Utility
 
-		public int GetRecordsCount(QueryBase query)
+		public virtual int GetRecordsCount(QueryBase query)
 		{
 			ValidateState();
-
-			using var service = GetService();
-			return RequestHelper.GetTotalRecordsCount(service, query);
+			return RequestHelper.GetTotalRecordsCount(this, query);
 		}
 
-		public int GetPagesCount(QueryBase query, int pageSize = 5000)
+		public virtual int GetPagesCount(QueryBase query, int pageSize = 5000)
 		{
 			ValidateState();
-
-			using var service = GetService();
 			pageSize.RequireInRange(1, 5000, nameof(pageSize));
-			return RequestHelper.GetTotalPagesCount(service, query, pageSize);
+			return RequestHelper.GetTotalPagesCount(this, query, pageSize);
 		}
 
-		public QueryExpression CloneQuery(QueryBase query)
+		public virtual QueryExpression CloneQuery(QueryBase query)
 		{
 			ValidateState();
-
-			using var service = GetService();
-			return RequestHelper.CloneQuery(service, query);
+			return RequestHelper.CloneQuery(this, query);
 		}
 
 		#endregion
 
-		public void Dispose()
+		#region Operation Handling
+
+		protected internal virtual TResult TryRunOperation<TResult>(Func<IOrganizationService, TResult> action, Operation operation,
+			ExecuteParams executeParams)
 		{
+			var isRetryEnabled = executeParams?.IsAutoRetryEnabled ?? IsRetryEnabled;
+			var maxRetryCount = executeParams?.AutoRetryParams?.MaxRetryCount ?? MaxRetryCount;
+			var retryInterval = executeParams?.AutoRetryParams?.RetryInterval ?? RetryInterval;
+			var backoffMultiplier = executeParams?.AutoRetryParams?.BackoffMultiplier ?? RetryBackoffMultiplier;
+			var maxmimumRetryInterval = executeParams?.AutoRetryParams?.MaxmimumRetryInterval ?? MaxmimumRetryInterval;
+
+			var currentRetry = 0;
+			var nextInterval = retryInterval;
+
+			try
+			{
+				pendingOperations.Add(operation);
+
+				while (true)
+				{
+					try
+					{
+						operation.OperationStatus = OperationStatus.InProgress;
+						using var service = GetService();
+						return action(service);
+					}
+					catch (Exception ex)
+					{
+						if (!isRetryEnabled || currentRetry >= maxRetryCount || nextInterval > maxmimumRetryInterval)
+						{
+							FailureCount++;
+							operation.Exception = ex;
+							OnOperationFailed(new OperationFailedEventArgs(this, operation,
+								currentRetry,
+								currentRetry == 0 ? new TimeSpan(0) : new TimeSpan((long)(nextInterval.Ticks / backoffMultiplier))));
+							
+							foreach (var function in CustomRetryFunctions)
+							{
+								try
+								{
+									var customRetryResult = function(s => action(s), operation, executeParams, ex);
+
+									if (customRetryResult is TResult result && operation.OperationStatus == OperationStatus.Success)
+									{
+										return result;
+									}
+								}
+								catch
+								{
+									// ignored
+								}
+							}
+							
+							throw;
+						}
+
+						operation.OperationStatus = OperationStatus.Retry;
+
+						Task.Delay(nextInterval).Wait();
+						nextInterval = new TimeSpan((long)(nextInterval.Ticks * backoffMultiplier));
+
+						currentRetry++;
+						RetryCount++;
+					}
+				}
+			}
+			finally
+			{
+				RequestCount++;
+
+				pendingOperations.Remove(operation);
+
+				if (executeParams?.IsExcludeFromHistory != true)
+				{
+					executedOperations.Enqueue(operation);
+				}
+			}
+		}
+		
+		protected virtual void OnOperationStatusChanged(OperationStatusEventArgs e)  
+		{  
+			InnerOperationStatusChanged?.Invoke(this, e);  
+		}
+		
+		protected virtual void OnOperationFailed(OperationFailedEventArgs e)  
+		{  
+			InnerOperationFailed?.Invoke(this, e);  
+		}
+
+		protected virtual Operation PrepOperation<TResponse>(OrganizationRequest request) where TResponse : OrganizationResponse
+		{
+			var operation =
+				new Operation<TResponse>(request)
+				{
+					Index = ++OperationIndex
+				};
+			operation.OperationStatusChanged += (s, e) => OnOperationStatusChanged(e);
+			operation.OperationStatus = OperationStatus.Ready;
+			return operation;
+		}
+
+		#endregion
+
+		public virtual void Dispose()
+		{
+			InnerOperationStatusChanged = null;
+			InnerOperationFailed = null;
 			CancelPlanning();
 			CancelDeferredRequests();
 			ReleaseService?.Invoke();
-			IsValid = false;
 		}
 	}
 }

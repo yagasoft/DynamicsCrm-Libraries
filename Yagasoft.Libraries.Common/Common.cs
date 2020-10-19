@@ -459,6 +459,22 @@ namespace Yagasoft.Libraries.Common
 
 		#endregion
 
+		/// <summary>
+		/// Author: Ahmed Elsawalhy
+		/// </summary>
+		public static bool IsEmpty(this IEnumerable e)
+		{
+			return !e.IsFilled();
+		}
+
+		/// <summary>
+		/// Author: Ahmed Elsawalhy
+		/// </summary>
+		public static bool IsFilled(this IEnumerable e)
+		{
+			return e.Cast<object>().Any();
+		}
+
 		#region Strings
 
 		/// <summary>
@@ -1074,6 +1090,20 @@ namespace Yagasoft.Libraries.Common
 				var originalFieldValue = fieldInfo.GetValue(originalObject);
 				var clonedFieldValue = InternalCopy(originalFieldValue, visited);
 				fieldInfo.SetValue(cloneObject, clonedFieldValue);
+			}
+		}
+
+		public static void CopyValuesFrom(this object self, object parent, bool isDeepCopy = false)
+		{
+			var bindingFlags = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.FlattenHierarchy;
+			var fromFields = parent.GetType().GetFields(bindingFlags);
+			var toFields = self.GetType().GetFields(bindingFlags);
+
+			foreach (var fromField in fromFields)
+			{
+				var toField = toFields.FirstOrDefault(f => fromField.Name == f.Name && fromField.FieldType == f.FieldType);
+				var value = fromField.GetValue(parent);
+				toField?.SetValue(self, isDeepCopy ? value.Copy() : value);
 			}
 		}
 	}
@@ -2234,6 +2264,23 @@ namespace Yagasoft.Libraries.Common
 	[GeneratedCode("Not generated code, but used to exclude from Code Analysis.", "0.0.0.0")]
 	public static partial class CrmHelpers
 	{
+		public static string[] NonUpdatableFields =
+			{
+				"createdby",
+				"createdon",
+				"createdonbehalfby",
+				"importsequencenumber",
+				"modifiedby",
+				"modifiedon",
+				"modifiedonbehalfby",
+				"owningbusinessunit",
+				"owningteam",
+				"owninguser",
+				"timezoneruleversionnumber",
+				"utcconversiontimezonecode",
+				"versionumber",
+			};
+
 		/// <summary>
 		///     Retrieves the generic configuration record from CRM. All fields are returned.<br />
 		///     If none is found, an empty entity record is returned.<br />
@@ -6897,7 +6944,7 @@ namespace Yagasoft.Libraries.Common
 	}
 
 	/// <summary>
-	///     credits: http://joe-bq-wang.iteye.com/blog/1878940
+	///     credits: http://joe-bq-wang.iteye.com/blog/1878940<br />
 	///     Author: Ahmed Elsawalhy
 	/// </summary>
 	[ExcludeFromCodeCoverage]
@@ -6907,15 +6954,11 @@ namespace Yagasoft.Libraries.Common
 	{
 		#region ctor(s)
 
-		public BlockingQueue()
-			: base(new ConcurrentQueue<T>())
-		{
-		}
+		public BlockingQueue() : base(new ConcurrentQueue<T>())
+		{ }
 
-		public BlockingQueue(int maxSize)
-			: base(new ConcurrentQueue<T>(), maxSize)
-		{
-		}
+		public BlockingQueue(int maxSize) : base(new ConcurrentQueue<T>(), maxSize)
+		{ }
 
 		#endregion ctor(s)
 
@@ -6967,6 +7010,88 @@ namespace Yagasoft.Libraries.Common
 		}
 
 		#endregion Methods
+	}
+
+	/// <summary>
+	///     Adds to the queue, up to the limit, after which it dequeues to keep the size within the limit.<br />
+	///     credits: https://stackoverflow.com/a/5852926/1919456<br />
+	///     Author: Ahmed Elsawalhy
+	/// </summary>
+	[ExcludeFromCodeCoverage]
+	[DebuggerNonUserCode]
+	[GeneratedCode("Not generated code, but used to exclude from Code Analysis.", "0.0.0.0")]
+	public class FixedSizeQueue<T> : ICollection<T>, IEnumerable<T>, IEnumerable, ICollection
+	{
+		public virtual int Count => q.Count;
+		public virtual object SyncRoot => throw new NotSupportedException();
+		public virtual bool IsSynchronized => false;
+		public virtual bool IsReadOnly => false;
+
+		protected readonly ConcurrentQueue<T> q = new ConcurrentQueue<T>();
+		protected virtual int limit { get; set; }
+
+		public FixedSizeQueue(int limit)
+		{
+			limit.RequireAtLeast(1, nameof(limit));
+			this.limit = limit;
+		}
+
+		public virtual void Enqueue(T obj)
+		{
+			q.Enqueue(obj);
+			while (q.Count > limit && q.TryDequeue(out var _)) ;
+		}
+
+		public virtual T Dequeue()
+		{
+			q.TryDequeue(out var e);
+			return e;
+		}
+
+		public virtual void Add(T item)
+		{
+			Enqueue(item);
+		}
+
+		public virtual void Clear()
+		{
+			while (q.Any())
+			{
+				Dequeue();
+			}
+		}
+
+		public virtual bool Contains(T item)
+		{
+			return q.Contains(item);
+		}
+
+		public virtual void CopyTo(T[] array, int arrayIndex)
+		{
+			array.Require(nameof(array));
+			q.CopyTo(array, arrayIndex);
+		}
+
+		public virtual bool Remove(T item)
+		{
+			throw new NotSupportedException();
+		}
+
+		public virtual void CopyTo(Array array, int index)
+		{
+			array.Require(nameof(array));
+			((ICollection)this.ToList()).CopyTo(array, index);
+		}
+
+		public virtual IEnumerator<T> GetEnumerator()
+		{
+			return q.GetEnumerator();
+		}
+
+		IEnumerator IEnumerable.GetEnumerator()
+		{
+			return GetEnumerator();
+		}
 	}
 
 	#endregion
@@ -9296,7 +9421,7 @@ namespace Yagasoft.Libraries.Common
 
 		protected abstract void ExecuteLogic();
 
-		protected Entity GetPreImage()
+		protected TEntity GetPreImage<TEntity>() where TEntity : Entity
 		{
 			var image = context.PreEntityImages.FirstOrDefault().Value;
 
@@ -9305,10 +9430,59 @@ namespace Yagasoft.Libraries.Common
 				throw new InvalidPluginExecutionException("Missing a pre-image for this step.");
 			}
 
-			return image;
+			return image.ToEntity<TEntity>();
 		}
 
-		protected Entity GetPostImage()
+		protected TEntity GetTarget<TEntity>() where TEntity : Entity
+		{
+			if (context.InputParameters.TryGetValue("Target", out var target) && target is Entity targetEntity)
+			{
+				return targetEntity.ToEntity<TEntity>();
+			}
+
+			throw new InvalidPluginExecutionException("Missing Target in the plugin input, or not of type Entity.");
+		}
+
+		protected EntityReference GetTargetReference()
+		{
+			if (context.InputParameters.TryGetValue("Target", out var target) && target is EntityReference targetEntityRef)
+			{
+				return targetEntityRef;
+			}
+
+			throw new InvalidPluginExecutionException("Missing Target in the plugin input, or not of type EntityReference.");
+		}
+
+		protected TEntity BuildPostFromPreImage<TEntity>() where TEntity : Entity
+		{
+			var preImage = GetPreImage<TEntity>();
+			var target = GetTarget<TEntity>();
+			var postImage = new Entity(target.LogicalName, target.Id);
+
+			foreach (var pair in preImage.Attributes)
+			{
+				postImage[pair.Key] = pair.Value;
+			}
+
+			foreach (var pair in preImage.FormattedValues)
+			{
+				postImage.FormattedValues[pair.Key] = pair.Value;
+			}
+
+			foreach (var pair in target.Attributes)
+			{
+				postImage[pair.Key] = pair.Value;
+			}
+
+			foreach (var pair in target.FormattedValues)
+			{
+				postImage.FormattedValues[pair.Key] = pair.Value;
+			}
+
+			return postImage.ToEntity<TEntity>();
+		}
+
+		protected TEntity GetPostImage<TEntity>() where TEntity : Entity
 		{
 			var image = context.PostEntityImages.FirstOrDefault().Value;
 
@@ -9317,7 +9491,7 @@ namespace Yagasoft.Libraries.Common
 				throw new InvalidPluginExecutionException("Missing a post-image for this step.");
 			}
 
-			return image;
+			return image.ToEntity<TEntity>();
 		}
 
 		protected virtual bool IsContextValid()
@@ -9525,6 +9699,58 @@ namespace Yagasoft.Libraries.Common
 		}
 
 		protected abstract void ExecuteLogic();
+
+		protected TEntity GetPreImage<TEntity>() where TEntity : Entity
+		{
+			if (context.PreEntityImages.TryGetValue("PreBusinessEntity", out var image))
+			{
+				return image.ToEntity<TEntity>();
+			}
+
+			throw new InvalidPluginExecutionException("Missing a pre-image for this step.");
+		}
+
+		protected TEntity GetTarget<TEntity>() where TEntity : Entity
+		{
+			throw new InvalidPluginExecutionException("The Target parameter should not be accessed in a step.");
+		}
+
+		protected TEntity GetPostImage<TEntity>(bool retrieveIfMissing = false, ColumnSet columns = null) where TEntity : Entity
+		{
+			if (context.PostEntityImages.TryGetValue("PostBusinessEntity", out var image))
+			{
+				return image.ToEntity<TEntity>();
+			}
+
+			if (retrieveIfMissing)
+			{
+				return service.Retrieve(context.PrimaryEntityName, context.PrimaryEntityId, columns == null ? new ColumnSet(true) : columns)
+					.ToEntity<TEntity>();
+			}
+
+			throw new InvalidPluginExecutionException("Missing a post-image for this step.");
+		}
+
+		protected TEntity GetPostPreImage<TEntity>(bool retrieveIfMissing = false, ColumnSet columns = null) where TEntity : Entity
+		{
+			if (context.PostEntityImages.TryGetValue("PostBusinessEntity", out var image))
+			{
+				return image.ToEntity<TEntity>();
+			}
+
+			if (context.PreEntityImages.TryGetValue("PreBusinessEntity", out image))
+			{
+				return image.ToEntity<TEntity>();
+			}
+
+			if (retrieveIfMissing)
+			{
+				return service.Retrieve(context.PrimaryEntityName, context.PrimaryEntityId, columns == null ? new ColumnSet(true) : columns)
+					.ToEntity<TEntity>();
+			}
+
+			throw new InvalidPluginExecutionException("Missing a post or pre-image for this step.");
+		}
 
 		protected virtual bool IsContextValid()
 		{

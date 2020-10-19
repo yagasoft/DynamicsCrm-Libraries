@@ -1,5 +1,7 @@
 ﻿#region Imports
 
+using Yagasoft.Libraries.EnhancedOrgService.Factories;
+using Yagasoft.Libraries.EnhancedOrgService.Response.Operations;
 using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced;
 using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Transactions;
 
@@ -12,11 +14,12 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 	///     Releasing the services to the pool is done manually, or through the 'using' keyword.<br />
 	///     Author: Ahmed Elsawalhy
 	/// </summary>
-	public interface IEnhancedServicePool<out TService>
-		where TService : ITransactionOrgService
+	public interface IEnhancedServicePool<out TService> : IOperationStats
+		where TService : IEnhancedOrgService
 	{
 		int CreatedServices { get; }
 		int CurrentPoolSize { get; }
+		IEnhancedServiceFactory<TService> Factory { get; }
 
 		/// <summary>
 		///     If the pool is empty, creates a new Enhanced Service.
@@ -29,7 +32,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 		TService GetService(int threads = 1);
 
 		/// <summary>
-		///     Starts making connections to fill the internal queue. Makes retrieving the connections a lot faster later.
+		///     Starts creating connections to fill the internal queue. Makes retrieving the connections a lot faster later.
 		/// </summary>
 		void WarmUp();
 
@@ -49,6 +52,6 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 		///     The state of the service becomes invalid; so it should not be used after calling this method.
 		/// </summary>
 		/// <param name="service">Service to release.</param>
-		void ReleaseService(ITransactionOrgService service);
+		void ReleaseService(IEnhancedOrgService service);
 	}
 }

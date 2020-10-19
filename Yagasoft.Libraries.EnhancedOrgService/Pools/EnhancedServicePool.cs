@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -10,6 +11,7 @@ using Yagasoft.Libraries.Common;
 using Yagasoft.Libraries.EnhancedOrgService.Factories;
 using Yagasoft.Libraries.EnhancedOrgService.Helpers;
 using Yagasoft.Libraries.EnhancedOrgService.Params;
+using Yagasoft.Libraries.EnhancedOrgService.Response.Operations;
 using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced;
 using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Transactions;
 
@@ -19,13 +21,47 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 {
 	/// <inheritdoc cref="IEnhancedServicePool{TService}" />
 	public class EnhancedServicePool<TServiceInterface, TEnhancedOrgService> : IEnhancedServicePool<TServiceInterface>
-		where TServiceInterface : ITransactionOrgService
+		where TServiceInterface : IEnhancedOrgService
 		where TEnhancedOrgService : EnhancedOrgServiceBase, TServiceInterface
 	{
+		public event EventHandler<OperationStatusEventArgs> OperationStatusChanged
+		{
+			add
+			{
+				InnerOperationStatusChanged -= value;
+				InnerOperationStatusChanged += value;
+			}
+			remove => InnerOperationStatusChanged -= value;
+		}
+		private event EventHandler<OperationStatusEventArgs> InnerOperationStatusChanged;
+
+		public event EventHandler<OperationFailedEventArgs> OperationFailed
+		{
+			add
+			{
+				InnerOperationFailed -= value;
+				InnerOperationFailed += value;
+			}
+			remove => InnerOperationFailed -= value;
+		}
+		private event EventHandler<OperationFailedEventArgs> InnerOperationFailed;
+
+		public IEnumerable<Operation> PendingOperations => statServices.SelectMany(e => e.PendingOperations);
+		public IEnumerable<Operation> ExecutedOperations => statServices.SelectMany(e => e.ExecutedOperations);
+
+		public int RequestCount => statServices.Sum(e => e.RequestCount);
+		public int FailureCount => statServices.Sum(e => e.FailureCount);
+		public double FailureRate => FailureCount / (double)(RequestCount == 0 ? 1 : RequestCount);
+		public int RetryCount => statServices.Sum(e => e.RetryCount);
+
+		public IEnhancedServiceFactory<TServiceInterface> Factory => factory;
+
 		private readonly EnhancedServiceFactory<TServiceInterface, TEnhancedOrgService> factory;
 
 		private readonly BlockingQueue<TServiceInterface> servicesQueue = new BlockingQueue<TServiceInterface>();
 		private readonly ConcurrentQueue<IOrganizationService> crmServicesQueue = new ConcurrentQueue<IOrganizationService>();
+
+		private readonly HashSet<IOperationStats> statServices = new HashSet<IOperationStats>();
 
 		private readonly PoolParams poolParams;
 		private int createdCrmServicesCount;
@@ -33,7 +69,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 		private Thread warmupThread;
 		private bool isWarmUp;
 
-		public EnhancedServicePool(EnhancedServiceFactory<TServiceInterface, TEnhancedOrgService> factory, int poolSize = 2)
+		public EnhancedServicePool(EnhancedServiceFactory<TServiceInterface, TEnhancedOrgService> factory, int poolSize)
 		{
 			this.factory = factory;
 			poolParams = new PoolParams { PoolSize = poolSize };
@@ -42,7 +78,13 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 		public EnhancedServicePool(EnhancedServiceFactory<TServiceInterface, TEnhancedOrgService> factory, PoolParams poolParams = null)
 		{
 			this.factory = factory;
-			this.poolParams = poolParams ?? new PoolParams();
+
+			if (poolParams != null)
+			{
+				poolParams.IsLocked = true;
+			}
+
+			this.poolParams = poolParams ?? factory.Parameters?.PoolParams ?? new PoolParams();
 		}
 
 		public int CreatedServices { get; private set; }
@@ -50,6 +92,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 
 		public TServiceInterface GetService(int threads = 1)
 		{
+			threads.RequireAtLeast(1);
 			servicesQueue.TryTake(out var service);
 			return GetInitialisedService(threads, service);
 		}
@@ -137,7 +180,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 
 			try
 			{
-				enhancedService ??= servicesQueue.Dequeue(poolParams.DequeueTimeoutInMillis ?? 10);
+				enhancedService ??= servicesQueue.Dequeue(poolParams.DequeueTimeoutInMillis ?? 2 * 65 * 1000);
 			}
 			catch (TimeoutException)
 			{
@@ -162,6 +205,27 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 				}
 			}
 
+			if (enhancedService is IOperationStats statService)
+			{
+				if (InnerOperationStatusChanged != null)
+				{
+					foreach (EventHandler<OperationStatusEventArgs> invocation in InnerOperationStatusChanged.GetInvocationList())
+					{
+						statService.OperationStatusChanged += invocation;
+					}
+				}
+
+				if (InnerOperationFailed != null)
+				{
+					foreach (EventHandler<OperationFailedEventArgs> invocation in InnerOperationFailed.GetInvocationList())
+					{
+						statService.OperationFailed += invocation;
+					}
+				}
+
+				statServices.Add(statService);
+			}
+
 			return enhancedService;
 		}
 
@@ -177,7 +241,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 			factory.ClearCache();
 		}
 
-		public void ReleaseService(ITransactionOrgService enhancedService)
+		public void ReleaseService(IEnhancedOrgService enhancedService)
 		{
 			lock (crmServicesQueue)
 			{
