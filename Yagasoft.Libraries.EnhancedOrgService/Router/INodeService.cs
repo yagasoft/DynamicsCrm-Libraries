@@ -17,7 +17,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 		Offline
 	}
 
-	public interface INodeService : IOpStatsContainer
+	public interface INodeService : IOpStatsAggregate, IOpStatsParent
 	{
 		EnhancedServiceParams Params { get; }
 		int Weight { get; }

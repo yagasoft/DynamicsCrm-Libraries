@@ -17,14 +17,11 @@ using Microsoft.Xrm.Sdk.Messages;
 using Microsoft.Xrm.Sdk.Query;
 using Yagasoft.Libraries.Common;
 using Yagasoft.Libraries.EnhancedOrgService.Exceptions;
-using Yagasoft.Libraries.EnhancedOrgService.ExecutionPlan.Planning;
-using Yagasoft.Libraries.EnhancedOrgService.ExecutionPlan.SdkMocks;
-using Yagasoft.Libraries.EnhancedOrgService.ExecutionPlan.SerialiseWorkarounds;
 using Yagasoft.Libraries.EnhancedOrgService.Helpers;
+using Yagasoft.Libraries.EnhancedOrgService.Operations.EventArgs;
 using Yagasoft.Libraries.EnhancedOrgService.Params;
 using Yagasoft.Libraries.EnhancedOrgService.Response.Operations;
 using Yagasoft.Libraries.EnhancedOrgService.Response.Tokens;
-using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Cache;
 using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Deferred;
 using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Planned;
 using Yagasoft.Libraries.EnhancedOrgService.Services.SelfDisposing;
@@ -1028,7 +1025,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 		#region Operation Handling
 
 		protected internal virtual TResult TryRunOperation<TResult>(Func<IOrganizationService, TResult> action, Operation operation,
-			ExecuteParams executeParams)
+			ExecuteParams executeParams, bool isDelegated = false)
 		{
 			var isRetryEnabled = executeParams?.IsAutoRetryEnabled ?? IsRetryEnabled;
 			var maxRetryCount = executeParams?.AutoRetryParams?.MaxRetryCount ?? MaxRetryCount;
@@ -1041,7 +1038,10 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 
 			try
 			{
-				pendingOperations.Add(operation);
+				if (!isDelegated)
+				{
+					pendingOperations.Add(operation);
+				}
 
 				while (true)
 				{
@@ -1055,29 +1055,33 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 					{
 						if (!isRetryEnabled || currentRetry >= maxRetryCount || nextInterval > maxmimumRetryInterval)
 						{
-							FailureCount++;
-							operation.Exception = ex;
-							OnOperationFailed(new OperationFailedEventArgs(this, operation,
-								currentRetry,
-								currentRetry == 0 ? new TimeSpan(0) : new TimeSpan((long)(nextInterval.Ticks / backoffMultiplier))));
-							
-							foreach (var function in CustomRetryFunctions)
+							if (!isDelegated)
 							{
-								try
-								{
-									var customRetryResult = function(s => action(s), operation, executeParams, ex);
+								FailureCount++;
 
-									if (customRetryResult is TResult result && operation.OperationStatus == OperationStatus.Success)
+								operation.Exception = ex;
+								OnOperationFailed(new OperationFailedEventArgs(this, operation,
+									currentRetry,
+									currentRetry == 0 ? new TimeSpan(0) : new TimeSpan((long)(nextInterval.Ticks / backoffMultiplier))));
+
+								foreach (var function in CustomRetryFunctions)
+								{
+									try
 									{
-										return result;
+										var customRetryResult = function(s => action(s), operation, executeParams, ex);
+
+										if (customRetryResult is TResult result && operation.OperationStatus == OperationStatus.Success)
+										{
+											return result;
+										}
+									}
+									catch
+									{
+										// ignored
 									}
 								}
-								catch
-								{
-									// ignored
-								}
 							}
-							
+
 							throw;
 						}
 
@@ -1087,19 +1091,26 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 						nextInterval = new TimeSpan((long)(nextInterval.Ticks * backoffMultiplier));
 
 						currentRetry++;
-						RetryCount++;
+
+						if (!isDelegated)
+						{
+							RetryCount++;
+						}
 					}
 				}
 			}
 			finally
 			{
-				RequestCount++;
-
-				pendingOperations.Remove(operation);
-
-				if (executeParams?.IsExcludeFromHistory != true)
+				if (!isDelegated)
 				{
-					executedOperations.Enqueue(operation);
+					RequestCount++;
+
+					pendingOperations.Remove(operation);
+
+					if (executeParams?.IsExcludeFromHistory != true)
+					{
+						executedOperations.Enqueue(operation);
+					}
 				}
 			}
 		}

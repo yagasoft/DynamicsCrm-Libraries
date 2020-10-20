@@ -24,29 +24,10 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 		where TServiceInterface : IEnhancedOrgService
 		where TEnhancedOrgService : EnhancedOrgServiceBase, TServiceInterface
 	{
-		public event EventHandler<OperationStatusEventArgs> OperationStatusChanged
-		{
-			add
-			{
-				InnerOperationStatusChanged -= value;
-				InnerOperationStatusChanged += value;
-			}
-			remove => InnerOperationStatusChanged -= value;
-		}
-		private event EventHandler<OperationStatusEventArgs> InnerOperationStatusChanged;
+		public IOperationStats Stats => new OperationStats(this);
 
-		public event EventHandler<OperationFailedEventArgs> OperationFailed
-		{
-			add
-			{
-				InnerOperationFailed -= value;
-				InnerOperationFailed += value;
-			}
-			remove => InnerOperationFailed -= value;
-		}
-		private event EventHandler<OperationFailedEventArgs> InnerOperationFailed;
-
-		public IOperationStats Stats => new OperationStats(statServices);
+		public virtual IEnumerable<IOpStatsParent> Containers => null;
+		public virtual IEnumerable<IOperationStats> StatTargets => statServices;
 
 		public IEnhancedServiceFactory<TServiceInterface> Factory => factory;
 
@@ -201,23 +182,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 
 			if (enhancedService is EnhancedOrgServiceBase eventService)
 			{
-				if (InnerOperationStatusChanged != null)
-				{
-					foreach (EventHandler<OperationStatusEventArgs> invocation in InnerOperationStatusChanged.GetInvocationList())
-					{
-						eventService.OperationStatusChanged += invocation;
-					}
-				}
-
-				if (InnerOperationFailed != null)
-				{
-					foreach (EventHandler<OperationFailedEventArgs> invocation in InnerOperationFailed.GetInvocationList())
-					{
-						eventService.OperationFailed += invocation;
-					}
-				}
-
 				statServices.Add(eventService);
+				(Stats as OperationStats)?.Propagate();
 			}
 
 			return enhancedService;

@@ -6,6 +6,7 @@ using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Messages;
 using Microsoft.Xrm.Sdk.Query;
 using Yagasoft.Libraries.Common;
+using Yagasoft.Libraries.EnhancedOrgService.Operations.EventArgs;
 using Yagasoft.Libraries.EnhancedOrgService.Params;
 using Yagasoft.Libraries.EnhancedOrgService.Response.Operations;
 using Yagasoft.Libraries.EnhancedOrgService.Router;
@@ -18,24 +19,31 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Balancing
 {
 	public class SelfBalancingOrgService : EnhancedOrgServiceBase, ISelfBalancingOrgService
 	{
-		public override event EventHandler<OperationStatusEventArgs> OperationStatusChanged;
-		public override event EventHandler<OperationFailedEventArgs> OperationFailed;
+		public override event EventHandler<OperationStatusEventArgs> OperationStatusChanged
+		{
+			add => RoutingService.Stats.OperationStatusChanged += value;
+			remove => RoutingService.Stats.OperationStatusChanged -= value;
+		}
 
-		public override int RequestCount => (RoutingService as RoutingService)?.Stats.RequestCount
-			?? throw new NotSupportedException(NotSupportedOperation);
+		public override event EventHandler<OperationFailedEventArgs> OperationFailed
+		{
+			add => RoutingService.Stats.OperationFailed += value;
+			remove => RoutingService.Stats.OperationFailed -= value;
+		}
 
-		public override int FailureCount => (RoutingService as RoutingService)?.Stats.FailureCount
-			?? throw new NotSupportedException(NotSupportedOperation);
+		public override int RequestCount => (RoutingService as RoutingService)?.Stats.RequestCount ?? -1;
 
-		public override double FailureRate => (RoutingService as RoutingService)?.Stats.FailureRate
-			?? throw new NotSupportedException(NotSupportedOperation);
+		public override int FailureCount => (RoutingService as RoutingService)?.Stats.FailureCount ?? -1;
 
-		public override int RetryCount => (RoutingService as RoutingService)?.Stats.RetryCount
-			?? throw new NotSupportedException(NotSupportedOperation);
+		public override double FailureRate => (RoutingService as RoutingService)?.Stats.FailureRate ?? -1;
 
-		public override IEnumerable<Operation> PendingOperations => (RoutingService as RoutingService)?.Stats.PendingOperations;
+		public override int RetryCount => (RoutingService as RoutingService)?.Stats.RetryCount ?? -1;
 
-		public override IEnumerable<Operation> ExecutedOperations => (RoutingService as RoutingService)?.Stats.ExecutedOperations;
+		public override IEnumerable<Operation> PendingOperations => (RoutingService as RoutingService)?.Stats.PendingOperations
+			?? Array.Empty<Operation>();
+
+		public override IEnumerable<Operation> ExecutedOperations => (RoutingService as RoutingService)?.Stats.ExecutedOperations
+			?? Array.Empty<Operation>();
 
 		public override IEnumerable<OrganizationRequest> DeferredRequests => throw new NotSupportedException(NotSupportedOperation);
 

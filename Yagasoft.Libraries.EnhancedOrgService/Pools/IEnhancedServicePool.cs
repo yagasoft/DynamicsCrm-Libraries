@@ -14,7 +14,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 	///     Releasing the services to the pool is done manually, or through the 'using' keyword.<br />
 	///     Author: Ahmed Elsawalhy
 	/// </summary>
-	public interface IEnhancedServicePool<out TService> : IOpStatsContainer
+	public interface IEnhancedServicePool<out TService> : IOpStatsAggregate, IOpStatsParent
 		where TService : IEnhancedOrgService
 	{
 		int CreatedServices { get; }

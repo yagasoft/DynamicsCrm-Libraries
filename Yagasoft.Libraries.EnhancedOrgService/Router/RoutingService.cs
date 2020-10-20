@@ -23,14 +23,15 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 		public RouterRules Rules { get; protected internal set; }
 		public virtual bool IsRunning { get; protected internal set; }
 
-		public virtual event EventHandler<OperationStatusEventArgs> OperationStatusChanged;
-		public virtual event EventHandler<OperationFailedEventArgs> OperationFailed;
+		public IOperationStats Stats => new OperationStats(this);
 
-		public IOperationStats Stats => new OperationStats(NodeQueue);
-		
+		public virtual IEnumerable<IOpStatsParent> Containers => NodeQueue;
+		public virtual IEnumerable<IOperationStats> StatTargets => null;
+
 		protected internal readonly ConcurrentQueue<NodeService> NodeQueue = new ConcurrentQueue<NodeService>();
 
-		protected internal readonly ConcurrentDictionary<Func<OrganizationRequest, IEnhancedOrgService, bool>, INodeService> Exceptions =
+		protected internal readonly ConcurrentDictionary<Func<OrganizationRequest, IEnhancedOrgService, bool>, INodeService> Exceptions
+			=
 			new ConcurrentDictionary<Func<OrganizationRequest, IEnhancedOrgService, bool>, INodeService>();
 
 		protected internal IOrderedEnumerable<INodeService> FallbackNodes;
@@ -103,7 +104,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 				while (NodeQueue.TryDequeue(out var node) && node != nodeToRemove)
 				{
 					NodeQueue.Enqueue(node);
-				} 
+				}
 			}
 
 			return this;

@@ -38,10 +38,10 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 		public virtual double UpPercent => (DateTime.Now - Started).GetValueOrDefault().TotalMilliseconds
 			/ Uptime.GetValueOrDefault(TimeSpan.FromTicks(1)).TotalMilliseconds;
 
-		public virtual event EventHandler<OperationStatusEventArgs> OperationStatusChanged;
-		public virtual event EventHandler<OperationFailedEventArgs> OperationFailed;
+		public IOperationStats Stats => new OperationStats(this);
 
-		public IOperationStats Stats => Pool.Stats;
+		public virtual IEnumerable<IOpStatsParent> Containers => new[] { Pool };
+		public virtual IEnumerable<IOperationStats> StatTargets => null;
 
 		protected internal Thread LatencyEvaluator;
 		protected internal IOrganizationService LatencyEvaluatorService;

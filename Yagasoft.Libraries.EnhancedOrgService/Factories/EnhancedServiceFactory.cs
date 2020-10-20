@@ -32,29 +32,10 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 		where TServiceInterface : IEnhancedOrgService
 		where TEnhancedOrgService : EnhancedOrgServiceBase, TServiceInterface
 	{
-		public event EventHandler<OperationStatusEventArgs> OperationStatusChanged
-		{
-			add
-			{
-				InnerOperationStatusChanged -= value;
-				InnerOperationStatusChanged += value;
-			}
-			remove => InnerOperationStatusChanged -= value;
-		}
-		private event EventHandler<OperationStatusEventArgs> InnerOperationStatusChanged;
+		public IOperationStats Stats => new OperationStats(this);
 
-		public event EventHandler<OperationFailedEventArgs> OperationFailed
-		{
-			add
-			{
-				InnerOperationFailed -= value;
-				InnerOperationFailed += value;
-			}
-			remove => InnerOperationFailed -= value;
-		}
-		private event EventHandler<OperationFailedEventArgs> InnerOperationFailed;
-
-		public IOperationStats Stats => new OperationStats(statServices);
+		public virtual IEnumerable<IOpStatsParent> Containers => null;
+		public virtual IEnumerable<IOperationStats> StatTargets => statServices;
 
 		internal readonly EnhancedServiceParams Parameters;
 
@@ -147,8 +128,6 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 				{
 					throw new NotSupportedException($"Self-balancing services don't require the '{nameof(threads)}' parameter to be defined.");
 				}
-
-
 			}
 
 			return CreateEnhancedServiceInternal(true, threads);
@@ -206,23 +185,9 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 				enhancedService.FillServicesQueue(Enumerable.Range(0, threads).Select(e => CreateCrmService()));
 			}
 
-			if (InnerOperationStatusChanged != null)
-			{
-				foreach (EventHandler<OperationStatusEventArgs> invocation in InnerOperationStatusChanged.GetInvocationList())
-				{
-					enhancedService.OperationStatusChanged += invocation;
-				}
-			}
-
-			if (InnerOperationFailed != null)
-			{
-				foreach (EventHandler<OperationFailedEventArgs> invocation in InnerOperationFailed.GetInvocationList())
-				{
-					enhancedService.OperationFailed += invocation;
-				}
-			}
-
 			statServices.Add(enhancedService);
+
+			(Stats as OperationStats)?.Propagate();
 
 			return enhancedService;
 		}

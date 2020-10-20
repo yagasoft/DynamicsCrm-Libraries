@@ -2,6 +2,7 @@
 
 using System;
 using Microsoft.Xrm.Sdk;
+using Yagasoft.Libraries.EnhancedOrgService.Operations.EventArgs;
 
 #endregion
 
