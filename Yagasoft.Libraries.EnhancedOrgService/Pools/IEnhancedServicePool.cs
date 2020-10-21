@@ -1,6 +1,7 @@
 ﻿#region Imports
 
 using Yagasoft.Libraries.EnhancedOrgService.Factories;
+using Yagasoft.Libraries.EnhancedOrgService.Operations;
 using Yagasoft.Libraries.EnhancedOrgService.Response.Operations;
 using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced;
 using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Transactions;

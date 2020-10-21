@@ -3,15 +3,18 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Yagasoft.Libraries.EnhancedOrgService.Operations.EventArgs;
+using Yagasoft.Libraries.EnhancedOrgService.Events;
+using Yagasoft.Libraries.EnhancedOrgService.Events.EventArgs;
+using Yagasoft.Libraries.EnhancedOrgService.Response.Operations;
+using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced;
 
 #endregion
 
-namespace Yagasoft.Libraries.EnhancedOrgService.Response.Operations
+namespace Yagasoft.Libraries.EnhancedOrgService.Operations
 {
 	public class OperationStats : IOperationStats
 	{
-		public virtual event EventHandler<OperationStatusEventArgs> OperationStatusChanged
+		public virtual event EventHandler<IEnhancedOrgService, OperationStatusEventArgs> OperationStatusChanged
 		{
 			add
 			{
@@ -40,9 +43,9 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Response.Operations
 			}
 		}
 
-		private event EventHandler<OperationStatusEventArgs> InnerOperationStatusChanged;
+		private event EventHandler<IEnhancedOrgService, OperationStatusEventArgs> InnerOperationStatusChanged;
 
-		public virtual event EventHandler<OperationFailedEventArgs> OperationFailed
+		public virtual event EventHandler<IEnhancedOrgService, OperationFailedEventArgs> OperationFailed
 		{
 			add
 			{
@@ -71,7 +74,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Response.Operations
 			}
 		}
 
-		private event EventHandler<OperationFailedEventArgs> InnerOperationFailed;
+		private event EventHandler<IEnhancedOrgService, OperationFailedEventArgs> InnerOperationFailed;
 
 		public virtual int RequestCount => TargetStatsParent?.Containers?.Sum(t => new OperationStats(t).RequestCount)
 			?? TargetStatsParent?.StatTargets?.Sum(t => t.RequestCount) ?? -1;
@@ -105,7 +108,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Response.Operations
 			if (InnerOperationStatusChanged != null)
 			{
 				foreach (var invocation in InnerOperationStatusChanged.GetInvocationList()
-					.OfType<EventHandler<OperationStatusEventArgs>>().ToArray())
+					.OfType<EventHandler<IEnhancedOrgService, OperationStatusEventArgs>>().ToArray())
 				{
 					OperationStatusChanged += invocation;
 				}
@@ -114,7 +117,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Response.Operations
 			if (InnerOperationFailed != null)
 			{
 				foreach (var invocation in InnerOperationFailed.GetInvocationList()
-					.OfType<EventHandler<OperationFailedEventArgs>>().ToArray())
+					.OfType<EventHandler<IEnhancedOrgService, OperationFailedEventArgs>>().ToArray())
 				{
 					OperationFailed += invocation;
 				}

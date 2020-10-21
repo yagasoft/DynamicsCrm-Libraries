@@ -16,9 +16,10 @@ using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Messages;
 using Microsoft.Xrm.Sdk.Query;
 using Yagasoft.Libraries.Common;
+using Yagasoft.Libraries.EnhancedOrgService.Events;
+using Yagasoft.Libraries.EnhancedOrgService.Events.EventArgs;
 using Yagasoft.Libraries.EnhancedOrgService.Exceptions;
 using Yagasoft.Libraries.EnhancedOrgService.Helpers;
-using Yagasoft.Libraries.EnhancedOrgService.Operations.EventArgs;
 using Yagasoft.Libraries.EnhancedOrgService.Params;
 using Yagasoft.Libraries.EnhancedOrgService.Response.Operations;
 using Yagasoft.Libraries.EnhancedOrgService.Response.Tokens;
@@ -27,7 +28,6 @@ using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Planned;
 using Yagasoft.Libraries.EnhancedOrgService.Services.SelfDisposing;
 using Yagasoft.Libraries.EnhancedOrgService.State;
 using Yagasoft.Libraries.EnhancedOrgService.Transactions;
-using OperationStatus = Yagasoft.Libraries.EnhancedOrgService.Response.Operations.OperationStatus;
 
 #endregion
 
@@ -36,7 +36,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 	/// <inheritdoc cref="IEnhancedOrgService" />
 	public abstract class EnhancedOrgServiceBase : IStateful, IEnhancedOrgService
 	{
-		public virtual event EventHandler<OperationStatusEventArgs> OperationStatusChanged
+		public virtual event EventHandler<IEnhancedOrgService, OperationStatusEventArgs> OperationStatusChanged
 		{
 			add
 			{
@@ -45,9 +45,9 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 			}
 			remove => InnerOperationStatusChanged -= value;
 		}
-		private event EventHandler<OperationStatusEventArgs> InnerOperationStatusChanged;
+		protected virtual event EventHandler<IEnhancedOrgService, OperationStatusEventArgs> InnerOperationStatusChanged;
 
-		public virtual event EventHandler<OperationFailedEventArgs> OperationFailed
+		public virtual event EventHandler<IEnhancedOrgService, OperationFailedEventArgs> OperationFailed
 		{
 			add
 			{
@@ -56,7 +56,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 			}
 			remove => InnerOperationFailed -= value;
 		}
-		private event EventHandler<OperationFailedEventArgs> InnerOperationFailed;
+		protected virtual event EventHandler<IEnhancedOrgService, OperationFailedEventArgs> InnerOperationFailed;
 
 		public virtual IEnumerable<Operation> PendingOperations => pendingOperations;
 		public virtual IEnumerable<Operation> ExecutedOperations => executedOperations;
@@ -1047,7 +1047,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 				{
 					try
 					{
-						operation.OperationStatus = OperationStatus.InProgress;
+						operation.OperationStatus = Status.InProgress;
 						using var service = GetService();
 						return action(service);
 					}
@@ -1060,7 +1060,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 								FailureCount++;
 
 								operation.Exception = ex;
-								OnOperationFailed(new OperationFailedEventArgs(this, operation,
+								OnOperationFailed(new OperationFailedEventArgs(operation,
 									currentRetry,
 									currentRetry == 0 ? new TimeSpan(0) : new TimeSpan((long)(nextInterval.Ticks / backoffMultiplier))));
 
@@ -1070,7 +1070,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 									{
 										var customRetryResult = function(s => action(s), operation, executeParams, ex);
 
-										if (customRetryResult is TResult result && operation.OperationStatus == OperationStatus.Success)
+										if (customRetryResult is TResult result && operation.OperationStatus == Status.Success)
 										{
 											return result;
 										}
@@ -1085,7 +1085,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 							throw;
 						}
 
-						operation.OperationStatus = OperationStatus.Retry;
+						operation.OperationStatus = Status.Retry;
 
 						Task.Delay(nextInterval).Wait();
 						nextInterval = new TimeSpan((long)(nextInterval.Ticks * backoffMultiplier));
@@ -1133,7 +1133,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 					Index = ++OperationIndex
 				};
 			operation.OperationStatusChanged += (s, e) => OnOperationStatusChanged(e);
-			operation.OperationStatus = OperationStatus.Ready;
+			operation.OperationStatus = Status.Ready;
 			return operation;
 		}
 

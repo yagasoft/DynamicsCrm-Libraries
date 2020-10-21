@@ -3,16 +3,19 @@
 using System;
 using System.Collections.Generic;
 using Microsoft.Xrm.Sdk;
-using Yagasoft.Libraries.EnhancedOrgService.Operations.EventArgs;
+using Yagasoft.Libraries.EnhancedOrgService.Events;
+using Yagasoft.Libraries.EnhancedOrgService.Events.EventArgs;
+using Yagasoft.Libraries.EnhancedOrgService.Response.Operations;
+using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced;
 
 #endregion
 
-namespace Yagasoft.Libraries.EnhancedOrgService.Response.Operations
+namespace Yagasoft.Libraries.EnhancedOrgService.Operations
 {
 	public interface IOperationStats
 	{
-		event EventHandler<OperationStatusEventArgs> OperationStatusChanged;
-		event EventHandler<OperationFailedEventArgs> OperationFailed;
+		event EventHandler<IEnhancedOrgService, OperationStatusEventArgs> OperationStatusChanged;
+		event EventHandler<IEnhancedOrgService, OperationFailedEventArgs> OperationFailed;
 
 		/// <summary>
 		///     Total number of core operations performed by this service.

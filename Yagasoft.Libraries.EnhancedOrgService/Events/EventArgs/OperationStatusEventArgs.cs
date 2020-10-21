@@ -1,17 +1,17 @@
 ﻿using Yagasoft.Libraries.EnhancedOrgService.Response.Operations;
 using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced;
 
-namespace Yagasoft.Libraries.EnhancedOrgService.Operations.EventArgs
+namespace Yagasoft.Libraries.EnhancedOrgService.Events.EventArgs
 {
 	public class OperationStatusEventArgs
 	{
-		public IEnhancedOrgService Service { get; }
 		public Operation Operation { get; }
+		public Status? Status { get; }
 
-		public OperationStatusEventArgs(IEnhancedOrgService service, Operation operation)
+		public OperationStatusEventArgs(Operation operation, Status? status)
 		{
-			Service = service;
 			Operation = operation;
+			Status = status;
 		}
 	}
 }

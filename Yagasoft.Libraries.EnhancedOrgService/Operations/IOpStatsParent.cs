@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace Yagasoft.Libraries.EnhancedOrgService.Response.Operations
+namespace Yagasoft.Libraries.EnhancedOrgService.Operations
 {
     public interface IOpStatsParent 
     {

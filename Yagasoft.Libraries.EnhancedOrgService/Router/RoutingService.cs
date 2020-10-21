@@ -8,11 +8,11 @@ using System.Threading;
 using Microsoft.Xrm.Sdk;
 using Yagasoft.Libraries.Common;
 using Yagasoft.Libraries.EnhancedOrgService.Exceptions;
+using Yagasoft.Libraries.EnhancedOrgService.Operations;
 using Yagasoft.Libraries.EnhancedOrgService.Params;
 using Yagasoft.Libraries.EnhancedOrgService.Response.Operations;
 using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced;
 using Yagasoft.Libraries.EnhancedOrgService.State;
-using OperationStatus = Yagasoft.Libraries.EnhancedOrgService.Response.Operations.OperationStatus;
 
 #endregion
 
@@ -280,8 +280,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 									{
 										n,
 										load = n.Pool.Stats.PendingOperations
-											.Count(o => o.OperationStatus != OperationStatus.Success
-												&& o.OperationStatus != OperationStatus.Failure)
+											.Count(o => o.OperationStatus != Status.Success
+												&& o.OperationStatus != Status.Failure)
 									})
 								.Where(e => e.n.Status == NodeStatus.Online)
 								.OrderBy(e => e.load)

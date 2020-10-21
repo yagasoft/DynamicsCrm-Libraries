@@ -113,6 +113,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Events\Delegates.cs" />
     <Compile Include="Exceptions\FinalisationException.cs" />
     <Compile Include="Exceptions\NodeSelectException.cs" />
     <Compile Include="Exceptions\NodeInitException.cs" />
@@ -162,11 +163,11 @@
     <Compile Include="Operations\OperationStats.cs" />
     <Compile Include="Operations\IOperationStats.cs" />
     <Compile Include="Response\Operations\Operation.cs" />
-    <Compile Include="Operations\EventArgs\OperationStatusEventArgs.cs" />
+    <Compile Include="Events\EventArgs\OperationStatusEventArgs.cs" />
     <Compile Include="Response\Tokens\IToken.cs" />
     <Compile Include="Response\Tokens\OrganisationRequestToken.cs" />
     <Compile Include="Response\Tokens\Token.cs" />
-    <Compile Include="Operations\EventArgs\OperationFailedEventArgs.cs" />
+    <Compile Include="Events\EventArgs\OperationFailedEventArgs.cs" />
     <Compile Include="Router\IRoutingService.cs" />
     <Compile Include="Router\NodeService.cs" />
     <Compile Include="Router\RouterRules.cs" />

@@ -6,7 +6,8 @@ using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Messages;
 using Microsoft.Xrm.Sdk.Query;
 using Yagasoft.Libraries.Common;
-using Yagasoft.Libraries.EnhancedOrgService.Operations.EventArgs;
+using Yagasoft.Libraries.EnhancedOrgService.Events;
+using Yagasoft.Libraries.EnhancedOrgService.Events.EventArgs;
 using Yagasoft.Libraries.EnhancedOrgService.Params;
 using Yagasoft.Libraries.EnhancedOrgService.Response.Operations;
 using Yagasoft.Libraries.EnhancedOrgService.Router;
@@ -19,18 +20,6 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Balancing
 {
 	public class SelfBalancingOrgService : EnhancedOrgServiceBase, ISelfBalancingOrgService
 	{
-		public override event EventHandler<OperationStatusEventArgs> OperationStatusChanged
-		{
-			add => RoutingService.Stats.OperationStatusChanged += value;
-			remove => RoutingService.Stats.OperationStatusChanged -= value;
-		}
-
-		public override event EventHandler<OperationFailedEventArgs> OperationFailed
-		{
-			add => RoutingService.Stats.OperationFailed += value;
-			remove => RoutingService.Stats.OperationFailed -= value;
-		}
-
 		public override int RequestCount => (RoutingService as RoutingService)?.Stats.RequestCount ?? -1;
 
 		public override int FailureCount => (RoutingService as RoutingService)?.Stats.FailureCount ?? -1;
@@ -51,10 +40,16 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Balancing
 
 		protected const string NotSupportedOperation = "Operation not supported by this service.";
 
+		protected override event EventHandler<IEnhancedOrgService, OperationStatusEventArgs> InnerOperationStatusChanged;
+		protected override event EventHandler<IEnhancedOrgService, OperationFailedEventArgs> InnerOperationFailed;
+
 		protected internal SelfBalancingOrgService(IRoutingService routingService) : base(null)
 		{
 			routingService.Require(nameof(routingService));
 			RoutingService = routingService;
+
+			RoutingService.Stats.OperationStatusChanged += (s, a) => InnerOperationStatusChanged?.Invoke(this, a);
+			RoutingService.Stats.OperationFailed += (s, a) => InnerOperationFailed?.Invoke(this, a);
 		}
 
 		protected internal override IDisposableService GetService()

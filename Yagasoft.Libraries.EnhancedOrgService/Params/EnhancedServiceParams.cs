@@ -1,6 +1,7 @@
 ﻿#region Imports
 
 using Yagasoft.Libraries.Common;
+using Yagasoft.Libraries.EnhancedOrgService.Operations;
 using Yagasoft.Libraries.EnhancedOrgService.Response.Operations;
 
 #endregion

@@ -1,4 +1,4 @@
-﻿namespace Yagasoft.Libraries.EnhancedOrgService.Response.Operations
+﻿namespace Yagasoft.Libraries.EnhancedOrgService.Operations
 {
     public interface IOpStatsAggregate
     {

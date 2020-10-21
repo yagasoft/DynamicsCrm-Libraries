@@ -2,13 +2,14 @@
 
 using System;
 using Microsoft.Xrm.Sdk;
-using Yagasoft.Libraries.EnhancedOrgService.Operations.EventArgs;
+using Yagasoft.Libraries.EnhancedOrgService.Events;
+using Yagasoft.Libraries.EnhancedOrgService.Events.EventArgs;
 
 #endregion
 
 namespace Yagasoft.Libraries.EnhancedOrgService.Response.Operations
 {
-	public enum OperationStatus
+	public enum Status
 	{
 		Success,
 		Failure,
@@ -39,7 +40,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Response.Operations
 			internal set
 			{
 				exception = value;
-				OperationStatus = exception == null ? Operations.OperationStatus.Success : Operations.OperationStatus.Failure;
+				OperationStatus = exception == null ? Status.Success : Status.Failure;
 			}
 		}
 
@@ -47,25 +48,25 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Response.Operations
 		public DateTime? EndDate { get; protected set; }
 		public TimeSpan? TotalTime => EndDate - StartDate;
 
-		public OperationStatus? OperationStatus
+		public Status? OperationStatus
 		{
 			get => operationStatus;
 			internal set
 			{
 				switch (value)
 				{
-					case Operations.OperationStatus.InProgress when StartDate == null:
+					case Status.InProgress when StartDate == null:
 						StartDate = DateTime.Now;
 						break;
 
-					case Operations.OperationStatus.Success when EndDate == null:
-					case Operations.OperationStatus.Failure when EndDate == null:
+					case Status.Success when EndDate == null:
+					case Status.Failure when EndDate == null:
 						EndDate = DateTime.Now;
 						break;
 				}
 
 				operationStatus = value;
-				OnOperationStatusChanged(new OperationStatusEventArgs(null, this));
+				OnOperationStatusChanged(new OperationStatusEventArgs(this, OperationStatus));
 			}
 		}
 
@@ -105,15 +106,15 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Response.Operations
 				// set the response value
 				response = value;
 
-				OperationStatus = Operations.OperationStatus.Success;
+				OperationStatus = Status.Success;
 			}
 		}
 
-		internal event EventHandler<OperationStatusEventArgs> OperationStatusChanged;
+		internal event EventHandler<Operation, OperationStatusEventArgs> OperationStatusChanged;
 
 		private Exception exception;
 		private OrganizationResponse response;
-		private OperationStatus? operationStatus;
+		private Status? operationStatus;
 
 		internal Operation(OrganizationRequest request = null, OrganizationRequest undoRequest = null)
 		{
