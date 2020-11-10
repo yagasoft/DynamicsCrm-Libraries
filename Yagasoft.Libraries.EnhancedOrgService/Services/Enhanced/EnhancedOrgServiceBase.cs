@@ -47,17 +47,6 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 		}
 		protected virtual event EventHandler<IEnhancedOrgService, OperationStatusEventArgs> InnerOperationStatusChanged;
 
-		public virtual event EventHandler<IEnhancedOrgService, OperationFailedEventArgs> OperationFailed
-		{
-			add
-			{
-				InnerOperationFailed -= value;
-				InnerOperationFailed += value;
-			}
-			remove => InnerOperationFailed -= value;
-		}
-		protected virtual event EventHandler<IEnhancedOrgService, OperationFailedEventArgs> InnerOperationFailed;
-
 		public virtual IEnumerable<Operation> PendingOperations => pendingOperations;
 		public virtual IEnumerable<Operation> ExecutedOperations => executedOperations;
 
@@ -85,7 +74,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 
 		protected internal virtual IOrganizationServiceCache Cache { get; set; }
 		protected internal virtual ObjectCache ObjectCache { get; set; }
-		protected internal virtual bool IsCacheEnabled => Parameters.IsCachingEnabled == true && Cache != null;
+		protected internal virtual bool IsCacheEnabled => Parameters?.IsCachingEnabled == true && Cache != null;
 
 		private readonly List<Operation> pendingOperations;
 		private readonly FixedSizeQueue<Operation> executedOperations;
@@ -97,24 +86,24 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 
 		private IPlannedOrgService plannedOrgService;
 
-		private bool IsRetryEnabled => Parameters.IsAutoRetryEnabled ?? false;
-		private int MaxRetryCount => Parameters.AutoRetryParams?.MaxRetryCount ?? 1;
-		private TimeSpan RetryInterval => Parameters.AutoRetryParams?.RetryInterval ?? TimeSpan.FromSeconds(5);
-		private double RetryBackoffMultiplier => Parameters.AutoRetryParams?.BackoffMultiplier ?? 1;
-		private TimeSpan? MaxmimumRetryInterval => Parameters.AutoRetryParams?.MaxmimumRetryInterval;
+		private bool IsRetryEnabled => Parameters?.IsAutoRetryEnabled ?? false;
+		private int MaxRetryCount => Parameters?.AutoRetryParams?.MaxRetryCount ?? 1;
+		private TimeSpan RetryInterval => Parameters?.AutoRetryParams?.RetryInterval ?? TimeSpan.FromSeconds(5);
+		private double RetryBackoffMultiplier => Parameters?.AutoRetryParams?.BackoffMultiplier ?? 1;
+		private TimeSpan? MaxmimumRetryInterval => Parameters?.AutoRetryParams?.MaxmimumRetryInterval;
 		private IEnumerable<Func<Func<IOrganizationService, object>, Operation, ExecuteParams, Exception, object>> CustomRetryFunctions
-			 => Parameters.AutoRetryParams.CustomRetryFunctions;
+			 => Parameters?.AutoRetryParams?.CustomRetryFunctions;
 
 		protected internal EnhancedOrgServiceBase(EnhancedServiceParams parameters)
 		{
 			Parameters = parameters;
 			pendingOperations = new List<Operation>();
-			executedOperations = new FixedSizeQueue<Operation>(parameters.OperationHistoryLimit ?? int.MaxValue);
+			executedOperations = new FixedSizeQueue<Operation>(parameters?.OperationHistoryLimit ?? int.MaxValue);
 		}
 		
 		public virtual void ValidateState(bool isValid = true)
 		{
-			if (Parameters == null || !servicesQueue.Any())
+			if (!servicesQueue.Any())
 			{
 				throw new StateException("Service is not ready. Try to get a new service from the factory.");
 			}
@@ -653,11 +642,11 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 
 						if (IsCacheEnabled && executeParams?.IsCachingEnabled != false)
 						{
-							resultInner = operation.Response = InnerExecute<OrganizationResponse>(request);
+							resultInner = InnerExecute<OrganizationResponse>(request);
 						}
 						else
 						{
-							resultInner = operation.Response = service.Execute(request);
+							resultInner = service.Execute(request);
 						}
 
 						return resultInner;
@@ -1060,24 +1049,24 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 								FailureCount++;
 
 								operation.Exception = ex;
-								OnOperationFailed(new OperationFailedEventArgs(operation,
-									currentRetry,
-									currentRetry == 0 ? new TimeSpan(0) : new TimeSpan((long)(nextInterval.Ticks / backoffMultiplier))));
 
-								foreach (var function in CustomRetryFunctions)
+								if (CustomRetryFunctions != null)
 								{
-									try
+									foreach (var function in CustomRetryFunctions)
 									{
-										var customRetryResult = function(s => action(s), operation, executeParams, ex);
-
-										if (customRetryResult is TResult result && operation.OperationStatus == Status.Success)
+										try
 										{
-											return result;
+											var customRetryResult = function(s => action(s), operation, executeParams, ex);
+
+											if (customRetryResult is TResult result && operation.OperationStatus == Status.Success)
+											{
+												return result;
+											}
 										}
-									}
-									catch
-									{
-										// ignored
+										catch
+										{
+											// ignored
+										}
 									}
 								}
 							}
@@ -1119,11 +1108,6 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 		{  
 			InnerOperationStatusChanged?.Invoke(this, e);  
 		}
-		
-		protected virtual void OnOperationFailed(OperationFailedEventArgs e)  
-		{  
-			InnerOperationFailed?.Invoke(this, e);  
-		}
 
 		protected virtual Operation PrepOperation<TResponse>(OrganizationRequest request) where TResponse : OrganizationResponse
 		{
@@ -1142,7 +1126,6 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 		public virtual void Dispose()
 		{
 			InnerOperationStatusChanged = null;
-			InnerOperationFailed = null;
 			CancelPlanning();
 			CancelDeferredRequests();
 			ReleaseService?.Invoke();

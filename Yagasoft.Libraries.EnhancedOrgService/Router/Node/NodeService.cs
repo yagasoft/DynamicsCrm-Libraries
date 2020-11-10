@@ -8,25 +8,49 @@ using System.Threading;
 using Microsoft.Crm.Sdk.Messages;
 using Microsoft.Xrm.Sdk;
 using Yagasoft.Libraries.Common;
+using Yagasoft.Libraries.EnhancedOrgService.Events;
+using Yagasoft.Libraries.EnhancedOrgService.Events.EventArgs;
 using Yagasoft.Libraries.EnhancedOrgService.Exceptions;
 using Yagasoft.Libraries.EnhancedOrgService.Helpers;
 using Yagasoft.Libraries.EnhancedOrgService.Operations;
 using Yagasoft.Libraries.EnhancedOrgService.Params;
 using Yagasoft.Libraries.EnhancedOrgService.Pools;
-using Yagasoft.Libraries.EnhancedOrgService.Response.Operations;
 using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced;
 
 #endregion
 
-namespace Yagasoft.Libraries.EnhancedOrgService.Router
+namespace Yagasoft.Libraries.EnhancedOrgService.Router.Node
 {
 	public class NodeService : INodeService
 	{
+		public virtual event EventHandler<INodeService, NodeStatusEventArgs> NodeStatusChanged
+		{
+			add
+			{
+				InnerNodeStatusChanged -= value;
+				InnerNodeStatusChanged += value;
+			}
+			remove => InnerNodeStatusChanged -= value;
+		}
+		protected virtual event EventHandler<INodeService, NodeStatusEventArgs> InnerNodeStatusChanged;
+		
 		public EnhancedServiceParams Params { get; protected internal set; }
 		public int Weight { get; protected internal set; }
 		public virtual IEnhancedServicePool<IEnhancedOrgService> Pool { get; protected internal set; }
-		public virtual NodeStatus Status { get; protected internal set; }
+
+		public virtual NodeStatus Status
+		{
+			get => status;
+			protected internal set
+			{
+				status = value;
+				OnStatusChanged();
+			}
+		}
+
 		public virtual bool IsPrimary { get; protected internal set; }
+
+		public virtual Exception LatestConnectionError { get; protected internal set; }
 
 		public virtual TimeSpan Latency => LatencyHistory.Any()
 			? TimeSpan.FromMilliseconds(LatencyHistory.Average(e => e.TotalMilliseconds))
@@ -39,18 +63,20 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 		public virtual double UpPercent => (DateTime.Now - Started).GetValueOrDefault().TotalMilliseconds
 			/ Uptime.GetValueOrDefault(TimeSpan.FromTicks(1)).TotalMilliseconds;
 
-		public IOperationStats Stats => new OperationStats(this);
+		public IOperationStats Stats { get; }
 
-		public virtual IEnumerable<IOpStatsParent> Containers => new[] { Pool };
-		public virtual IEnumerable<IOperationStats> StatTargets => null;
+		public virtual IEnumerable<IOperationStats> StatTargets => Pool == null ? new IOperationStats[0] : new[] { Pool.Stats };
 
 		protected internal Thread LatencyEvaluator;
 		protected internal IOrganizationService LatencyEvaluatorService;
 		protected internal TimeSpan? LatencyInterval;
 		protected internal FixedSizeQueue<TimeSpan> LatencyHistory = new FixedSizeQueue<TimeSpan>(5);
+		private NodeStatus status;
 
 		protected internal NodeService(EnhancedServiceParams @params, int weight = 1)
 		{
+			Stats = new OperationStats(this);
+
 			Params = @params;
 			Weight = weight;
 
@@ -60,14 +86,14 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 					{
 						var downtime = new Stopwatch();
 
-						while (true)
+						while (Status != NodeStatus.Offline)
 						{
 							try
 							{
 								var stopwatch = new Stopwatch();
 								stopwatch.Start();
 
-								if (Status == NodeStatus.Offline)
+								if (Status != NodeStatus.Online)
 								{
 									Downtime += downtime.Elapsed;
 								}
@@ -86,6 +112,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 											catch (ThreadAbortException)
 											{ }
 										});
+								thread.Start();
 
 								if (!thread.Join(TimeSpan.FromSeconds(10)))
 								{
@@ -98,18 +125,23 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 								stopwatch.Stop();
 
 								LatencyHistory.Enqueue(stopwatch.Elapsed);
+								LatestConnectionError = null;
 								Status = NodeStatus.Online;
 							}
-							catch
+							catch (Exception ex)
 							{
 								LatencyHistory.Enqueue(TimeSpan.MaxValue);
-								Status = NodeStatus.Offline;
+								LatestConnectionError = ex;
+								Status = NodeStatus.Faulty;
 							}
 							finally
 							{
 								Thread.Sleep((int?)LatencyInterval?.TotalMilliseconds ?? 10000);
 							}
 						}
+
+						LatencyEvaluator = null;
+						LatencyEvaluatorService = null;
 					});
 		}
 
@@ -117,7 +149,10 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 		{
 			try
 			{
+				Status = NodeStatus.Starting;
+				LatestConnectionError = null;
 				Pool = EnhancedServiceHelper.GetPool(Params);
+				(Stats as OperationStats)?.Propagate();
 				LatencyEvaluatorService = Pool.Factory.CreateCrmService();
 				LatencyEvaluator.Start();
 				Started = DateTime.Now;
@@ -125,8 +160,28 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 			}
 			catch (Exception ex)
 			{
+				LatestConnectionError = ex;
 				throw new NodeInitException("Failed to start node.", ex, this);
 			}
+		}
+
+		protected internal virtual void StopNode()
+		{
+			try
+			{
+				status = NodeStatus.Offline;
+				Status = NodeStatus.Offline;
+				Pool = null;
+			}
+			catch
+			{
+				// ignored
+			}
+		}
+		
+		protected virtual void OnStatusChanged()
+		{
+			InnerNodeStatusChanged?.Invoke(this, new NodeStatusEventArgs(this, Status, LatestConnectionError));
 		}
 	}
 }

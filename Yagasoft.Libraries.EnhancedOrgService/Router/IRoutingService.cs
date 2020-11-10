@@ -1,21 +1,41 @@
 ﻿#region Imports
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Xrm.Sdk;
+using Yagasoft.Libraries.EnhancedOrgService.Events;
+using Yagasoft.Libraries.EnhancedOrgService.Events.EventArgs;
 using Yagasoft.Libraries.EnhancedOrgService.Operations;
 using Yagasoft.Libraries.EnhancedOrgService.Params;
 using Yagasoft.Libraries.EnhancedOrgService.Response.Operations;
+using Yagasoft.Libraries.EnhancedOrgService.Router.Node;
 using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced;
 
 #endregion
 
 namespace Yagasoft.Libraries.EnhancedOrgService.Router
 {
+	public enum Status
+	{
+		Offline,
+		Starting,
+		Failed,
+		Online,
+		Stopping
+	}
+
 	public interface IRoutingService : IOpStatsAggregate, IOpStatsParent
 	{
+		event EventHandler<IRoutingService, RouterEventArgs> RouterEventOccurred;
+
 		RouterRules Rules { get; }
-		bool IsRunning { get; }
+		Status Status { get; }
+		IReadOnlyList<INodeService> Nodes { get; }
+
+		Exception LatestConnectionError { get; }
 
 		/// <summary>
 		///     Adds a node with the given settings.
@@ -51,9 +71,15 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 		IRoutingService DefineFallback(IOrderedEnumerable<INodeService> fallbackNodes);
 
 		/// <summary>
-		///     Validates the router configuration state, and then initialises all internal nodes.
+		///     Validates the router configuration state, and then initialises all internal nodes.<br />
+		///     This operation is done asynchronously.
 		/// </summary>
-		IRoutingService StartRouter();
+		Task StartRouter();
+
+		/// <summary>
+		///     Stops all internal nodes.
+		/// </summary>
+		void StopRouter();
 
 		/// <summary>
 		///     Starts creating connections to fill the internal queues. Makes retrieving the connections a lot faster later.

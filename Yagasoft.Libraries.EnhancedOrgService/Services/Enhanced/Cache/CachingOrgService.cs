@@ -43,7 +43,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Cache
 	    /// <inheritdoc />
 	    public virtual void ClearCache()
 	    {
-		    if (Parameters.CachingParams.CacheScope != CacheScope.Service)
+		    if (Parameters.CachingParams?.CacheScope != CacheScope.Service)
 		    {
 			    throw new NotSupportedException("The memory cache is not limited to this service."
 				    + " Use the factory's method to clear the cache instead.");

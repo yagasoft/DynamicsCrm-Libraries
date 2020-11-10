@@ -1,4 +1,5 @@
-﻿using Yagasoft.Libraries.EnhancedOrgService.Response.Operations;
+﻿using System;
+using Yagasoft.Libraries.EnhancedOrgService.Response.Operations;
 using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced;
 
 namespace Yagasoft.Libraries.EnhancedOrgService.Events.EventArgs

@@ -79,7 +79,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 
 		public AutoRetryParams AutoRetryParams
 		{
-			get => autoRetryParams ??= new AutoRetryParams();
+			get => autoRetryParams;
 			set
 			{
 				ValidateLock();
@@ -136,20 +136,12 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 		/// </summary>
 		public void AutoSetMaxPerformanceParams()
 		{
-			if (ConnectionParams == null)
-			{
-				ConnectionParams = new ConnectionParams();
-			}
-
+			ConnectionParams ??= new ConnectionParams();
 			ConnectionParams.DotNetDefaultConnectionLimit = 30000;
 			ConnectionParams.IsDotNetDisableWaitForConnectConfirm = true;
 			ConnectionParams.IsDotNetDisableNagleAlgorithm = true;
 
-			if (PoolParams == null)
-			{
-				PoolParams = new PoolParams();
-			}
-
+			PoolParams ??= new PoolParams();
 			PoolParams.DotNetSetMinAppReservedThreads = 100;
 		}
 	}

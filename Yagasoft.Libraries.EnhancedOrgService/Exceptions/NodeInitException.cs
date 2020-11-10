@@ -3,6 +3,7 @@
 using System;
 using System.Runtime.Serialization;
 using Yagasoft.Libraries.EnhancedOrgService.Router;
+using Yagasoft.Libraries.EnhancedOrgService.Router.Node;
 
 #endregion
 

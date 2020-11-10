@@ -1,6 +1,7 @@
 ﻿#region Imports
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Yagasoft.Libraries.EnhancedOrgService.Factories;
 using Yagasoft.Libraries.EnhancedOrgService.Params;
 using Yagasoft.Libraries.EnhancedOrgService.Pools;
@@ -85,7 +86,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 			return new EnhancedServicePool<ICachingOrgService, CachingOrgService>(factory, poolParams);
 		}
 
-		public static ISelfBalancingOrgService GetSelfBalancingService(IEnumerable<EnhancedServiceParams> nodeParameters, RouterRules rules)
+		public static async Task<ISelfBalancingOrgService> GetSelfBalancingService(IEnumerable<EnhancedServiceParams> nodeParameters, RouterRules rules)
 		{
 			var routingService = new RoutingService();
 
@@ -95,7 +96,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 			}
 
 			routingService.DefineRules(rules);
-			routingService.StartRouter();
+			await routingService.StartRouter();
 
 			return new EnhancedServiceFactory<ISelfBalancingOrgService, SelfBalancingOrgService>(routingService).CreateEnhancedService();
 		}

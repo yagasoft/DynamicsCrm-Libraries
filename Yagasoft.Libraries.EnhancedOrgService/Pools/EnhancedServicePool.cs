@@ -25,9 +25,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 		where TServiceInterface : IEnhancedOrgService
 		where TEnhancedOrgService : EnhancedOrgServiceBase, TServiceInterface
 	{
-		public IOperationStats Stats => new OperationStats(this);
+		public IOperationStats Stats { get; }
 
-		public virtual IEnumerable<IOpStatsParent> Containers => null;
 		public virtual IEnumerable<IOperationStats> StatTargets => statServices;
 
 		public IEnhancedServiceFactory<TServiceInterface> Factory => factory;
@@ -47,12 +46,16 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 
 		public EnhancedServicePool(EnhancedServiceFactory<TServiceInterface, TEnhancedOrgService> factory, int poolSize)
 		{
+			Stats = new OperationStats(this);
+
 			this.factory = factory;
 			poolParams = new PoolParams { PoolSize = poolSize };
 		}
 
 		public EnhancedServicePool(EnhancedServiceFactory<TServiceInterface, TEnhancedOrgService> factory, PoolParams poolParams = null)
 		{
+			Stats = new OperationStats(this);
+
 			this.factory = factory;
 
 			if (poolParams != null)

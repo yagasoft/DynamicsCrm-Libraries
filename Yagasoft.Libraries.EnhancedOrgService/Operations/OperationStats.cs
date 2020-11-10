@@ -18,20 +18,20 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Operations
 		{
 			add
 			{
-				InnerOperationStatusChanged -= value;
+				OperationStatusChanged -= value;
 				InnerOperationStatusChanged += value;
+
+				if (TargetStatsParent?.StatTargets != null)
+				{
+					foreach (var target in TargetStatsParent.StatTargets)
+					{
+						target.OperationStatusChanged += value;
+					}
+				}
 			}
 			remove
 			{
 				InnerOperationStatusChanged -= value;
-
-				if (TargetStatsParent?.Containers != null)
-				{
-					foreach (var container in TargetStatsParent.Containers.Select(t => new OperationStats(t)))
-					{
-						container.OperationStatusChanged -= value;
-					}
-				}
 
 				if (TargetStatsParent?.StatTargets != null)
 				{
@@ -45,56 +45,17 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Operations
 
 		private event EventHandler<IEnhancedOrgService, OperationStatusEventArgs> InnerOperationStatusChanged;
 
-		public virtual event EventHandler<IEnhancedOrgService, OperationFailedEventArgs> OperationFailed
-		{
-			add
-			{
-				InnerOperationFailed -= value;
-				InnerOperationFailed += value;
-			}
-			remove
-			{
-				InnerOperationFailed -= value;
+		public virtual int RequestCount => TargetStatsParent?.StatTargets?.Sum(t => t.RequestCount) ?? -1;
 
-				if (TargetStatsParent?.Containers != null)
-				{
-					foreach (var container in TargetStatsParent.Containers.Select(t => new OperationStats(t)))
-					{
-						container.OperationFailed -= value;
-					}
-				}
+		public virtual int FailureCount => TargetStatsParent?.StatTargets?.Sum(t => t.FailureCount) ?? -1;
 
-				if (TargetStatsParent?.StatTargets != null)
-				{
-					foreach (var target in TargetStatsParent.StatTargets)
-					{
-						target.OperationFailed -= value;
-					}
-				}
-			}
-		}
+		public virtual double FailureRate => TargetStatsParent?.StatTargets?.Sum(t => t.FailureRate) ?? -1;
 
-		private event EventHandler<IEnhancedOrgService, OperationFailedEventArgs> InnerOperationFailed;
+		public virtual int RetryCount => TargetStatsParent?.StatTargets?.Sum(t => t.RetryCount) ?? -1;
 
-		public virtual int RequestCount => TargetStatsParent?.Containers?.Sum(t => new OperationStats(t).RequestCount)
-			?? TargetStatsParent?.StatTargets?.Sum(t => t.RequestCount) ?? -1;
+		public virtual IEnumerable<Operation> PendingOperations => TargetStatsParent?.StatTargets?.SelectMany(t => t.PendingOperations) ?? Array.Empty<Operation>();
 
-		public virtual int FailureCount => TargetStatsParent?.Containers?.Sum(t => new OperationStats(t).FailureCount)
-			?? TargetStatsParent?.StatTargets?.Sum(t => t.FailureCount) ?? -1;
-
-		public virtual double FailureRate => TargetStatsParent?.Containers?.Sum(t => new OperationStats(t).FailureRate)
-			?? TargetStatsParent?.StatTargets?.Sum(t => t.FailureRate) ?? -1;
-
-		public virtual int RetryCount => TargetStatsParent?.Containers?.Sum(t => new OperationStats(t).RetryCount)
-			?? TargetStatsParent?.StatTargets?.Sum(t => t.RetryCount) ?? -1;
-
-		public virtual IEnumerable<Operation> PendingOperations =>
-			TargetStatsParent?.Containers?.SelectMany(t => new OperationStats(t).PendingOperations)
-				?? TargetStatsParent?.StatTargets?.SelectMany(t => t.PendingOperations) ?? Array.Empty<Operation>();
-
-		public virtual IEnumerable<Operation> ExecutedOperations =>
-			TargetStatsParent?.Containers?.SelectMany(t => new OperationStats(t).ExecutedOperations)
-				?? TargetStatsParent?.StatTargets?.SelectMany(t => t.ExecutedOperations) ?? Array.Empty<Operation>();
+		public virtual IEnumerable<Operation> ExecutedOperations => TargetStatsParent?.StatTargets?.SelectMany(t => t.ExecutedOperations) ?? Array.Empty<Operation>();
 
 		protected internal IOpStatsParent TargetStatsParent;
 
@@ -111,15 +72,6 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Operations
 					.OfType<EventHandler<IEnhancedOrgService, OperationStatusEventArgs>>().ToArray())
 				{
 					OperationStatusChanged += invocation;
-				}
-			}
-
-			if (InnerOperationFailed != null)
-			{
-				foreach (var invocation in InnerOperationFailed.GetInvocationList()
-					.OfType<EventHandler<IEnhancedOrgService, OperationFailedEventArgs>>().ToArray())
-				{
-					OperationFailed += invocation;
 				}
 			}
 		}

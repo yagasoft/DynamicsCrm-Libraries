@@ -114,6 +114,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Events\Delegates.cs" />
+    <Compile Include="Events\EventArgs\NodeStatusEventArgs.cs" />
+    <Compile Include="Events\EventArgs\RouterEventArgs.cs" />
     <Compile Include="Exceptions\FinalisationException.cs" />
     <Compile Include="Exceptions\NodeSelectException.cs" />
     <Compile Include="Exceptions\NodeInitException.cs" />
@@ -167,9 +169,8 @@
     <Compile Include="Response\Tokens\IToken.cs" />
     <Compile Include="Response\Tokens\OrganisationRequestToken.cs" />
     <Compile Include="Response\Tokens\Token.cs" />
-    <Compile Include="Events\EventArgs\OperationFailedEventArgs.cs" />
     <Compile Include="Router\IRoutingService.cs" />
-    <Compile Include="Router\NodeService.cs" />
+    <Compile Include="Router\Node\NodeService.cs" />
     <Compile Include="Router\RouterRules.cs" />
     <Compile Include="Router\RoutingService.cs" />
     <Compile Include="Services\Enhanced\Balancing\ISelfBalancingOrgService.cs" />
@@ -190,7 +191,7 @@
     <Compile Include="Services\Enhanced\IEnhancedOrgService.cs" />
     <Compile Include="Services\Enhanced\Planned\PlannedOrgService.cs" />
     <Compile Include="Services\Enhanced\Transactions\ITransactionOrgService.cs" />
-    <Compile Include="Router\INodeService.cs" />
+    <Compile Include="Router\Node\INodeService.cs" />
     <Compile Include="Services\SelfDisposing\IDisposableService.cs" />
     <Compile Include="Services\SelfDisposing\SelfDisposingService.cs" />
     <Compile Include="State\IStateful.cs" />

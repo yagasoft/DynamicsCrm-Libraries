@@ -5,14 +5,19 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Xrm.Sdk;
 using Yagasoft.Libraries.Common;
+using Yagasoft.Libraries.EnhancedOrgService.Events;
+using Yagasoft.Libraries.EnhancedOrgService.Events.EventArgs;
 using Yagasoft.Libraries.EnhancedOrgService.Exceptions;
 using Yagasoft.Libraries.EnhancedOrgService.Operations;
 using Yagasoft.Libraries.EnhancedOrgService.Params;
 using Yagasoft.Libraries.EnhancedOrgService.Response.Operations;
+using Yagasoft.Libraries.EnhancedOrgService.Router.Node;
 using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced;
 using Yagasoft.Libraries.EnhancedOrgService.State;
+using NodeStatus = Yagasoft.Libraries.EnhancedOrgService.Router.Node.NodeStatus;
 
 #endregion
 
@@ -20,31 +25,63 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 {
 	public class RoutingService : IStateful, IRoutingService
 	{
+		public virtual event EventHandler<IRoutingService, RouterEventArgs> RouterEventOccurred
+		{
+			add
+			{
+				InnerRouterEventOccurred -= value;
+				InnerRouterEventOccurred += value;
+			}
+			remove => InnerRouterEventOccurred -= value;
+		}
+		protected virtual event EventHandler<IRoutingService, RouterEventArgs> InnerRouterEventOccurred;
+		
 		public RouterRules Rules { get; protected internal set; }
-		public virtual bool IsRunning { get; protected internal set; }
 
-		public IOperationStats Stats => new OperationStats(this);
+		public Status Status
+		{
+			get => status;
+			protected internal set
+			{
+				status = value;
+				OnEventOccurred(Event.StatusChanged, LatestFaultyNode);
+			}
+		}
 
-		public virtual IEnumerable<IOpStatsParent> Containers => NodeQueue;
-		public virtual IEnumerable<IOperationStats> StatTargets => null;
+		public IOperationStats Stats { get; }
+
+		public virtual IEnumerable<IOperationStats> StatTargets => NodeQueue.Select(n => n.Stats);
+
+		public virtual IReadOnlyList<INodeService> Nodes => NodeQueue.ToArray();
+
+		public virtual Exception LatestConnectionError { get; protected internal set; }
 
 		protected internal readonly ConcurrentQueue<NodeService> NodeQueue = new ConcurrentQueue<NodeService>();
 
 		protected internal readonly ConcurrentDictionary<Func<OrganizationRequest, IEnhancedOrgService, bool>, INodeService> Exceptions
-			=
-			new ConcurrentDictionary<Func<OrganizationRequest, IEnhancedOrgService, bool>, INodeService>();
+			= new ConcurrentDictionary<Func<OrganizationRequest, IEnhancedOrgService, bool>, INodeService>();
 
 		protected internal IOrderedEnumerable<INodeService> FallbackNodes;
 
+		protected internal virtual INodeService LatestFaultyNode { get; set; }
+
 		private readonly object dequeueLock = new object();
+		private Status status;
 
 		public RoutingService()
 		{
+			Stats = new OperationStats(this);
 			Rules = new RouterRules();
+			Status = Status.Offline;
 		}
 
 		public virtual void ValidateState(bool isValid = true)
 		{
+			if (Status != Status.Offline)
+			{
+				throw new StateException("Router is not offline.");
+			}
+
 			if (!NodeQueue.Any())
 			{
 				throw new StateException("At least one node must be added to the router.");
@@ -66,6 +103,11 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 			serviceParams.Require(nameof(serviceParams), "Service Parameters must be set first.");
 			weight.RequireAtLeast(1, nameof(weight));
 
+			if (Status != Status.Offline)
+			{
+				throw new StateException("Router is not stopped.");
+			}
+
 			var node = new NodeService(serviceParams, weight);
 
 			if (NodeQueue.IsEmpty)
@@ -75,6 +117,12 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 
 			NodeQueue.Enqueue(node);
 
+			foreach (var nodeService in NodeQueue)
+			{
+				nodeService.NodeStatusChanged += (s, a) => OnEventOccurred(Event.NodeStatusChanged, s);
+			}
+
+			OnEventOccurred(Event.NodeQueueAdded, node);
 			return node;
 		}
 
@@ -99,6 +147,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 
 		public IRoutingService RemoveNode(INodeService nodeToRemove)
 		{
+			ValidateState();
+
 			lock (dequeueLock)
 			{
 				while (NodeQueue.TryDequeue(out var node) && node != nodeToRemove)
@@ -107,6 +157,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 				}
 			}
 
+			OnEventOccurred(Event.NodeQueueRemoved, nodeToRemove);
 			return this;
 		}
 
@@ -175,18 +226,69 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 			return this;
 		}
 
-		public virtual IRoutingService StartRouter()
+		public virtual async Task StartRouter()
 		{
 			ValidateState();
 
-			foreach (var service in NodeQueue)
+			Status = Status.Starting;
+			(Stats as OperationStats)?.Propagate();
+
+			LatestConnectionError = null;
+
+			void NodeEvent(INodeService s, NodeStatusEventArgs a)
 			{
-				service.StartNode();
+				lock (NodeQueue)
+				{
+					if (s.Status != NodeStatus.Starting)
+					{
+						s.NodeStatusChanged -= NodeEvent;
+					}
+
+					if (NodeQueue.Any(n => n.Status == NodeStatus.Starting) || Status != Status.Starting)
+					{
+						return;
+					}
+
+					Status = Status.Online;
+				}
 			}
 
-			IsRunning = true;
+			foreach (var node in NodeQueue)
+			{
+				await Task.Factory.StartNew(
+					() =>
+					{
+						try
+						{
+							node.NodeStatusChanged += NodeEvent;
+							node.StartNode();
+						}
+						catch
+						{
+							LatestConnectionError = node.LatestConnectionError;
+							LatestFaultyNode = node;
+							Status = Status.Failed;
+							throw;
+						}
+					}, TaskCreationOptions.LongRunning).ConfigureAwait(false);
+			}
+		}
 
-			return this;
+		public virtual void StopRouter()
+		{
+			if (Status != Status.Online)
+			{
+				throw new StateException("Router is not online.");
+			}
+
+			Status = Status.Stopping;
+
+			foreach (var node in NodeQueue)
+			{
+				node.StopNode();
+			}
+
+			Status = Status.Offline;
 		}
 
 		public virtual IRoutingService WarmUp()
@@ -203,8 +305,6 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 
 		public virtual IRoutingService EndWarmup()
 		{
-			ValidateState();
-
 			foreach (var service in NodeQueue)
 			{
 				service.Pool.EndWarmup();
@@ -217,9 +317,17 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 		{
 			threads.RequireAtLeast(1);
 
-			ValidateState();
+			for (var i = 0; i < (60 * 1000 / 100) && Status == Status.Starting; i++)
+			{
+				Thread.Sleep(100);
+			}
 
-			NodeService node = null;
+			if (Status != Status.Online)
+			{
+				throw new StateException("Router must be running.");
+			}
+
+			NodeService node;
 
 			lock (dequeueLock)
 			{
@@ -239,6 +347,9 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 									break;
 								}
 							}
+
+							node = null;
+
 							break;
 
 						case RouterMode.WeightedRoundRobin:
@@ -266,6 +377,9 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 									break;
 								}
 							}
+
+							node = null;
+
 							break;
 
 						case RouterMode.StaticWithFallback:
@@ -280,8 +394,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 									{
 										n,
 										load = n.Pool.Stats.PendingOperations
-											.Count(o => o.OperationStatus != Status.Success
-												&& o.OperationStatus != Status.Failure)
+											.Count(o => o.OperationStatus != Response.Operations.Status.Success
+												&& o.OperationStatus != Response.Operations.Status.Failure)
 									})
 								.Where(e => e.n.Status == NodeStatus.Online)
 								.OrderBy(e => e.load)
@@ -300,15 +414,10 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 
 					if (Rules.IsFallbackEnabled == true)
 					{
-						node ??= FallbackNodes.OfType<NodeService>().Union(NodeQueue).FirstOrDefault(n => n.Status == NodeStatus.Online);
+						node ??= FallbackNodes?.OfType<NodeService>().Union(NodeQueue).FirstOrDefault(n => n.Status == NodeStatus.Online);
 					}
 
-					// if no nodes found and there is a node with no latency measured (starting up), wait
-					if (node == null && NodeQueue.Union(FallbackNodes.OfType<NodeService>()).Any(n => !n.LatencyHistory.Any()))
-					{
-						Thread.Sleep(100);
-						continue;
-					}
+					node ??= NodeQueue.FirstOrDefault(n => n.Status == NodeStatus.Online);
 
 					break;
 				}
@@ -316,12 +425,14 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 
 			if (node == null)
 			{
+				OnEventOccurred(Event.RoutingFailed);
 				throw new NodeSelectException("Cannot find a valid node.");
 			}
 
 			var service = node.Pool.GetService(threads);
 
-			if (service.Parameters.AutoRetryParams?.CustomRetryFunctions.Contains(CustomRetry) == false)
+			if (Rules.IsFallbackEnabled == true
+				&& service.Parameters.AutoRetryParams?.CustomRetryFunctions.Contains(CustomRetry) == false)
 			{
 				service.Parameters.AutoRetryParams.CustomRetryFunctions?.Add(CustomRetry);
 			}
@@ -332,11 +443,20 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 		protected internal virtual object CustomRetry(Func<IOrganizationService, object> action, Operation operation,
 			ExecuteParams executeParams, Exception ex)
 		{
+			FallbackNodes.Require(nameof(FallbackNodes));
+
 			foreach (var fallbackNode in FallbackNodes)
 			{
 				try
 				{
-					return (fallbackNode.Pool.GetService() as EnhancedOrgServiceBase)?.TryRunOperation(action, operation, executeParams);
+					using var service  = fallbackNode.Pool.GetService() as EnhancedOrgServiceBase;
+
+					if (service == null)
+					{
+						continue;
+					}
+
+					return service.TryRunOperation(action, operation, executeParams, true);
 				}
 				catch
 				{
@@ -345,6 +465,12 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 			}
 
 			return null;
+		}
+		
+		protected virtual void OnEventOccurred(Event @event, INodeService node = null)
+		{
+			InnerRouterEventOccurred?.Invoke(this, new RouterEventArgs(@event, Status, Rules?.RouterMode, node,
+				LatestConnectionError));
 		}
 	}
 }

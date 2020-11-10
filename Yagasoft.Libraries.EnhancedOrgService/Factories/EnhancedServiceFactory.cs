@@ -33,9 +33,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 		where TServiceInterface : IEnhancedOrgService
 		where TEnhancedOrgService : EnhancedOrgServiceBase, TServiceInterface
 	{
-		public IOperationStats Stats => new OperationStats(this);
+		public IOperationStats Stats { get; }
 
-		public virtual IEnumerable<IOpStatsParent> Containers => null;
 		public virtual IEnumerable<IOperationStats> StatTargets => statServices;
 
 		internal readonly EnhancedServiceParams Parameters;
@@ -53,6 +52,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 
 		public EnhancedServiceFactory(IRoutingService routeringService)
 		{
+			Stats = new OperationStats(this);
+
 			this.routeringService = routeringService;
 			var enhancedOrgType = typeof(TEnhancedOrgService);
 
@@ -71,6 +72,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 
 		public EnhancedServiceFactory(EnhancedServiceParams parameters)
 		{
+			Stats = new OperationStats(this);
+
 			var enhancedOrgType = typeof(TEnhancedOrgService);
 
 			if (enhancedOrgType.IsAbstract)
@@ -92,10 +95,10 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 			parameters.IsLocked = true;
 			Parameters = parameters;
 
-			customCacheFactory = parameters.CachingParams.CustomCacheFactory;
-
-			if (parameters.IsCachingEnabled == true)
+			if (parameters.IsCachingEnabled == true && parameters.CachingParams != null)
 			{
+				customCacheFactory = parameters.CachingParams.CustomCacheFactory;
+
 				switch (parameters.CachingParams.CacheScope)
 				{
 					case CacheScope.Global:
@@ -195,7 +198,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 
 		private void InitialiseCaching(TEnhancedOrgService enhancedService)
 		{
-			if (Parameters.IsCachingEnabled == true)
+			if (Parameters.IsCachingEnabled != true || Parameters.CachingParams == null)
 			{
 				return;
 			}
@@ -274,12 +277,12 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 		/// </summary>
 		public void ClearCache()
 		{
-			if (Parameters.IsCachingEnabled == true)
+			if (Parameters.IsCachingEnabled != true)
 			{
 				throw new NotSupportedException("Cannot clear the cache because caching is not enabled.");
 			}
 
-			if (Parameters.CachingParams.CacheScope == CacheScope.Service)
+			if (Parameters.CachingParams?.CacheScope == CacheScope.Service)
 			{
 				foreach (var service in statServices.OfType<ICachingOrgService>())
 				{
