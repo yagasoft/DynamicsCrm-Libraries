@@ -111,7 +111,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router.Node
 											}
 											catch (ThreadAbortException)
 											{ }
-										});
+										}) { IsBackground = true };
 								thread.Start();
 
 								if (!thread.Join(TimeSpan.FromSeconds(10)))
@@ -142,7 +142,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router.Node
 
 						LatencyEvaluator = null;
 						LatencyEvaluatorService = null;
-					});
+					}) { IsBackground = true };
 		}
 
 		protected internal virtual void StartNode()

@@ -8,11 +8,13 @@ using Microsoft.Xrm.Sdk.Query;
 using Yagasoft.Libraries.Common;
 using Yagasoft.Libraries.EnhancedOrgService.Events;
 using Yagasoft.Libraries.EnhancedOrgService.Events.EventArgs;
+using Yagasoft.Libraries.EnhancedOrgService.Exceptions;
 using Yagasoft.Libraries.EnhancedOrgService.Params;
 using Yagasoft.Libraries.EnhancedOrgService.Response.Operations;
 using Yagasoft.Libraries.EnhancedOrgService.Router;
 using Yagasoft.Libraries.EnhancedOrgService.Services.SelfDisposing;
 using Yagasoft.Libraries.EnhancedOrgService.Transactions;
+using Status = Yagasoft.Libraries.EnhancedOrgService.Router.Status;
 
 #endregion
 
@@ -50,6 +52,14 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Balancing
 		{
 			routingService.Require(nameof(routingService));
 			RoutingService = routingService;
+		}
+
+		public override void ValidateState(bool isValid = true)
+		{
+			if (RoutingService?.Status != Status.Online)
+			{
+				throw new StateException("Service is not ready. Try to get a new service from the helper/pool/factory.");
+			}
 		}
 
 		protected internal override IDisposableService GetService()

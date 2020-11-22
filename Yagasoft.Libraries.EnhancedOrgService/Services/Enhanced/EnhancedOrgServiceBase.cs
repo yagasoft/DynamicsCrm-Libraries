@@ -94,6 +94,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 		private IEnumerable<Func<Func<IOrganizationService, object>, Operation, ExecuteParams, Exception, object>> CustomRetryFunctions
 			 => Parameters?.AutoRetryParams?.CustomRetryFunctions;
 
+		private int servicesCount;
+
 		protected internal EnhancedOrgServiceBase(EnhancedServiceParams parameters)
 		{
 			Parameters = parameters;
@@ -103,9 +105,9 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 		
 		public virtual void ValidateState(bool isValid = true)
 		{
-			if (!servicesQueue.Any())
+			if (servicesCount <= 0)
 			{
-				throw new StateException("Service is not ready. Try to get a new service from the factory.");
+				throw new StateException("Service is not ready. Try to get a new service from the helper/pool/factory.");
 			}
 		}
 
@@ -116,6 +118,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 			foreach (var service in services)
 			{
 				servicesQueue.Add(service);
+				servicesCount++;
 			}
 		}
 
@@ -123,6 +126,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 		{
 			var services = servicesQueue.ToArray();
 			servicesQueue.Clear();
+			servicesCount = 0;
 			return services;
 		}
 

@@ -3,7 +3,7 @@
 <package>
   <metadata>
     <id>Yagasoft.Libraries.EnhancedOrgService</id>
-    <version>5.1.1</version>
+    <version>5.1.3</version>
     <authors>Ahmed Elsawalhy</authors>
     <owners>Ahmed Elsawalhy</owners>
     <projectUrl>https://github.com/yagasoft/DynamicsCrm-Libraries</projectUrl>
@@ -18,29 +18,31 @@
     <dependencies>
       <group>
         <dependency id="Microsoft.CrmSdk.XrmTooling.CoreAssembly" version="9.0.2.12" />
-        <dependency id="Yagasoft.Libraries.Common" version="2.4.1" />
+        <dependency id="Yagasoft.Libraries.Common" version="2.4.3" />
       </group>
     </dependencies>
     <references />
     <releaseNotes>
-      * 5.1.1
-      Added: [EnhancedOrgService] node load balancer
-      Added: [EnhancedOrgService] self-balancing service
-      Added: [EnhancedOrgService] auto-retry mechanism
-      Added: [EnhancedOrgService] auto-retry failure events
-      Added: [EnhancedOrgService] operation-specific options
-      Added: [EnhancedOrgService] operation status events
-      Added: [EnhancedOrgService] operation statistics on all levels: service, pool, and factory
-      Added: [EnhancedOrgService] operation history to the service
-      Added: [EnhancedOrgService] deferred support for SDK methods (in addition to the custom ones that return a 'token')
-      Added: [EnhancedOrgService] custom cache factory parameter
-      Added: [EnhancedOrgService] exposed AutoSetMaxPerformanceParams through the pool 'helper' class
-      Improved: [EnhancedOrgService] optimised the interfaces and refactored
-      Improved: [EnhancedOrgService] internal calls by switching them to pass through service features
-      Changed: [EnhancedOrgService] tighten the service validity check to avoid internal operations triggering after Dispose; user must wait for all operations to finish
-      Fixed: [Common] RequireFormat helper
-      Fixed: [EnhancedOrgService] params default values
-      Removed: [EnhancedOrgService] async operations (use Task.Run or similar methods from .NET instead)
+      * 5.1.3
+      Fixed: [EnhancedOrgService] state validation for self-enqueuing/balancing service
+      Fixed: threading issues
+      * 5.1.2
+      Added: node load balancer
+      Added: self-balancing service
+      Added: auto-retry mechanism
+      Added: auto-retry failure events
+      Added: operation-specific options
+      Added: operation status events
+      Added: operation statistics on all levels: service, pool, and factory
+      Added: operation history to the service
+      Added: deferred support for SDK methods (in addition to the custom ones that return a 'token')
+      Added: custom cache factory parameter
+      Added: exposed AutoSetMaxPerformanceParams through the pool 'helper' class
+      Improved: optimised the interfaces and refactored
+      Improved: internal calls by switching them to pass through service features
+      Changed: tighten the service validity check to avoid internal operations triggering after Dispose; user must wait for all operations to finish
+      Fixed: params default values
+      Removed: async operations (use Task.Run or similar methods from .NET instead)
       * 4.1.1
       Added: CacheItemPriority to cache settings
       Improved: pool helpers

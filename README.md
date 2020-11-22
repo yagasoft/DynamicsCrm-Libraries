@@ -2,7 +2,7 @@
 
 [![Join the chat at https://gitter.im/yagasoft/DynamicsCrm-Libraries](https://badges.gitter.im/yagasoft/DynamicsCrm-Libraries.svg)](https://gitter.im/yagasoft/DynamicsCrm-Libraries?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-### Version: 5.1.1
+### Version: 5.1.3
 ---
 
 A collection of libraries for common and extended operations in Dynamics CRM development that gives power to the developer and saves time.
@@ -33,7 +33,13 @@ A collection of libraries for common and extended operations in Dynamics CRM dev
 
 ## Changes
 
-#### _v5.1.1 (2020-10-07)_
+#### _v5.1.3 (2020-11-22)_
++ Fixed: [EnhancedOrgService] state validation for self-enqueuing/balancing service
++ Fixed: [EnhancedOrgService] threading issues
++ Fixed: [Common] caching issues
+#### _v5.1.2 (2020-11-11)_
++ Fixed: [Common] log issues
+#### _v5.1.1 (2020-11-07)_
 + Added: [EnhancedOrgService] node load balancer
 + Added: [EnhancedOrgService] self-balancing service
 + Added: [EnhancedOrgService] auto-retry mechanism

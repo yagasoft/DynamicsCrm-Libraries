@@ -95,10 +95,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 							{
 								try
 								{
-									lock (crmServicesQueue)
-									{
-										crmServicesQueue.Enqueue(GetCrmService(true));
-									}
+									crmServicesQueue.Enqueue(GetCrmService(true));
 								}
 								catch
 								{
@@ -118,30 +115,27 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 
 		private IOrganizationService GetCrmService(bool isSkipQueue = false)
 		{
-			lock (crmServicesQueue)
+			IOrganizationService crmService = null;
+
+			if (!isSkipQueue)
 			{
-				IOrganizationService crmService = null;
+				crmServicesQueue.TryDequeue(out crmService);
+			}
 
-				if (!isSkipQueue)
-				{
-					crmServicesQueue.TryDequeue(out crmService);
-				}
+			if (crmService.EnsureTokenValid(poolParams.TokenExpiryCheckSecs ?? 600) == false)
+			{
+				crmService = null;
+			}
 
-				if (crmService.EnsureTokenValid(poolParams.TokenExpiryCheckSecs ?? 600) == false)
-				{
-					crmService = null;
-				}
-
-				if (crmService != null)
-				{
-					return crmService;
-				}
-
-				crmService = factory.CreateCrmService();
-				createdCrmServicesCount++;
-
+			if (crmService != null)
+			{
 				return crmService;
 			}
+
+			crmService = factory.CreateCrmService();
+			createdCrmServicesCount++;
+
+			return crmService;
 		}
 
 		private TServiceInterface GetInitialisedService(int threads, [Optional] TServiceInterface enhancedService)
@@ -207,16 +201,13 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 
 		public void ReleaseService(IEnhancedOrgService enhancedService)
 		{
-			lock (crmServicesQueue)
+			if (enhancedService is EnhancedOrgServiceBase enhancedOrgServiceBase)
 			{
-				if (enhancedService is EnhancedOrgServiceBase enhancedOrgServiceBase)
-				{
-					var releasedServices = enhancedOrgServiceBase.ClearServicesQueue();
+				var releasedServices = enhancedOrgServiceBase.ClearServicesQueue();
 
-					foreach (var service in releasedServices)
-					{
-						crmServicesQueue.Enqueue(service);
-					}
+				foreach (var service in releasedServices)
+				{
+					crmServicesQueue.Enqueue(service);
 				}
 			}
 
