@@ -40,13 +40,13 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 		internal readonly EnhancedServiceParams Parameters;
 
 		private readonly ObjectCache factoryCache;
-		private readonly List<ObjectCache> customFactoryCaches = new List<ObjectCache>();
+		private readonly List<ObjectCache> customFactoryCaches = new();
 		private readonly Func<IServiceFactory, EnhancedServiceParams, IEnhancedOrgService, ObjectCache> customCacheFactory;
 
 		private readonly Func<string, IOrganizationService> customServiceFactory = ConnectionHelpers.CreateCrmService;
 		private CrmServiceClient serviceCloneBase;
 
-		private readonly HashSet<IOperationStats> statServices = new HashSet<IOperationStats>();
+		private readonly HashSet<IOperationStats> statServices = new();
 
 		private readonly IRoutingService routeringService;
 

@@ -13,7 +13,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 {
 	public static class ConnectionHelpers
 	{
-		private static readonly object lockObject = new object();
+		private static readonly object lockObject = new();
 
 		public static IOrganizationService CreateCrmService(string connectionString)
 		{
@@ -57,7 +57,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 
 		public static bool? EnsureTokenValid(this IOrganizationService crmService, int tokenExpiryCheckSecs = 600)
 		{
-			if (crmService == null || !(crmService is CrmServiceClient clientService))
+			if (crmService is not CrmServiceClient clientService)
 			{
 				return null;
 			}
@@ -91,11 +91,13 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 
 				isValidToken = proxy.IsAuthenticated;
 			}
+			else
+			{
+				var webProxy = clientService.OrganizationWebProxyClient;
 
-			var webProxy = clientService.OrganizationWebProxyClient;
-
-			if (webProxy != null)
-			{ }
+				if (webProxy != null)
+				{ }
+			}
 
 			if (isValidToken == null)
 			{

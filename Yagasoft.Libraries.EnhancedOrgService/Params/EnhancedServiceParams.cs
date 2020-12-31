@@ -100,11 +100,11 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 
 		/// <summary>
 		///     Sets a limit on the number of operations to keep in <see cref="IOperationStats.ExecutedOperations" /><br />
-		///     Default: <see cref="int.MaxValue" />.
+		///     Default: 10.
 		/// </summary>
 		public int? OperationHistoryLimit
 		{
-			get => operationHistoryLimit;
+			get => operationHistoryLimit ?? 10;
 			set
 			{
 				ValidateLock();
@@ -134,7 +134,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 		///     <br />
 		///     Those parameters are app-wide -- global on the .Net Framework level; so they will affect all logic in this process.
 		/// </summary>
-		public void AutoSetMaxPerformanceParams()
+		public EnhancedServiceParams AutoSetMaxPerformanceParams()
 		{
 			ConnectionParams ??= new ConnectionParams();
 			ConnectionParams.DotNetDefaultConnectionLimit = 30000;
@@ -143,6 +143,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 
 			PoolParams ??= new PoolParams();
 			PoolParams.DotNetSetMinAppReservedThreads = 100;
+
+			return this;
 		}
 	}
 }

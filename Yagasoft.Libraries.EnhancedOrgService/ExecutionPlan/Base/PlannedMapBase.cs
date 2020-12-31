@@ -29,7 +29,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.ExecutionPlan.Base
 		public string Alias { get; internal set; }
 
 		[DataMember]
-		internal readonly MockDictionary InnerDictionary = new MockDictionary();
+		internal readonly MockDictionary InnerDictionary = new();
 
 		protected PlannedMapBase(Guid? parentId, string alias)
 		{

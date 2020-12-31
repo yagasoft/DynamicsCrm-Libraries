@@ -3,7 +3,7 @@
 <package>
   <metadata>
     <id>Yagasoft.Libraries.EnhancedOrgService</id>
-    <version>5.1.3</version>
+    <version>5.1.4</version>
     <authors>Ahmed Elsawalhy</authors>
     <owners>Ahmed Elsawalhy</owners>
     <projectUrl>https://github.com/yagasoft/DynamicsCrm-Libraries</projectUrl>
@@ -18,13 +18,17 @@
     <dependencies>
       <group>
         <dependency id="Microsoft.CrmSdk.XrmTooling.CoreAssembly" version="9.0.2.12" />
-        <dependency id="Yagasoft.Libraries.Common" version="2.4.3" />
+        <dependency id="Yagasoft.Libraries.Common" version="2.4.4" />
       </group>
     </dependencies>
     <references />
     <releaseNotes>
+      * 5.1.4
+      Fixed: clear operation events when operation has finished to prevent memory leak
+      Fixed: made parameters in generic retrieve optional
+      Fixed: memory leaks
       * 5.1.3
-      Fixed: [EnhancedOrgService] state validation for self-enqueuing/balancing service
+      Fixed: state validation for self-enqueuing/balancing service
       Fixed: threading issues
       * 5.1.2
       Added: node load balancer

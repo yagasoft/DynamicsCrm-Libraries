@@ -19,8 +19,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 	{
 		internal static readonly Dictionary<Type,
 			Func<IOrganizationService, OrganizationRequest, OrganizationRequest>> UndoLogicCache
-				= new Dictionary<Type,
-					Func<IOrganizationService, OrganizationRequest, OrganizationRequest>>();
+				= new();
 
 		/// <summary>
 		///     Generates an organisation request that reverts the actions taken by the given request.

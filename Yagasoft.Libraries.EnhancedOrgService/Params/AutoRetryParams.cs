@@ -77,7 +77,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 		///     location.
 		/// </summary>
 		public readonly List<Func<Func<IOrganizationService, object>, Operation, ExecuteParams, Exception, object>>
-			CustomRetryFunctions = new List<Func<Func<IOrganizationService, object>, Operation, ExecuteParams, Exception, object>>();
+			CustomRetryFunctions = new();
 
 		private int? maxRetryCount;
 		private TimeSpan? retryInterval;

@@ -16,8 +16,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Transactions
 	/// </summary>
 	internal class TransactionManager : ITransactionManager
 	{
-		private readonly Stack<Operation> operationsStack = new Stack<Operation>();
-		private readonly Stack<Transaction> transactionsStack = new Stack<Transaction>();
+		private readonly Stack<Operation> operationsStack = new();
+		private readonly Stack<Transaction> transactionsStack = new();
 
 		public bool IsTransactionInEffect()
 		{

@@ -56,16 +56,16 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 
 		public virtual Exception LatestConnectionError { get; protected internal set; }
 
-		protected internal readonly ConcurrentQueue<NodeService> NodeQueue = new ConcurrentQueue<NodeService>();
+		protected internal readonly ConcurrentQueue<NodeService> NodeQueue = new();
 
 		protected internal readonly ConcurrentDictionary<Func<OrganizationRequest, IEnhancedOrgService, bool>, INodeService> Exceptions
-			= new ConcurrentDictionary<Func<OrganizationRequest, IEnhancedOrgService, bool>, INodeService>();
+			= new();
 
 		protected internal IOrderedEnumerable<INodeService> FallbackNodes;
 
 		protected internal virtual INodeService LatestFaultyNode { get; set; }
 
-		private readonly object dequeueLock = new object();
+		private readonly object dequeueLock = new();
 		private Status status;
 
 		public RoutingService()

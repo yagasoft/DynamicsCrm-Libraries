@@ -12,7 +12,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 {
 	internal static class RequestHelper
 	{
-		private static readonly QueryCacheControl queryCache = new QueryCacheControl();
+		private static readonly QueryCacheControl queryCache = new();
 
 		internal static int GetTotalRecordsCount<TQuery>(IOrganizationService service, TQuery query)
 			where TQuery : QueryBase

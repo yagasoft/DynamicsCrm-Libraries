@@ -3,7 +3,7 @@
 <package>
   <metadata>
     <id>Yagasoft.Libraries.Common.File</id>
-    <version>4.4.3</version>
+    <version>4.4.4</version>
     <authors>Ahmed Elsawalhy</authors>
     <owners>Ahmed Elsawalhy</owners>
     <projectUrl>https://github.com/yagasoft/DynamicsCrm-Libraries</projectUrl>
@@ -26,6 +26,9 @@
     </frameworkAssemblies>
     <references />
     <releaseNotes>
+      * 4.4.4
+      Improved: performance and memory
+      Fixed: issues
       * 4.4.3
       Fixed: cache ignoring null values
       * 4.4.2

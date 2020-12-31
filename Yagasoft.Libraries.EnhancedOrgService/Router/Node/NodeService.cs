@@ -70,7 +70,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router.Node
 		protected internal Thread LatencyEvaluator;
 		protected internal IOrganizationService LatencyEvaluatorService;
 		protected internal TimeSpan? LatencyInterval;
-		protected internal FixedSizeQueue<TimeSpan> LatencyHistory = new FixedSizeQueue<TimeSpan>(5);
+		protected internal FixedSizeQueue<TimeSpan> LatencyHistory = new(5);
 		private NodeStatus status;
 
 		protected internal NodeService(EnhancedServiceParams @params, int weight = 1)

@@ -122,6 +122,11 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Response.Operations
 			UndoRequest = undoRequest;
 		}
 		
+		internal void ClearEventHandlers()  
+		{  
+			OperationStatusChanged = null;  
+		}
+		
 		private void OnOperationStatusChanged(OperationStatusEventArgs e)  
 		{  
 			OperationStatusChanged?.Invoke(this, e);  

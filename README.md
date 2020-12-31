@@ -33,6 +33,11 @@ A collection of libraries for common and extended operations in Dynamics CRM dev
 
 ## Changes
 
+#### _v5.1.4 (2020-12-27)_
++ Improved: [Common] performance and memory
++ Fixed: [EnhancedOrgService] clear operation events when operation has finished to prevent memory leak
++ Fixed: [EnhancedOrgService] made parameters in generic retrieve optional
++ Fixed: [Common] issues
 #### _v5.1.3 (2020-11-22)_
 + Fixed: [EnhancedOrgService] state validation for self-enqueuing/balancing service
 + Fixed: [EnhancedOrgService] threading issues

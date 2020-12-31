@@ -223,7 +223,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Balancing
 			return ((IEnhancedOrgService)service).Retrieve(entityName, id, columnSet, executeParams);
 		}
 
-		public override TEntity Retrieve<TEntity>(string entityName, Guid id, ColumnSet columnSet, ExecuteParams executeParams)
+		public override TEntity Retrieve<TEntity>(string entityName, Guid id, ColumnSet columnSet,
+			ExecuteParams executeParams = null)
 		{
 			using var service = GetService();
 			return ((IEnhancedOrgService)service).Retrieve<TEntity>(entityName, id, columnSet, executeParams);

@@ -195,7 +195,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 		///     <seealso cref="IOrganizationService.Retrieve" />
 		/// </summary>
 		/// <typeparam name="TEntity">Returned entity type.</typeparam>
-		public TEntity Retrieve<TEntity>(string entityName, Guid id, ColumnSet columnSet, ExecuteParams executeParams)
+		public TEntity Retrieve<TEntity>(string entityName, Guid id, ColumnSet columnSet,
+			ExecuteParams executeParams = null)
 			where TEntity : Entity;
 
 		/// <inheritdoc cref="IOrganizationService.RetrieveMultiple" />

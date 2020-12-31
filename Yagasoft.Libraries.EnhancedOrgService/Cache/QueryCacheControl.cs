@@ -10,7 +10,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Cache
 {
 	internal class QueryCacheControl
 	{
-		private readonly Dictionary<string, string> queryCache = new Dictionary<string, string>();
+		private readonly Dictionary<string, string> queryCache = new();
 
 		public void AddCachedQuery(QueryBase query, QueryExpression queryExpression)
 		{

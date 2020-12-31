@@ -33,10 +33,10 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 
 		private readonly EnhancedServiceFactory<TServiceInterface, TEnhancedOrgService> factory;
 
-		private readonly BlockingQueue<TServiceInterface> servicesQueue = new BlockingQueue<TServiceInterface>();
-		private readonly ConcurrentQueue<IOrganizationService> crmServicesQueue = new ConcurrentQueue<IOrganizationService>();
+		private readonly BlockingQueue<TServiceInterface> servicesQueue = new();
+		private readonly ConcurrentQueue<IOrganizationService> crmServicesQueue = new();
 
-		private readonly HashSet<IOperationStats> statServices = new HashSet<IOperationStats>();
+		private readonly HashSet<IOperationStats> statServices = new();
 
 		private readonly PoolParams poolParams;
 		private int createdCrmServicesCount;
@@ -153,7 +153,9 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 
 			try
 			{
-				enhancedService ??= servicesQueue.Dequeue(poolParams.DequeueTimeoutInMillis ?? 2 * 65 * 1000);
+				enhancedService ??= servicesQueue
+					.Dequeue(TimeSpan
+						.FromMilliseconds(poolParams.DequeueTimeoutInMillis ?? 2 * 65 * 1000));
 			}
 			catch (TimeoutException)
 			{

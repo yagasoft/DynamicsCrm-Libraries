@@ -79,7 +79,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 		private readonly List<Operation> pendingOperations;
 		private readonly FixedSizeQueue<Operation> executedOperations;
 
-		private readonly BlockingQueue<IOrganizationService> servicesQueue = new BlockingQueue<IOrganizationService>();
+		private readonly BlockingQueue<IOrganizationService> servicesQueue = new();
 
 		private IDeferredOrgService deferredOrgService;
 		private bool isUseSdkDeferredOperations;
@@ -320,7 +320,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 				?? new Entity(entityName, id);
 		}
 
-		public virtual TEntity Retrieve<TEntity>(string entityName, Guid id, ColumnSet columnSet, ExecuteParams executeParams)
+		public virtual TEntity Retrieve<TEntity>(string entityName, Guid id, ColumnSet columnSet,
+			ExecuteParams executeParams = null)
 			where TEntity : Entity
 		{
 			return Retrieve(entityName, id, columnSet, executeParams).ToEntity<TEntity>();
@@ -1105,6 +1106,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 						executedOperations.Enqueue(operation);
 					}
 				}
+
+				operation.ClearEventHandlers();
 			}
 		}
 		
