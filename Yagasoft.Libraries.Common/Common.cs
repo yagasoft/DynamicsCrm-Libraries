@@ -52,7 +52,7 @@ namespace Yagasoft.Libraries.Common
 	/// <summary>
 	///     The log levels
 	/// </summary>
-	[GeneratedCode("Not generated code, but used to exclude from Code Analysis.", "0.0.0.0")]
+	[GeneratedCode("This is not generated code, but this attribute is used for excluding the code from code analysis.", "0.0.0.0")]
 	public enum LogLevel
 	{
 		None = 0,
@@ -62,7 +62,7 @@ namespace Yagasoft.Libraries.Common
 		Debug = 40
 	}
 
-	[GeneratedCode("Not generated code, but used to exclude from Code Analysis.", "0.0.0.0")]
+	[GeneratedCode("This is not generated code, but this attribute is used for excluding the code from code analysis.", "0.0.0.0")]
 	public enum LogMode
 	{
 		Crm = 10,
@@ -70,7 +70,7 @@ namespace Yagasoft.Libraries.Common
 		Both = 30
 	}
 
-	[GeneratedCode("Not generated code, but used to exclude from Code Analysis.", "0.0.0.0")]
+	[GeneratedCode("This is not generated code, but this attribute is used for excluding the code from code analysis.", "0.0.0.0")]
 	public enum SplitMode
 	{
 		Size = 10,
@@ -78,7 +78,7 @@ namespace Yagasoft.Libraries.Common
 		Both = 30
 	}
 
-	[GeneratedCode("Not generated code, but used to exclude from Code Analysis.", "0.0.0.0")]
+	[GeneratedCode("This is not generated code, but this attribute is used for excluding the code from code analysis.", "0.0.0.0")]
 	public enum SplitFrequency
 	{
 		Hourly = 10,
@@ -87,7 +87,7 @@ namespace Yagasoft.Libraries.Common
 		Yearly = 40
 	}
 
-	[GeneratedCode("Not generated code, but used to exclude from Code Analysis.", "0.0.0.0")]
+	[GeneratedCode("This is not generated code, but this attribute is used for excluding the code from code analysis.", "0.0.0.0")]
 	public enum PluginUser
 	{
 		ContextUser,
@@ -105,7 +105,7 @@ namespace Yagasoft.Libraries.Common
 	/// </summary>
 	[ExcludeFromCodeCoverage]
 	[DebuggerNonUserCode]
-	[GeneratedCode("Not generated code, but used to exclude from Code Analysis.", "0.0.0.0")]
+	[GeneratedCode("This is not generated code, but this attribute is used for excluding the code from code analysis.", "0.0.0.0")]
 	public static partial class Extensions
 	{
 		private const string StringExceptionMsg = "String value cannot be empty.";
@@ -715,7 +715,7 @@ namespace Yagasoft.Libraries.Common
 	// -----------------------------------------------------------------------------------------------------------------------------------------------------------------
 	[ExcludeFromCodeCoverage]
 	[DebuggerNonUserCode]
-	[GeneratedCode("Not generated code, but used to exclude from Code Analysis.", "0.0.0.0")]
+	[GeneratedCode("This is not generated code, but this attribute is used for excluding the code from code analysis.", "0.0.0.0")]
 	public static class EntitySerializer
 	{
 		public static string SerializeObject(Entity entity)
@@ -957,7 +957,7 @@ namespace Yagasoft.Libraries.Common
 	/// </summary>
 	[ExcludeFromCodeCoverage]
 	[DebuggerNonUserCode]
-	[GeneratedCode("Not generated code, but used to exclude from Code Analysis.", "0.0.0.0")]
+	[GeneratedCode("This is not generated code, but this attribute is used for excluding the code from code analysis.", "0.0.0.0")]
 	public static class ObjectCopier
 	{
 		/// <summary>
@@ -987,7 +987,7 @@ namespace Yagasoft.Libraries.Common
 
 	[ExcludeFromCodeCoverage]
 	[DebuggerNonUserCode]
-	[GeneratedCode("Not generated code, but used to exclude from Code Analysis.", "0.0.0.0")]
+	[GeneratedCode("This is not generated code, but this attribute is used for excluding the code from code analysis.", "0.0.0.0")]
 	public static class ObjectExtensions
 	{
 		private static readonly MethodInfo cloneMethod = typeof(object).GetMethod("MemberwiseClone",
@@ -1113,7 +1113,7 @@ namespace Yagasoft.Libraries.Common
 
 	[ExcludeFromCodeCoverage]
 	[DebuggerNonUserCode]
-	[GeneratedCode("Not generated code, but used to exclude from Code Analysis.", "0.0.0.0")]
+	[GeneratedCode("This is not generated code, but this attribute is used for excluding the code from code analysis.", "0.0.0.0")]
 	public class GenericEqualityComparer<T> : EqualityComparer<T>
 	{
 		private readonly Func<T, T, bool> equator;
@@ -1139,7 +1139,7 @@ namespace Yagasoft.Libraries.Common
 
 	[ExcludeFromCodeCoverage]
 	[DebuggerNonUserCode]
-	[GeneratedCode("Not generated code, but used to exclude from Code Analysis.", "0.0.0.0")]
+	[GeneratedCode("This is not generated code, but this attribute is used for excluding the code from code analysis.", "0.0.0.0")]
 	public class ReferenceEqualityComparer : EqualityComparer<object>
 	{
 		public override bool Equals(object x, object y)
@@ -1155,7 +1155,7 @@ namespace Yagasoft.Libraries.Common
 
 	[ExcludeFromCodeCoverage]
 	[DebuggerNonUserCode]
-	[GeneratedCode("Not generated code, but used to exclude from Code Analysis.", "0.0.0.0")]
+	[GeneratedCode("This is not generated code, but this attribute is used for excluding the code from code analysis.", "0.0.0.0")]
 	public static class ArrayExtensions
 	{
 		public static void ForEach(this Array array, Action<Array, int[]> action)
@@ -1216,14 +1216,14 @@ namespace Yagasoft.Libraries.Common
 
 	[ExcludeFromCodeCoverage]
 	[DebuggerNonUserCode]
-	[GeneratedCode("Not generated code, but used to exclude from Code Analysis.", "0.0.0.0")]
+	[GeneratedCode("This is not generated code, but this attribute is used for excluding the code from code analysis.", "0.0.0.0")]
 	public static class StringHelpers
 	{
 	}
 
 	[ExcludeFromCodeCoverage]
 	[DebuggerNonUserCode]
-	[GeneratedCode("Not generated code, but used to exclude from Code Analysis.", "0.0.0.0")]
+	[GeneratedCode("This is not generated code, but this attribute is used for excluding the code from code analysis.", "0.0.0.0")]
 	public static class TypeHelpers
 	{
 		public static IEnumerable<Type> GetHierarchyTree(this Type type)
@@ -1253,7 +1253,7 @@ namespace Yagasoft.Libraries.Common
 
 	[ExcludeFromCodeCoverage]
 	[DebuggerNonUserCode]
-	[GeneratedCode("Not generated code, but used to exclude from Code Analysis.", "0.0.0.0")]
+	[GeneratedCode("This is not generated code, but this attribute is used for excluding the code from code analysis.", "0.0.0.0")]
 	public static partial class Helpers
 	{
 		private static readonly IDictionary<Type, Func<object, string>> StringRepresentationsMap =
@@ -1524,7 +1524,7 @@ namespace Yagasoft.Libraries.Common
 	///     Author: Ahmed Elsawalhy
 	/// </summary>
 	[ExcludeFromCodeCoverage]
-	[GeneratedCode("Not generated code, but used to exclude from Code Analysis.", "0.0.0.0")]
+	[GeneratedCode("This is not generated code, but this attribute is used for excluding the code from code analysis.", "0.0.0.0")]
 	public static partial class CacheHelpers
 	{
 		/// <summary>
@@ -1703,7 +1703,7 @@ namespace Yagasoft.Libraries.Common
 	/// </summary>
 	[ExcludeFromCodeCoverage]
 	[DebuggerNonUserCode]
-	[GeneratedCode("Not generated code, but used to exclude from Code Analysis.", "0.0.0.0")]
+	[GeneratedCode("This is not generated code, but this attribute is used for excluding the code from code analysis.", "0.0.0.0")]
 	public static class RandomGenerator
 	{
 		public enum SymbolFlag
@@ -1846,7 +1846,7 @@ namespace Yagasoft.Libraries.Common
 
 	[ExcludeFromCodeCoverage]
 	[DebuggerNonUserCode]
-	[GeneratedCode("Not generated code, but used to exclude from Code Analysis.", "0.0.0.0")]
+	[GeneratedCode("This is not generated code, but this attribute is used for excluding the code from code analysis.", "0.0.0.0")]
 	public static partial class DateTimeHelpers
 	{
 		/// <summary>
@@ -1922,7 +1922,7 @@ namespace Yagasoft.Libraries.Common
 	/// </summary>
 	[ExcludeFromCodeCoverage]
 	[DebuggerNonUserCode]
-	[GeneratedCode("Not generated code, but used to exclude from Code Analysis.", "0.0.0.0")]
+	[GeneratedCode("This is not generated code, but this attribute is used for excluding the code from code analysis.", "0.0.0.0")]
 	public static partial class SerialiserHelpers
 	{
 		// credit: http://stackoverflow.com/a/12845153/1919456
@@ -2282,7 +2282,7 @@ namespace Yagasoft.Libraries.Common
 	/// </summary>
 	[ExcludeFromCodeCoverage]
 	[DebuggerNonUserCode]
-	[GeneratedCode("Not generated code, but used to exclude from Code Analysis.", "0.0.0.0")]
+	[GeneratedCode("This is not generated code, but this attribute is used for excluding the code from code analysis.", "0.0.0.0")]
 	public static partial class CrmHelpers
 	{
 		public static string[] NonUpdatableFields =
@@ -4133,7 +4133,7 @@ namespace Yagasoft.Libraries.Common
 	/// </summary>
 	[ExcludeFromCodeCoverage]
 	[DebuggerNonUserCode]
-	[GeneratedCode("Not generated code, but used to exclude from Code Analysis.", "0.0.0.0")]
+	[GeneratedCode("This is not generated code, but this attribute is used for excluding the code from code analysis.", "0.0.0.0")]
 	public static partial class MetadataHelpers
 	{
 		private static readonly string[] nonStandard =
@@ -5175,7 +5175,7 @@ namespace Yagasoft.Libraries.Common
 	/// </summary>
 	[ExcludeFromCodeCoverage]
 	[DebuggerNonUserCode]
-	[GeneratedCode("Not generated code, but used to exclude from Code Analysis.", "0.0.0.0")]
+	[GeneratedCode("This is not generated code, but this attribute is used for excluding the code from code analysis.", "0.0.0.0")]
 	public static class ErrorHelpers
 	{
 		public static string BuildExceptionMessage(this Exception ex, string preMessage = null, bool isUseExStackTrace = false,
@@ -5287,7 +5287,7 @@ namespace Yagasoft.Libraries.Common
 	/// </summary>
 	[ExcludeFromCodeCoverage]
 	[DebuggerNonUserCode]
-	[GeneratedCode("Not generated code, but used to exclude from Code Analysis.", "0.0.0.0")]
+	[GeneratedCode("This is not generated code, but this attribute is used for excluding the code from code analysis.", "0.0.0.0")]
 	public static class PluginInfo
 	{
 		public static string GetPluginExecutionInfo(IOrganizationService organizationService, IExecutionContext context)
@@ -5500,7 +5500,7 @@ namespace Yagasoft.Libraries.Common
 	/// </summary>
 	[ExcludeFromCodeCoverage]
 	[DebuggerNonUserCode]
-	[GeneratedCode("Not generated code, but used to exclude from Code Analysis.", "0.0.0.0")]
+	[GeneratedCode("This is not generated code, but this attribute is used for excluding the code from code analysis.", "0.0.0.0")]
 	public static partial class BpfHelpers
 	{
 		/// <summary>
@@ -5952,7 +5952,7 @@ namespace Yagasoft.Libraries.Common
 	/// </summary>
 	[ExcludeFromCodeCoverage]
 	[DebuggerNonUserCode]
-	[GeneratedCode("Not generated code, but used to exclude from Code Analysis.", "0.0.0.0")]
+	[GeneratedCode("This is not generated code, but this attribute is used for excluding the code from code analysis.", "0.0.0.0")]
 	public static partial class SlaHelpers
 	{
 		/// <summary>
@@ -6202,7 +6202,7 @@ namespace Yagasoft.Libraries.Common
 	/// </summary>
 	[ExcludeFromCodeCoverage]
 	[DebuggerNonUserCode]
-	[GeneratedCode("Not generated code, but used to exclude from Code Analysis.", "0.0.0.0")]
+	[GeneratedCode("This is not generated code, but this attribute is used for excluding the code from code analysis.", "0.0.0.0")]
 	public static class FetchXmlTriggerHelpers
 	{
 		/// <summary>
@@ -6851,7 +6851,7 @@ namespace Yagasoft.Libraries.Common
 	/// </summary>
 	[ExcludeFromCodeCoverage]
 	[DebuggerNonUserCode]
-	[GeneratedCode("Not generated code, but used to exclude from Code Analysis.", "0.0.0.0")]
+	[GeneratedCode("This is not generated code, but this attribute is used for excluding the code from code analysis.", "0.0.0.0")]
 	public sealed class FifoSemaphore : IDisposable
 	{
 		private readonly Queue<ManualResetEvent> threadLocksQueue = new Queue<ManualResetEvent>();
@@ -6923,7 +6923,7 @@ namespace Yagasoft.Libraries.Common
 	/// </summary>
 	[ExcludeFromCodeCoverage]
 	[DebuggerNonUserCode]
-	[GeneratedCode("Not generated code, but used to exclude from Code Analysis.", "0.0.0.0")]
+	[GeneratedCode("This is not generated code, but this attribute is used for excluding the code from code analysis.", "0.0.0.0")]
 	public sealed class QueuedLock : IDisposable
 	{
 		private readonly object innerLock;
@@ -6971,7 +6971,7 @@ namespace Yagasoft.Libraries.Common
 	/// </summary>
 	[ExcludeFromCodeCoverage]
 	[DebuggerNonUserCode]
-	[GeneratedCode("Not generated code, but used to exclude from Code Analysis.", "0.0.0.0")]
+	[GeneratedCode("This is not generated code, but this attribute is used for excluding the code from code analysis.", "0.0.0.0")]
 	public class BlockingQueue<T> : BlockingCollection<T>
 	{
 		#region ctor(s)
@@ -7046,7 +7046,7 @@ namespace Yagasoft.Libraries.Common
 	/// </summary>
 	[ExcludeFromCodeCoverage]
 	[DebuggerNonUserCode]
-	[GeneratedCode("Not generated code, but used to exclude from Code Analysis.", "0.0.0.0")]
+	[GeneratedCode("This is not generated code, but this attribute is used for excluding the code from code analysis.", "0.0.0.0")]
 	public class FixedSizeQueue<T> : ICollection<T>, IEnumerable<T>, IEnumerable, ICollection
 	{
 		public virtual int Count => q.Count;
@@ -7125,13 +7125,13 @@ namespace Yagasoft.Libraries.Common
 
 	#region CrmLog
 
-	[GeneratedCode("Not generated code, but used to exclude from Code Analysis.", "0.0.0.0")]
+	[GeneratedCode("This is not generated code, but this attribute is used for excluding the code from code analysis.", "0.0.0.0")]
 	[DebuggerNonUserCode]
 	public sealed class LogAttribute : Attribute
 	{
 	}
 
-	[GeneratedCode("Not generated code, but used to exclude from Code Analysis.", "0.0.0.0")]
+	[GeneratedCode("This is not generated code, but this attribute is used for excluding the code from code analysis.", "0.0.0.0")]
 	public sealed class NoLogAttribute : Attribute
 	{
 	}
@@ -7143,7 +7143,7 @@ namespace Yagasoft.Libraries.Common
 	/// </summary>
 	[ExcludeFromCodeCoverage]
 	[DebuggerNonUserCode]
-	[GeneratedCode("Not generated code, but used to exclude from Code Analysis.", "0.0.0.0")]
+	[GeneratedCode("This is not generated code, but this attribute is used for excluding the code from code analysis.", "0.0.0.0")]
 	public class CrmLog
 	{
 		[Flags]
@@ -9147,7 +9147,7 @@ namespace Yagasoft.Libraries.Common
 	///     Contains information related to the log entry.<br />
 	///     Author: Ahmed Elsawalhy
 	/// </summary>
-	[GeneratedCode("Not generated code, but used to exclude from Code Analysis.", "0.0.0.0")]
+	[GeneratedCode("This is not generated code, but this attribute is used for excluding the code from code analysis.", "0.0.0.0")]
 	public class LogEntry
 	{
 		private int elapsedTime;
@@ -9318,7 +9318,7 @@ namespace Yagasoft.Libraries.Common
 	/// <summary>
 	///     Author: Ahmed Elsawalhy
 	/// </summary>
-	[GeneratedCode("Not generated code, but used to exclude from Code Analysis.", "0.0.0.0")]
+	[GeneratedCode("This is not generated code, but this attribute is used for excluding the code from code analysis.", "0.0.0.0")]
 	public interface IPluginContext
 	{
 		IPlugin Plugin { get; }
@@ -9349,7 +9349,7 @@ namespace Yagasoft.Libraries.Common
 	/// <summary>
 	///     Author: Ahmed Elsawalhy
 	/// </summary>
-	[GeneratedCode("Not generated code, but used to exclude from Code Analysis.", "0.0.0.0")]
+	[GeneratedCode("This is not generated code, but this attribute is used for excluding the code from code analysis.", "0.0.0.0")]
 	public abstract class PluginLogic<TPlugin> : IPluginContext
 		where TPlugin : IPlugin
 	{
@@ -9474,7 +9474,7 @@ namespace Yagasoft.Libraries.Common
 
 				if (isLogEnabled)
 				{
-					TracingService.Trace("Log enabled.");
+					TracingService.Trace("Log is enabled in the code.");
 
 					TracingService.Trace("Setting entry class in log ...");
 					Log.SetEntryClass(typeof(TPlugin).FullName);
@@ -9487,6 +9487,10 @@ namespace Yagasoft.Libraries.Common
 						TracingService.Trace("Setting regarding in log ...");
 						Log.SetRegarding(Context.PrimaryEntityName, Context.PrimaryEntityId);
 					}
+				}
+				else
+				{
+					TracingService.Trace("Log is disabled in the code.");
 				}
 			}
 			catch (Exception ex)
@@ -9703,7 +9707,7 @@ namespace Yagasoft.Libraries.Common
 	/// <summary>
 	///     Author: Ahmed Elsawalhy
 	/// </summary>
-	[GeneratedCode("Not generated code, but used to exclude from Code Analysis.", "0.0.0.0")]
+	[GeneratedCode("This is not generated code, but this attribute is used for excluding the code from code analysis.", "0.0.0.0")]
 	public abstract class StepLogic<TCodeActivity> : IPluginContext
 		where TCodeActivity : CodeActivity
 	{

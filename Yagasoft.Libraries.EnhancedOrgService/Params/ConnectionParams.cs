@@ -11,6 +11,21 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 	public class ConnectionParams : BasicConnectionParams
 	{
 		/// <summary>
+		///     Change the connection timeout when making requests to CRM. Default: 2 minutes.<br />
+		///     This is an app-wide (global on the .Net Framework level) setting.
+		/// </summary>
+		public TimeSpan? Timeout
+		{
+			get => timeout;
+			set
+			{
+				ValidateLock();
+				value?.TotalSeconds.RequireAtLeast(1, nameof(Timeout));
+				timeout = value;
+			}
+		}
+
+		/// <summary>
 		///     Change max connections from .NET to a remote service. Default: 2.<br />
 		///     This is an app-wide (global on the .Net Framework level) setting.
 		/// </summary>
@@ -55,6 +70,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 			}
 		}
 
+		private TimeSpan? timeout;
 		private int? dotNetDefaultConnectionLimit;
 		private bool? isDotNetDisableWaitForConnectConfirm;
 		private bool? isDotNetDisableNagleAlgorithm;

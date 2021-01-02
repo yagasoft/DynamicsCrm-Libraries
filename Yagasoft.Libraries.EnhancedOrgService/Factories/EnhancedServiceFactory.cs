@@ -10,6 +10,8 @@ using System.Threading;
 using Microsoft.Xrm.Client.Caching;
 using Microsoft.Xrm.Client.Services;
 using Microsoft.Xrm.Sdk;
+using Microsoft.Xrm.Sdk.Client;
+using Microsoft.Xrm.Sdk.WebServiceClient;
 using Microsoft.Xrm.Tooling.Connector;
 using Yagasoft.Libraries.Common;
 using Yagasoft.Libraries.EnhancedOrgService.Cache;
@@ -141,6 +143,13 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 		{
 			IOrganizationService service = null;
 
+			var timeout = Parameters.ConnectionParams.Timeout;
+
+			if (timeout != null)
+			{
+				CrmServiceClient.MaxConnectionTimeout = timeout.Value;
+			}
+
 			if (serviceCloneBase == null)
 			{
 				service = customServiceFactory(Parameters.ConnectionParams.ConnectionString);
@@ -157,7 +166,22 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 				service = null;
 			}
 
-			return service ?? customServiceFactory(Parameters.ConnectionParams.ConnectionString);
+			service ??= customServiceFactory(Parameters.ConnectionParams.ConnectionString);
+
+			if (timeout != null)
+			{
+				if (service is OrganizationServiceProxy proxyService)
+				{
+					proxyService.Timeout = timeout.Value;
+				}
+
+				if (service is OrganizationWebProxyClient webProxyService)
+				{
+					webProxyService.InnerChannel.OperationTimeout = timeout.Value;
+				}
+			}
+
+			return service;
 		}
 
 		internal virtual TServiceInterface CreateEnhancedServiceInternal(bool isInitialiseCrmServices = true, int threads = 1)
