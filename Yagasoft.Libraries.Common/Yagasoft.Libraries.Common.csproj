@@ -138,6 +138,9 @@
   <ItemGroup>
     <None Include="nuget-access-key.txt" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="Scripts\ys_RichEditor.html" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>IF "$(ConfigurationName)" == "Release" (

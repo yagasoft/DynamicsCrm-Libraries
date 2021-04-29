@@ -1,6 +1,7 @@
 ﻿#region Imports
 
 using Yagasoft.Libraries.Common;
+using Yagasoft.Libraries.EnhancedOrgService.Pools;
 
 #endregion
 
@@ -54,7 +55,24 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 			}
 		}
 
-		/// <summary>
+	    /// <summary>
+	    ///     When a <see cref="IEnhancedServicePool{TService}.GetService" /> is passed a number of threads,
+	    ///     an internally managed pool is created this service only.
+	    ///     Enable this option to pre-create all connections (same as thread count);
+	    ///     otherwise, connections are created when needed only.<br />
+	    ///     Default value: false.
+	    /// </summary>
+	    public bool? IsEnableSelfPoolingWarmUp
+	    {
+	        get => isSelfPoolingWarmUp;
+	        set
+	        {
+	            ValidateLock();
+	            isSelfPoolingWarmUp = value;
+	        }
+	    }
+
+	    /// <summary>
 		///     Bump up the min threads reserved for this app. Default: 4.<br />
 		///     This is an app-wide (global on the .Net Framework level) setting.
 		/// </summary>
@@ -72,6 +90,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 		private int? poolSize;
 		private int? tokenExpiryCheckSecs;
 		private int? dequeueTimeoutInMillis;
+		private bool? isSelfPoolingWarmUp;
 		private int? dotNetSetMinAppReservedThreads;
 	}
 }

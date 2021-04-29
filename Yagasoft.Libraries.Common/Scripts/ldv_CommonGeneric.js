@@ -1,7 +1,7 @@
 ﻿/// <reference path="Sdk.Soap.vsdoc.js" />
 /// <reference path="jquery-1.11.1.js" />
 /// <reference path="Sdk.Soap.vsdoc.js" />
-/// <reference path="xrm.page.365.d.ts" />
+/// <reference path="AnchoredExecutionContext.getFormContext().365.d.ts" />
 
 // Author: Ahmed Elsawalhy
 // Version: 1.11.6
@@ -16,10 +16,20 @@ window.onerror = function(msg, url, line)
 	console.log("Line number : " + line);
 };
 
+function SetAnchoredExecutionContext(executionContext)
+{
+    AnchoredExecutionContext = executionContext;
+}
+
+function BuildAnchoredExecutionContext(formContext)
+{
+    AnchoredExecutionContext = window.AnchoredExecutionContext || { getFormContext: () => formContext };
+}
+
 /////////////////////////////////////////////////////
 //#region >>>>>>>>> UI custom controls <<<<<<<<<<< //
 
-function LoadRichEditor(fieldName, suffix, callback)
+function LoadRichEditor(fieldName, suffix, callback, isDelayApplied)
 {
 	/// <summary>
 	///     Appends the rich editor frame to the specified field and hides the field using the DOM.<br />
@@ -34,7 +44,20 @@ function LoadRichEditor(fieldName, suffix, callback)
 		throw message;
 	}
 
-	suffix = suffix || '';
+    suffix = suffix || '';
+    const id = 'ckWysiwyg_' + suffix;
+
+    if ($('#' + id, parent.document).length > 0
+        || $('#' + id).length > 0)
+    {
+        return;
+    }
+
+	if (!isDelayApplied)
+    {
+        setTimeout(() => LoadRichEditor(fieldName, suffix, callback, true), 500);
+        return;
+    }
 
 	var fieldContainer = GetInsertionRow(fieldName);
 
@@ -45,12 +68,14 @@ function LoadRichEditor(fieldName, suffix, callback)
 
 	var isSkipFireOnChange = false;
 
-	var editorJsUrl = Xrm.Page.context.getClientUrl() + '/WebResources/ldv_/CkRichEditor/ckeditor.js';
+	var editorJsUrl = Xrm.Utility.getGlobalContext().getClientUrl() + '/WebResources/ldv_/CkRichEditor/ckeditor.js';
+
+    fieldContainer.hide();
 
     // add the control that is going to be replaced by CK Editor
-	fieldContainer.before('<tr><td colspan="2">' +
-		'<textarea name="ckWysiwyg_' + suffix + '" id="ckWysiwyg_' + suffix + '"></textarea>' +
-		'</td></tr>');
+	fieldContainer.after('<div>' +
+		'<textarea name="' + id + '" id="' + id + '"></textarea>' +
+		'</div>');
 
 	// load CKEditor script
 	var headTag = parent.document.getElementsByTagName("head")[0];
@@ -61,9 +86,9 @@ function LoadRichEditor(fieldName, suffix, callback)
 	// form the editor and its events
 	jqTag.onload = function ()
 	{
-		parent.CKEDITOR.replace('ckWysiwyg_' + suffix);
+		parent.CKEDITOR.replace(id);
 
-		var editor = parent.CKEDITOR.dom.element.get('ckWysiwyg_' + suffix).getEditor();
+		var editor = parent.CKEDITOR.dom.element.get(id).getEditor();
 
 		if (editor)
 		{
@@ -77,7 +102,7 @@ function LoadRichEditor(fieldName, suffix, callback)
 					return;
 				}
 
-				parent.CKEDITOR.instances['ckWysiwyg_' + suffix].setData(Xrm.Page.getAttribute(fieldName).getValue());
+				parent.CKEDITOR.instances[id].setData(AnchoredExecutionContext.getFormContext().getAttribute(fieldName).getValue());
 
                 var editorFindLoop =
 					function()
@@ -96,7 +121,7 @@ function LoadRichEditor(fieldName, suffix, callback)
 											setTimeout(
 												function()
 												{
-													Xrm.Page.data.save();
+													AnchoredExecutionContext.getFormContext().data.save();
 												}, 100);
 
 											event.preventDefault();
@@ -115,7 +140,7 @@ function LoadRichEditor(fieldName, suffix, callback)
 			};
 
 			// add an OnChange event to copy field data to editor
-            Xrm.Page.getAttribute(fieldName).addOnChange(setEditorData);
+            AnchoredExecutionContext.getFormContext().getAttribute(fieldName).addOnChange(setEditorData);
 
 			setEditorData();
 
@@ -123,10 +148,10 @@ function LoadRichEditor(fieldName, suffix, callback)
 			editor.on('change',
 				function ()
 				{
-                    Xrm.Page.getAttribute(fieldName).setValue(editor.getData());
+                    AnchoredExecutionContext.getFormContext().getAttribute(fieldName).setValue(editor.getData());
 					// prevent looping
 					isSkipFireOnChange = true;
-                    Xrm.Page.getAttribute(fieldName).fireOnChange();
+                    AnchoredExecutionContext.getFormContext().getAttribute(fieldName).fireOnChange();
 				});
 		}
 
@@ -137,47 +162,6 @@ function LoadRichEditor(fieldName, suffix, callback)
 	};
 
     headTag.appendChild(jqTag);
-
-	var hide = function(fieldName)
-	{
-		var fieldContainer = GetFieldContainer(fieldName);
-
-		if (fieldContainer == null)
-		{
-			return;
-		}
-
-		var found = false;
-		var set = false;
-		var trs = $('tr', fieldContainer.parent());
-
-		trs.each(function(tr)
-		{
-			if (set)
-			{
-				return;
-			}
-
-			if (trs[tr].innerHTML === fieldContainer[0].innerHTML)
-			{
-				$(trs[tr]).hide();
-				found = true;
-				return;
-			}
-
-			if (found && !trs[tr].innerHTML)
-			{
-				$(trs[tr]).hide();
-			}
-
-			if (found && trs[tr].innerHTML)
-			{
-				set = true;
-			}
-		});
-	};
-
-	hide(fieldName);
 }
 
 var AdvancedFindMap = window.AdvancedFindMap || {};
@@ -228,7 +212,7 @@ function LoadAdvancedFind(fieldName, logicalName, height, entityNameFieldName)
 		parent.AdvancedFindMap = AdvancedFindMap;
 	}
 
-	var iFrameUrl = Xrm.Page.context.getClientUrl() + '/WebResources/ldv_AdvancedFindHtml#' + fieldName +
+	var iFrameUrl = Xrm.Utility.getGlobalContext().getClientUrl() + '/WebResources/ldv_AdvancedFindHtml#' + fieldName +
         '#' + logicalName + '#' + 5;
 
 	// insert editor frame right after the field as a new row
@@ -332,7 +316,7 @@ function LoadAutoAdvancedFind(fieldName, entityNameFieldName, height, callback)
 var MultiSelectPool = window.MultiSelectPool || {};
 
 function LoadMultiSelect(fieldName, options, title, height, callback, isSingleMode, isSkipSort, isKeepVisible,
-		isDisableFlowUi, isVisualiseIndent)
+		isDisableFlowUi, isVisualiseIndent, isDelayApplied)
 	{
 		/// <summary>
 		///     Appends the multi-select frame to the specified field using the DOM.<br />
@@ -376,7 +360,18 @@ function LoadMultiSelect(fieldName, options, title, height, callback, isSingleMo
 			throw message;
 		}
 
-		if (typeof options === "string" && !Xrm.Page.getAttribute(options))
+        var split = fieldName.split(':');
+        fieldName = split[0];
+        var controlSuffix = split[1];
+        var controlName = fieldName + (controlSuffix || '');
+
+        if ($('#multiSelectRow_' + controlName, parent.document).length > 0
+            || $('#multiSelectRow_' + controlName).length > 0)
+        {
+            return;
+        }
+
+		if (typeof options === "string" && !AnchoredExecutionContext.getFormContext().getAttribute(options))
 		{
 			var message = "Couldn't load options from field: '" + options + "'";
 			console.error(message);
@@ -389,12 +384,12 @@ function LoadMultiSelect(fieldName, options, title, height, callback, isSingleMo
 			throw message;
 		}
 
-		var split = fieldName.split(':');
-		fieldName = split[0];
-		var controlSuffix = split[1];
-		var controlName = fieldName + (controlSuffix || '');
-
-		RemoveMultiSelect(controlName);
+        if (!isDelayApplied)
+        {
+            setTimeout(() => LoadMultiSelect(fieldName, options, title, height, callback, isSingleMode, isSkipSort, isKeepVisible,
+                isDisableFlowUi, isVisualiseIndent, true), 500);
+            return;
+        }
 
 		var fieldContainer = GetInsertionRow(controlName);
 
@@ -416,18 +411,14 @@ function LoadMultiSelect(fieldName, options, title, height, callback, isSingleMo
 		{
 			MultiSelectPool[fieldName] = options;
 
-			if ($('#multiSelectRow_' + controlName, parent.document).length > 0
-				|| $('#multiSelectRow_' + controlName).length > 0)
-			{
-				return;
-			}
-
-			var iFrameUrl = Xrm.Page.context.getClientUrl() + '/WebResources/ldv_MultiSelectHtml#' + fieldName +
+			var iFrameUrl = Xrm.Utility.getGlobalContext().getClientUrl() + '/WebResources/ldv_MultiSelectHtml#' + fieldName +
 				'#' + encodeURI(title) + '#' + (height || 200) + '#' + (isSingleMode === true) + '#' + (isSkipSort === true) +
 				'#' + (isDisableFlowUi === true) + '#' + (isVisualiseIndent === true);
 
+            fieldContainer.hide();
+
 			// insert editor frame right after the field as a new row
-			fieldContainer.before('<tr id="multiSelectRow_' + controlName + '"><td colspan="2">' +
+			fieldContainer.after('<div id="multiSelectRow_' + controlName + '">' +
 				// auto size iFrame
 				'<script type="text/javascript">' +
 				'function AutoSizeMultiSelect(controlName) {' +
@@ -435,12 +426,12 @@ function LoadMultiSelect(fieldName, options, title, height, callback, isSingleMo
 				'if (!document.getElementById("multiSelectFrame_' + controlName + '")' +
 				' || !document.getElementById("multiSelectFrame_' + controlName + '").contentWindow' +
 				' || !document.getElementById("multiSelectFrame_' + controlName + '").contentWindow.IsFrameLoaded) {' +
-				'setTimeout(function () { AutoSizeMultiSelect(controlName); }, 200);' +
+				'setTimeout(function () { AutoSizeMultiSelect(controlName); }, 50);' +
 				'return;' +
 				'}' +
 				// resize frame to the editor size + 5 for padding
 				'setTimeout(function() { $("#multiSelectFrame_" + controlName).height($("body",' +
-				' $("#multiSelectFrame_" + controlName).contents()).height() + 17); }, 1000);' +
+				' $("#multiSelectFrame_" + controlName).contents()).height() + 17); }, 300);' +
 				'}' +
 				// add an event for window resize
 				'$(window).resize(function () { AutoSizeMultiSelect("' + controlName + '"); });' +
@@ -450,50 +441,12 @@ function LoadMultiSelect(fieldName, options, title, height, callback, isSingleMo
 				'" onload="AutoSizeMultiSelect(\'' + controlName + '\')" src="' +
 				iFrameUrl +
 				'" frameborder="0" scrolling="no"></iframe>' +
-				'</td></tr>');
+				'</div>');
 
-			var hide = function()
-			{
-				if (!isKeepVisible)
-				{
-					var fieldContainer = GetFieldContainer(controlName);
-
-					if (fieldContainer == null)
-					{
-						return;
-					}
-
-					var found = false;
-					var trs = $('tr', fieldContainer.parent());
-
-					for (var i = 0; i < trs.length; i++)
-					{
-						if (trs[i].innerHTML === fieldContainer[0].innerHTML)
-						{
-							$(trs[i]).hide();
-							found = true;
-							continue;
-						}
-
-						if (found && !trs[i].innerHTML)
-						{
-							$(trs[i]).hide();
-						}
-
-						if (found && trs[i].innerHTML)
-						{
-							break;
-						}
-					}
-				}
-
-				if (callback)
-				{
-					setTimeout(callback, 500);
-				}
-			};
-
-			hide();
+            if (callback)
+            {
+                setTimeout(callback, 500);
+            }
 		};
 
 		// process relationship if passed as param
@@ -556,7 +509,7 @@ function LoadMultiSelect(fieldName, options, title, height, callback, isSingleMo
 		}
 		else
 		{
-			setTimeout(buildControl, 200);
+			setTimeout(buildControl, 10);
 		}
 	}
 
@@ -618,29 +571,8 @@ function RemoveMultiSelect(fieldName, callback, isKeepHidden)
 				return;
 			}
 
-			var found = false;
-			var trs = $('tr', fieldContainer.parent());
-
-			for (var i = 0; i < trs.length; i++)
-			{
-				if (trs[i].innerHTML === fieldContainer[0].innerHTML)
-				{
-					$(trs[i]).show();
-					found = true;
-					continue;
-				}
-
-				if (found && !trs[i].innerHTML)
-				{
-					$(trs[i]).show();
-				}
-
-				if (found && trs[i].innerHTML)
-				{
-					break;
-				}
-			}
-		}
+            fieldContainer.show();
+        }
 
 		if (callback)
 		{
@@ -651,30 +583,24 @@ function RemoveMultiSelect(fieldName, callback, isKeepHidden)
 	show();
 }
 
-function GetFieldContainer(fieldName)
+function GetFieldContainer(fieldName, tries)
 {
 	/// <summary>
 	/// Internal use only!
 	/// </summary>
 	// get field table row to insert frame after it later
-	var field = $('#' + fieldName + '_d');
 
-	// CRM 2016+
-	if (field.length <= 0)
-	{
-		field = $('#' + fieldName + '_d', parent.document);
-	}
+	if (tries <= 0)
+    {
+        return null;
+    }
 
-	var fieldContainer = field.parent();
+    var fieldContainer = $('[data-id="' + fieldName + (tries || '') + '"]').parent();
 
 	if (fieldContainer.length <= 0)
 	{
-		return null;
-	}
-
-	while (!fieldContainer.is('tr'))
-	{
-		fieldContainer = fieldContainer.parent();
+        tries = tries || 3;
+		return GetFieldContainer(fieldName, --tries);
 	}
 
 	return fieldContainer;
@@ -692,30 +618,6 @@ function GetInsertionRow(fieldName)
 		console.error("Error while creating frame: can't find field with name '" + fieldName + "'.");
 		return null;
 	}
-
-	var found = false;
-	var set = false;
-	var trs = $('tr', fieldContainer.parent());
-
-	trs.each(function(tr)
-	{
-		if (set)
-		{
-			return;
-		}
-
-		if (trs[tr].innerHTML === fieldContainer[0].innerHTML)
-		{
-			found = true;
-			return;
-		}
-
-		if (found && trs[tr].innerHTML)
-		{
-			fieldContainer = $(trs[tr]);
-			set = true;
-		}
-	});
 
 	return fieldContainer;
 }
@@ -1016,14 +918,14 @@ function ValidateDateFieldInFuture(fieldName, isResetDateOnError, dateErrorMsg)
 	/// </summary>
 
 	// get dates from the form
-	var startTime = Xrm.Page.getAttribute(fieldName).getValue();
+	var startTime = AnchoredExecutionContext.getFormContext().getAttribute(fieldName).getValue();
 
 	// make sure that the expected time is in the future
 	if (startTime && CompareDate(startTime, new Date()) > 0)
 	{
 		if (isResetDateOnError)
 		{
-			Xrm.Page.getAttribute(fieldName).setValue();
+			AnchoredExecutionContext.getFormContext().getAttribute(fieldName).setValue();
 		}
 
 		ShowControlError(fieldName, dateErrorMsg ||
@@ -1047,8 +949,8 @@ function ValidateDateFieldsOrder(initialFieldName, nextFieldName, isResetEndDate
 	/// </summary>
 
 	// get dates from the form
-		var startTime = Xrm.Page.getAttribute(initialFieldName).getValue();
-		var endTime = Xrm.Page.getAttribute(nextFieldName).getValue();
+		var startTime = AnchoredExecutionContext.getFormContext().getAttribute(initialFieldName).getValue();
+		var endTime = AnchoredExecutionContext.getFormContext().getAttribute(nextFieldName).getValue();
 
 		if (!startTime && !endTime)
 		{
@@ -1061,7 +963,7 @@ function ValidateDateFieldsOrder(initialFieldName, nextFieldName, isResetEndDate
 		{
 			if (isResetEndDateOnError)
 			{
-				Xrm.Page.getAttribute(nextFieldName).setValue();
+				AnchoredExecutionContext.getFormContext().getAttribute(nextFieldName).setValue();
 			}
 
 			ShowControlError(nextFieldName, startDateMissingErrorMsg ||
@@ -1074,7 +976,7 @@ function ValidateDateFieldsOrder(initialFieldName, nextFieldName, isResetEndDate
 		{
 			if (isResetEndDateOnError)
 			{
-				Xrm.Page.getAttribute(nextFieldName).setValue();
+				AnchoredExecutionContext.getFormContext().getAttribute(nextFieldName).setValue();
 			}
 
 			ShowControlError(nextFieldName, endDateBeforeStartErrorMsg ||
@@ -1090,9 +992,9 @@ function ValidateDateFieldsOrder(initialFieldName, nextFieldName, isResetEndDate
 
 function ValidateArabicCharacters(fieldname)
 {
-	Xrm.Page.getControl(fieldname).clearNotification();
+	AnchoredExecutionContext.getFormContext().getControl(fieldname).clearNotification();
 
-	var e = Xrm.Page.getAttribute(fieldname).getValue();
+	var e = AnchoredExecutionContext.getFormContext().getAttribute(fieldname).getValue();
 
 	if (e)
 	{
@@ -1105,8 +1007,8 @@ function ValidateArabicCharacters(fieldname)
 			if ((unicode < 0x0600 || unicode > 0x06FF) || (unicode >= 0xFE70 && unicode <= 0xFEFF))
 			{
 				var message = "You must enter a valid arabic letters.";
-				Xrm.Page.getControl(fieldname).setNotification(message);
-				Xrm.Page.getControl(fieldname).setFocus();
+				AnchoredExecutionContext.getFormContext().getControl(fieldname).setNotification(message);
+				AnchoredExecutionContext.getFormContext().getControl(fieldname).setFocus();
 				return false;
 			}
 		}
@@ -1118,27 +1020,27 @@ function ValidateArabicCharacters(fieldname)
 
 function ValidateEnglishCharacters(fieldname)
 {
-	Xrm.Page.getControl(fieldname).clearNotification();
+	AnchoredExecutionContext.getFormContext().getControl(fieldname).clearNotification();
 
-	if (Xrm.Page.getAttribute(fieldname).getValue() == null)
+	if (AnchoredExecutionContext.getFormContext().getAttribute(fieldname).getValue() == null)
 	{
 		return true;
 	}
 	else
 	{
 		var english = /^[A-Za-z0-9]*$/;
-		var fld = Xrm.Page.getAttribute(fieldname).getValue().replace(/\s/g, '');
+		var fld = AnchoredExecutionContext.getFormContext().getAttribute(fieldname).getValue().replace(/\s/g, '');
 
 		if (fld != null && !english.test(fld))
 		{
 			var message = "You must enter a valid English letters.";
-			Xrm.Page.getControl(fieldname).setNotification(message);
-			Xrm.Page.getControl(fieldname).setFocus();
+			AnchoredExecutionContext.getFormContext().getControl(fieldname).setNotification(message);
+			AnchoredExecutionContext.getFormContext().getControl(fieldname).setFocus();
 			return false;
 		}
 		else
 		{
-			Xrm.Page.getControl(fieldname).clearNotification();
+			AnchoredExecutionContext.getFormContext().getControl(fieldname).clearNotification();
 		}
 
 		return true;
@@ -1165,17 +1067,17 @@ function SetFormNotification(englishMessage, arabicMessage, level, id)
 	/// Use the 'NotificationLevel' object to pass the notification level.<br />
 	///     Author: Ahmed elSawalhy
 	/// </summary>
-	var language = Xrm.Page.context.getUserLcid();
+	var language = Xrm.Utility.getGlobalContext().getUserLcid();
 
 	ClearFormNotification(id);
 
 	if (language === 1025)
 	{
-		Xrm.Page.ui.setFormNotification(arabicMessage || englishMessage, level, id);
+		AnchoredExecutionContext.getFormContext().ui.setFormNotification(arabicMessage || englishMessage, level, id);
 	}
 	else
 	{
-		Xrm.Page.ui.setFormNotification(englishMessage || arabicMessage, level, id);
+		AnchoredExecutionContext.getFormContext().ui.setFormNotification(englishMessage || arabicMessage, level, id);
 	}
 
 	FormNotifications.push(id);
@@ -1194,7 +1096,7 @@ function ClearFormNotification(id)
 		return;
 	}
 
-	Xrm.Page.ui.clearFormNotification(id);
+	AnchoredExecutionContext.getFormContext().ui.clearFormNotification(id);
 	FormNotifications.splice(index, 1);
 }
 
@@ -1212,12 +1114,12 @@ function ClearFormNotifications()
 
 function ShowControlError(controlName, message)
 {
-	Xrm.Page.getControl(controlName).setNotification(message);
+	AnchoredExecutionContext.getFormContext().getControl(controlName).setNotification(message);
 }
 
 function ClearControlError(controlName)
 {
-	Xrm.Page.getControl(controlName).clearNotification();
+	AnchoredExecutionContext.getFormContext().getControl(controlName).clearNotification();
 }
 
 //#endregion
@@ -1241,7 +1143,7 @@ function GetFormType()
 	///     Returns the form type. 'FormType' global object can be used to compare values.<br />
 	///     Author: Ahmed Elsawalhy
 	/// </summary>
-	return Xrm.Page.ui.getFormType();
+	return AnchoredExecutionContext.getFormContext().ui.getFormType();
 }
 
 function SetFormLocked(locked, exceptions)
@@ -1251,13 +1153,13 @@ function SetFormLocked(locked, exceptions)
 	/// credit: http://crmexplorer.com/2011/11/disable-wnable-fields-sections-tabs-and-the-whole-form-in-crm-2011/ <br />
 	///     Author: Ahmed Elsawalhy
 	/// </summary>
-	var attributes = Xrm.Page.data.entity.attributes.get();
+	var attributes = AnchoredExecutionContext.getFormContext().data.entity.attributes.get();
 
 	for (var i in attributes)
 	{
 		if (attributes.hasOwnProperty(i))
 		{
-			var attribute = Xrm.Page.data.entity.attributes.get(attributes[i].getName());
+			var attribute = AnchoredExecutionContext.getFormContext().data.entity.attributes.get(attributes[i].getName());
 			var name = attribute.getName();
 
 			try
@@ -1281,7 +1183,7 @@ function IsFormDirty()
 	///     Author: Ahmed Elsawalhy
 	/// </summary>
 	/// <returns type="bool">'true' if there is an unsaved value.</returns>
-	return Xrm.Page.data.entity.getIsDirty();
+	return AnchoredExecutionContext.getFormContext().data.entity.getIsDirty();
 }
 
 var SaveMode = {
@@ -1300,7 +1202,7 @@ function SaveForm(saveMode)
 	///     [OPTIONAL=SaveMode.Default]Save mode to set.
 	///     Accepts 'SaveMode' type.
 	/// </param>
-	Xrm.Page.data.entity.save(saveMode);
+	AnchoredExecutionContext.getFormContext().data.entity.save(saveMode);
 }
 
 function GetFormTabNames()
@@ -1311,7 +1213,7 @@ function GetFormTabNames()
 	/// </summary>
 	/// <param name="tabname" type="String" optional="false">Tab name.</param>
 	/// <param name="required" type="bool" optional="false">'true' to set fields as required.</param>
-	var tabs = Xrm.Page.ui.tabs.get();
+	var tabs = AnchoredExecutionContext.getFormContext().ui.tabs.get();
 	var tabNames = [];
 
 	if (tabs != null)
@@ -1331,7 +1233,7 @@ function GetFormFieldNames()
 	///     Returns all form field names as an array.<br />
 	///     Author: Ahmed Elsawalhy
 	/// </summary>
-	var attributes = Xrm.Page.data.entity.attributes.get();
+	var attributes = AnchoredExecutionContext.getFormContext().data.entity.attributes.get();
 	var attributeNames = [];
 
 	for (var i in attributes)
@@ -1347,12 +1249,12 @@ function GetFormFieldNames()
 
 function GetFormId()
 {
-	return Xrm.Page.ui.formSelector.getCurrentItem().getId();
+	return AnchoredExecutionContext.getFormContext().ui.formSelector.getCurrentItem().getId();
 }
 
 function RefreshFormData()
 {
-	Xrm.Page.data.refresh();
+	AnchoredExecutionContext.getFormContext().data.refresh();
 }
 
 //#endregion
@@ -1361,7 +1263,7 @@ function RefreshFormData()
 
 function SetTabLabel(tabName, label)
 {
-	Xrm.Page.ui.tabs.get(tabName).setLabel(label);
+	AnchoredExecutionContext.getFormContext().ui.tabs.get(tabName).setLabel(label);
 }
 
 function GetTabSectionNames(tabname)
@@ -1371,7 +1273,7 @@ function GetTabSectionNames(tabname)
 	///     Author: Ahmed Elsawalhy
 	/// </summary>
 	/// <param name="tabname" type="String" optional="false">Tab name.</param>
-	var tab = Xrm.Page.ui.tabs.get(tabname);
+	var tab = AnchoredExecutionContext.getFormContext().ui.tabs.get(tabname);
 	var sectionNames = [];
 
 	if (tabname != null && tab != null)
@@ -1387,7 +1289,7 @@ function GetTabSectionNames(tabname)
 
 function GetTab(tabName)
 {
-	return Xrm.Page.ui.tabs.get(tabName);
+	return AnchoredExecutionContext.getFormContext().ui.tabs.get(tabName);
 }
 
 function SetTabVisible(tabName, visible)
@@ -1422,7 +1324,7 @@ function SetTabRequired(tabname, required)
 	/// </summary>
 	/// <param name="tabname" type="String" optional="false">Tab name.</param>
 	/// <param name="required" type="bool" optional="false">'true' to set fields as required.</param>
-	var tab = Xrm.Page.ui.tabs.get(tabname);
+	var tab = AnchoredExecutionContext.getFormContext().ui.tabs.get(tabname);
 	if (tabname != null && tab != null)
 	{
 		tab.sections.get().forEach(function(section)
@@ -1465,7 +1367,7 @@ function SetTabLocked(tabname, locked)
 	/// </summary>
 	/// <param name="tabname" type="String" optional="false">Tab name.</param>
 	/// <param name="locked" type="bool" optional="false">'true' to lock fields.</param>
-	var tab = Xrm.Page.ui.tabs.get(tabname);
+	var tab = AnchoredExecutionContext.getFormContext().ui.tabs.get(tabname);
 	if (tabname != null && tab != null)
 	{
 		tab.sections.get().forEach(function(section)
@@ -1512,7 +1414,7 @@ function GetSectionFieldNames(tabname, sectionName)
 	/// </summary>
 	/// <param name="tabname" type="String" optional="false">Tab name.</param>
 	/// <param name="sectionName" type="String" optional="false">Section name.</param>
-	var tab = Xrm.Page.ui.tabs.get(tabname);
+	var tab = AnchoredExecutionContext.getFormContext().ui.tabs.get(tabname);
 	var attributeNames = [];
 
 	if (tabname != null && tab != null)
@@ -1574,7 +1476,7 @@ function SetSectionRequired(tabname, sectionName, required)
 	/// <param name="tabname" type="String" optional="false">Tab name.</param>
 	/// <param name="sectionName" type="String" optional="false">Section name.</param>
 	/// <param name="required" type="bool" optional="false">'true' to set fields as required.</param>
-	var tab = Xrm.Page.ui.tabs.get(tabname);
+	var tab = AnchoredExecutionContext.getFormContext().ui.tabs.get(tabname);
 	if (tabname != null && tab != null)
 	{
 		var section = tab.sections.get(sectionName);
@@ -1621,7 +1523,7 @@ function SetSectionLocked(tabname, sectionName, locked)
 	/// <param name="tabname" type="String" optional="false">Tab name.</param>
 	/// <param name="sectionName" type="String" optional="false">Section name.</param>
 	/// <param name="locked" type="bool" optional="false">'true' to lock fields.</param>
-	var tab = Xrm.Page.ui.tabs.get(tabname);
+	var tab = AnchoredExecutionContext.getFormContext().ui.tabs.get(tabname);
 	if (tabname != null && tab != null)
 	{
 		var section = tab.sections.get(sectionName);
@@ -1665,7 +1567,7 @@ function SetSectionsLocked(sections, locked)
 
 function GetField(name)
 {
-	return Xrm.Page.getAttribute(name);
+	return AnchoredExecutionContext.getFormContext().getAttribute(name);
 }
 
 function GetFieldFromContext(context)
@@ -1711,7 +1613,7 @@ function SetLookupValue(name, id, text, entityLogicalName)
 				entityType: entityLogicalName
 			}];
 
-	Xrm.Page.getAttribute(name).setValue(value);
+	AnchoredExecutionContext.getFormContext().getAttribute(name).setValue(value);
 }
 
 function ClearFieldValue(name, fireOnChange)
@@ -1745,7 +1647,7 @@ function SetFieldSubmitMode(fieldName, submitMode)
 	///     Accepts 'SubmitMode' type.
 	/// </param>
 	submitMode = submitMode || SubmitMode.Dirty;
-	Xrm.Page.getAttribute(fieldName).setSubmitMode(submitMode);
+	AnchoredExecutionContext.getFormContext().getAttribute(fieldName).setSubmitMode(submitMode);
 }
 
 function IsFieldDirty(name)
@@ -1755,17 +1657,17 @@ function IsFieldDirty(name)
 
 function IsFieldVisible(name)
 {
-	return Xrm.Page.getControl(name).getVisible();
+	return AnchoredExecutionContext.getFormContext().getControl(name).getVisible();
 }
 
 function IsFieldLocked(name)
 {
-	return Xrm.Page.getControl(name).getDisabled();
+	return AnchoredExecutionContext.getFormContext().getControl(name).getDisabled();
 }
 
 function IsFieldRequired(name)
 {
-	return Xrm.Page.getAttribute(name).getRequiredLevel() === "required";
+	return AnchoredExecutionContext.getFormContext().getAttribute(name).getRequiredLevel() === "required";
 }
 
 function SetFieldsVisible(fields, visible)
@@ -1812,23 +1714,23 @@ function SetFieldsLocked(fields, locked)
 
 function SetFieldVisible(name, visible)
 {
-	ApplyActionToField(name, Xrm.Page.getControl, 'setVisible', visible);
+	ApplyActionToField(name, 'AnchoredExecutionContext.getFormContext().getControl("{arg}")', 'setVisible', visible);
 }
 
 function SetFieldLocked(name, locked)
 {
-	ApplyActionToField(name, Xrm.Page.getControl, 'setDisabled', locked);
+	ApplyActionToField(name, 'AnchoredExecutionContext.getFormContext().getControl("{arg}")', 'setDisabled', locked);
 }
 
 function SetFieldRequired(name, required)
 {
 	if (required)
 	{
-		ApplyActionToField(name, Xrm.Page.getAttribute, 'setRequiredLevel', 'required');
+		ApplyActionToField(name, 'AnchoredExecutionContext.getFormContext().getAttribute("{arg}")', 'setRequiredLevel', 'required');
 	}
 	else
 	{
-		ApplyActionToField(name, Xrm.Page.getAttribute, 'setRequiredLevel', 'none');
+		ApplyActionToField(name, 'AnchoredExecutionContext.getFormContext().getAttribute("{arg}")', 'setRequiredLevel', 'none');
 	}
 }
 
@@ -1841,7 +1743,7 @@ function ApplyActionToField(name, fetchFunction, action, value)
 	var index = 0;
 	var indexedName = name;
 
-	while (control = fetchFunction(indexedName))
+	while (control = eval(fetchFunction.replace('{arg}', indexedName)))
     {
 		control[action](value);
 		indexedName = name + (++index);
@@ -1890,7 +1792,7 @@ function AddOptionSetValues(optionSetName, values, isClearFirst)
 	///     Add the values given to the option-set. The values should be in the format
 	///     '[{value: value, text: text}].
 	/// </summary>
-	var optionSet = Xrm.Page.ui.controls.get(optionSetName);
+	var optionSet = AnchoredExecutionContext.getFormContext().ui.controls.get(optionSetName);
 
 	if (optionSet != null)
 	{
@@ -1908,7 +1810,7 @@ function AddOptionSetValues(optionSetName, values, isClearFirst)
 
 function ClearOptionSetValues(optionSetName)
 {
-	var optionSet = Xrm.Page.ui.controls.get(optionSetName);
+	var optionSet = AnchoredExecutionContext.getFormContext().ui.controls.get(optionSetName);
 
 	if (optionSet != null)
 	{
@@ -1921,7 +1823,7 @@ function RemoveOptionSetValues(optionSetName, values)
 	/// <summary>
 	///     Removes the values given from the option-set.
 	/// </summary>
-	var optionSet = Xrm.Page.ui.controls.get(optionSetName);
+	var optionSet = AnchoredExecutionContext.getFormContext().ui.controls.get(optionSetName);
 
 	if (optionSet != null)
 	{
@@ -1938,12 +1840,12 @@ function RemoveOptionSetValues(optionSetName, values)
 
 function GetSelectedStage()
 {
-	return Xrm.Page.data.process.getSelectedStage();
+	return AnchoredExecutionContext.getFormContext().data.process.getSelectedStage();
 }
 
 function GetActiveStage()
 {
-	return Xrm.Page.data.process.getActiveStage();
+	return AnchoredExecutionContext.getFormContext().data.process.getActiveStage();
 }
 
 function SetHeaderFieldVisible(name, visible, checkCount, suffix)
@@ -2019,12 +1921,12 @@ function SetHeaderFieldRequired(name, required, checkCount, suffix)
 
 function GetHeaderFieldControl(name)
 {
-	return Xrm.Page.getControl('header_process_' + name);
+	return AnchoredExecutionContext.getFormContext().getControl('header_process_' + name);
 }
 
 function SetBpfVisible(isVisible)
 {
-	Xrm.Page.ui.process.setVisible(isVisible);
+	AnchoredExecutionContext.getFormContext().ui.process.setVisible(isVisible);
 }
 
 //#endregion
@@ -2033,7 +1935,7 @@ function SetBpfVisible(isVisible)
 
 function GetControl(name)
 {
-	return Xrm.Page.getControl(name);
+	return AnchoredExecutionContext.getFormContext().getControl(name);
 }
 
 function GetControlValue(name)
@@ -2044,7 +1946,7 @@ function GetControlValue(name)
 function SetSubgridLocked(gridName, isLocked)
 {
 	// updated to use 2016 function -- Sawalhy
-	Xrm.Page.getControl(gridName).addOnLoad(function()
+	AnchoredExecutionContext.getFormContext().getControl(gridName).addOnLoad(function()
 	{
 		$('#' + gridName + '_addImageButton').css('display', isLocked ? 'none' : '');
 		$('#' + gridName + '_openAssociatedGridViewImageButton').css('display', isLocked ? 'none' : '');
@@ -2072,7 +1974,7 @@ function SetSubgridLocked(gridName, isLocked)
 
 function RefreshSubGrid(gridName)
 {
-	Xrm.Page.getControl(gridName).refresh();
+	AnchoredExecutionContext.getFormContext().getControl(gridName).refresh();
 }
 
 //#endregion
@@ -2698,7 +2600,7 @@ function RefreshOnNotDirty()
 			}
 			else
 			{
-				Xrm.Utility.openEntityForm(GetEntityName(), GetRecordId());
+				Xrm.Navigation.openForm(GetEntityName(), GetRecordId());
 			}
 		}, 100);
 }
@@ -2709,12 +2611,12 @@ function GoToRecord(entityName, recordId)
 	///     Author: Ahmed Elsawalhy
 	/// </summary>
 
-	Xrm.Utility.openEntityForm(entityName, recordId);
+	Xrm.Navigation.openForm(entityName, recordId);
 }
 
 function GetOrgUrl()
 {
-	return Xrm.Page.context.getClientUrl();
+	return Xrm.Utility.getGlobalContext().getClientUrl();
 }
 
 var CrmVersion = {
@@ -2735,12 +2637,12 @@ function GetCrmVersion()
 		return CrmVersion._2016;
 	}
 
-	if (Xrm.Page.context['isOutlookClient'])
+	if (Xrm.Utility.getGlobalContext()['isOutlookClient'])
 	{
 		return CrmVersion._2015;
 	}
 
-	if (Xrm.Page.ui['setFormNotification'])
+	if (AnchoredExecutionContext.getFormContext().ui['setFormNotification'])
 	{
 		return CrmVersion._2013;
 	}
@@ -2754,7 +2656,7 @@ function GetRecordId(isClean)
 	///     Returns the current record ID. Cleaning removes the braces around the ID if required.<br />
 	///     Author: Ahmed Elsawalhy
 	/// </summary>
-	var id = Xrm.Page.data.entity.getId();
+	var id = AnchoredExecutionContext.getFormContext().data.entity.getId();
 	return isClean ? id.replace('{', '').replace('}', '') : id;
 }
 
@@ -2764,7 +2666,7 @@ function GetUserId(isClean)
 	///     Returns the current user's ID. Cleaning removes the braces around the ID if required.<br />
 	///     Author: Ahmed Elsawalhy
 	/// </summary>
-	var id = Xrm.Page.context.getUserId();
+	var id = Xrm.Utility.getGlobalContext().getUserId();
 	return isClean ? id.replace('{', '').replace('}', '') : id;
 }
 
@@ -2779,12 +2681,12 @@ function GetUserLanguageCode()
 	///     Returns the language code of the current user's interface. Use 'Language' for easy comparison.<br />
 	///     Author: Ahmed Elsawalhy
 	/// </summary>
-	return Xrm.Page.context.getUserLcid();
+	return Xrm.Utility.getGlobalContext().getUserLcid();
 }
 
 function UserHasRole(roleName)
 {
-	var url = Xrm.Page.context.getClientUrl();
+	var url = Xrm.Utility.getGlobalContext().getClientUrl();
 	var oDataEndpointUrl = url + "/XRMServices/2011/OrganizationData.svc/";
 	oDataEndpointUrl += "RoleSet?$filter=Name eq '" + roleName + "'";
 
@@ -2807,7 +2709,7 @@ function UserHasRole(roleName)
 
 				var id = role.RoleId;
 
-				var currentUserRoles = Xrm.Page.context.getUserRoles();
+				var currentUserRoles = Xrm.Utility.getGlobalContext().getUserRoles();
 
 				for (var i = 0; i < currentUserRoles.length; i++)
 				{
@@ -2830,7 +2732,7 @@ function UserHasRoleId(roleId)
 	/// <summary>
 	///     Author: Ahmed Elsawalhy
 	/// </summary>
-	var currentUserRoles = Xrm.Page.context.getUserRoles();
+	var currentUserRoles = Xrm.Utility.getGlobalContext().getUserRoles();
 
 	for (var i = 0; i < currentUserRoles.length; i++)
 	{
@@ -2854,7 +2756,7 @@ function CanUserEditRecord(ownerId, entitySetName, recordId, callback, errorCall
 		type: "GET",
 		contentType: "application/json; charset=utf-8",
 		datatype: "json",
-		url: Xrm.Page.context.getClientUrl() + "/api/data/v8.2/systemusers(" + ownerId + ")/Microsoft.Dynamics.CRM.RetrievePrincipalAccess(Target=@tid)?"
+		url: Xrm.Utility.getGlobalContext().getClientUrl() + "/api/data/v8.2/systemusers(" + ownerId + ")/Microsoft.Dynamics.CRM.RetrievePrincipalAccess(Target=@tid)?"
 			+ "@tid={'@odata.id':'" + entitySetName + "(" + recordId + ")'}",
 		beforeSend: function (xmlHttpRequest) {
 			xmlHttpRequest.setRequestHeader("OData-MaxVersion", "4.0");
@@ -2918,13 +2820,13 @@ function LoadWebResources(resources, callback, scopeWindow)
 		}
 	};
 
-	LoadScript(Xrm.Page.context.getClientUrl() + '/WebResources/' + resources[0], localCallback, scopeWindow);
+	LoadScript(Xrm.Utility.getGlobalContext().getClientUrl() + '/WebResources/' + resources[0], localCallback, scopeWindow);
 }
 
 function LoadWebResourceCss(fileName, scopeWindow)
 {
 	// modified it to be generic -- Sawalhy
-	LoadCss(Xrm.Page.context.getClientUrl() + '/WebResources/' + fileName, scopeWindow);
+	LoadCss(Xrm.Utility.getGlobalContext().getClientUrl() + '/WebResources/' + fileName, scopeWindow);
 }
 
 function IsValueUnique(entitySetName, primaryKey, fieldName, value, callback, errorCallback)
@@ -3039,7 +2941,7 @@ function RetrieveEntityById(entityWebApiName, id, fields, callback, errorCallbac
 	/// <param name="entityWebApiName" type="string">The name of the entity in the WebAPI service (special plural).</param>
 	/// <param name="fields" type="string[]">An array of field names to retrieve. If 'null', all will be retrieved.</param>
 	/// <param name="errorCallback" type="function">Error message will be passed as parameter.</param>
-	var clientUrl = Xrm.Page.context.getClientUrl();
+	var clientUrl = Xrm.Utility.getGlobalContext().getClientUrl();
 	var oDataPath = clientUrl + "/api/data/v8.1";
 
 	$.ajax({
@@ -3086,7 +2988,7 @@ function RetrieveRelatedEntities(entityWebApiName, relationName, relatedFields, 
 	/// <param name="relationName" type="string">Schema name of the relationship.</param>
 	/// <param name="relatedFields" type="string[]">An array of field names to retrieve. If 'null', all will be retrieved.</param>
 	/// <param name="errorCallback" type="function">Error message will be passed as parameter.</param>
-	var clientUrl = Xrm.Page.context.getClientUrl();
+	var clientUrl = Xrm.Utility.getGlobalContext().getClientUrl();
 	var oDataPath = clientUrl + "/api/data/v8.1";
 
 	$.ajax({
@@ -3125,7 +3027,7 @@ function RetrieveRelatedEntities(entityWebApiName, relationName, relatedFields, 
 function ODataRequestJSONParsed(oDataRequestString)
 {
 	var retrieveEventListsReq = new XMLHttpRequest();
-	var serverUrl = Xrm.Page.context.getClientUrl();
+	var serverUrl = Xrm.Utility.getGlobalContext().getClientUrl();
 	var oDataPath = serverUrl + "/XRMServices/2011/OrganizationData.svc";
 
 	oDataPath += oDataRequestString;
@@ -3175,11 +3077,11 @@ function OpenReportByParamaters(reportName, reportParameters)
 
 	if (result.results.length > 0)
 	{
-		var serverUrl = Xrm.Page.context.getClientUrl();
+		var serverUrl = Xrm.Utility.getGlobalContext().getClientUrl();
 		var rdlName = result.results[0].Name + ".rdl";
 		var reportGuid = result.results[0].ReportId.replace('{', '').replace('}', '');
-		var entityGuid = Xrm.Page.data.entity.getId();//Here I am getting Entity GUID it from it's form
-		var entityType = Xrm.Page.context.getQueryStringParameters().etc;
+		var entityGuid = AnchoredExecutionContext.getFormContext().data.entity.getId();//Here I am getting Entity GUID it from it's form
+		var entityType = Xrm.Utility.getGlobalContext().getQueryStringParameters().etc;
 		var link = serverUrl + "/crmreports/viewer/viewer.aspx?action=run&context=records&helpID=" + rdlName + "&id={" + reportGuid + "}&records=" + entityGuid + "&recordstype=" + entityType + reportParameters;
 		var randomnumber = Math.floor((Math.random() * 10000) + 1);
 		window.open(link, "reportwindow" + randomnumber, "resizable=1,width=950,height=700");
@@ -3190,7 +3092,7 @@ function OpenReportByParamaters(reportName, reportParameters)
 
 function GetEntityName()
 {
-	return Xrm.Page.data.entity.getEntityName();
+	return AnchoredExecutionContext.getFormContext().data.entity.getEntityName();
 }
 
 function GetEntityWebApiName(logicalName, callback, errorCallback)
@@ -3275,7 +3177,7 @@ function RetrieveEntityMetadata(logicalName, properties, condition, attributePro
 				type: "GET",
 				contentType: "application/json; charset=utf-8",
 				datatype: "json",
-				url: Xrm.Page.context.getClientUrl() + "/api/data/v8.1/EntityDefinitions?" +
+				url: Xrm.Utility.getGlobalContext().getClientUrl() + "/api/data/v8.1/EntityDefinitions?" +
 					(properties ? ("$select=" + properties) : '') +
 					(condition ? ((properties ? '&' : '') + "$filter=" + condition) : '') +
 					(attributeProperties
@@ -3433,7 +3335,7 @@ function RetrieveOptionSetValueLabel(entityName, fieldName, value, languageCode,
 					type: "GET",
 					contentType: "application/json; charset=utf-8",
 					datatype: "json",
-					url: Xrm.Page.context.getClientUrl() + "/api/data/v8.1/EntityDefinitions" +
+					url: Xrm.Utility.getGlobalContext().getClientUrl() + "/api/data/v8.1/EntityDefinitions" +
 						"(" + metadata[0].MetadataId + ")" +
 						"/Attributes" +
 						"(" + metadata[0].Attributes[0].MetadataId + ")" +
@@ -3519,7 +3421,7 @@ function RetrieveOptionSetValuesLabels(entityName, fieldName, callback, errorCal
 					type: "GET",
 					contentType: "application/json; charset=utf-8",
 					datatype: "json",
-					url: Xrm.Page.context.getClientUrl() + "/api/data/v8.1/EntityDefinitions" +
+					url: Xrm.Utility.getGlobalContext().getClientUrl() + "/api/data/v8.1/EntityDefinitions" +
 						"(" + metadata[0].MetadataId + ")" +
 						"/Attributes" +
 						"(" + metadata[0].Attributes[0].MetadataId + ")" +
@@ -4194,7 +4096,7 @@ Notify.add = function(message, level, uniqueId, buttons, durationSeconds)
 		if ($header.length > 0)
 		{
 			// Load the style sheet
-			var baseUrl = Xrm.Page.context.getClientUrl();
+			var baseUrl = Xrm.Utility.getGlobalContext().getClientUrl();
 			$("<link/>", { rel: "stylesheet", href: baseUrl + "/WebResources/mag_/css/notify.css" }).appendTo('head');
 
 			Notify._initialised = true;

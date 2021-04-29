@@ -3,7 +3,7 @@
 <package>
   <metadata>
     <id>Yagasoft.Libraries.Common</id>
-    <version>2.4.4</version>
+    <version>2.4.5</version>
     <authors>Ahmed Elsawalhy</authors>
     <owners>Ahmed Elsawalhy</owners>
     <projectUrl>https://github.com/yagasoft/DynamicsCrm-Libraries</projectUrl>
@@ -26,7 +26,7 @@
     </frameworkAssemblies>
     <references />
     <releaseNotes>
-      * 2.4.4
+      * 2.4.5
       Improved: performance and memory
       Fixed: issues
       * 2.4.3

@@ -99,9 +99,9 @@ namespace Yagasoft.Libraries.Plugins
 	{
 		protected override void ExecuteLogic()
 		{
-			var plan = executionContext.GetValue(codeActivity.ExecutionPlan).Decompress();
+			var plan = ExecutionContext.GetValue(codeActivity.ExecutionPlan).Decompress();
 			var result = ProcessOperations(plan);
-			executionContext.SetValue(codeActivity.SerialisedResult, result.Compress());
+			ExecutionContext.SetValue(codeActivity.SerialisedResult, result.Compress());
 		}
 
 		private readonly IDictionary<Guid, object> valueMap = new Dictionary<Guid, object>();
@@ -132,7 +132,7 @@ namespace Yagasoft.Libraries.Plugins
 						var plannedResponse = operation.Response;
 						ProcessValue(request);
 
-						var response = service.Execute(request);
+						var response = Service.Execute(request);
 
 						valueMap[plannedResponse.Id] = response;
 						ProcessValue(response, plannedResponse);

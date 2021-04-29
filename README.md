@@ -2,7 +2,7 @@
 
 [![Join the chat at https://gitter.im/yagasoft/DynamicsCrm-Libraries](https://badges.gitter.im/yagasoft/DynamicsCrm-Libraries.svg)](https://gitter.im/yagasoft/DynamicsCrm-Libraries?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-### Version: 5.2.1
+### Version: 5.3.1
 ---
 
 A collection of libraries for common and extended operations in Dynamics CRM development that gives power to the developer and saves time.
@@ -33,6 +33,11 @@ A collection of libraries for common and extended operations in Dynamics CRM dev
 
 ## Changes
 
+#### _v5.3.1 (2021-04-29)_
++ Added: [EnhancedOrgService] option to control service internal pool warm up
++ Improved: [Common] performance and memory
++ Fixed: [EnhancedOrgService] RetrieveMultiple helper not respecting the limit given
++ Fixed: [Common] issues
 #### _v5.2.1 (2021-01-02)_
 + Added: [EnhancedOrgService] connection timeout parameter
 #### _v5.1.4 (2020-12-27)_

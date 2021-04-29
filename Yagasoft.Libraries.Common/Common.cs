@@ -4251,7 +4251,7 @@ namespace Yagasoft.Libraries.Common
 		/// </summary>
 		public static bool IsFieldExistInEntity(IOrganizationService service, string entityName, string fieldName, string orgId)
 		{
-			var cacheKey = $"LinDev.Common.IsFieldExistInEntity|{entityName}|{fieldName}";
+			var cacheKey = $"Yagasoft.Common.IsFieldExistInEntity|{entityName}|{fieldName}";
 			var isExist = CacheHelpers.GetFromMemCache<bool?>(cacheKey, orgId);
 
 			if (isExist.HasValue)
@@ -4314,7 +4314,7 @@ namespace Yagasoft.Libraries.Common
 		/// </summary>
 		public static IDictionary<string, string> GetEntityNames(IOrganizationService service, string orgId)
 		{
-			var cacheKey = $"LinDev.Common.GetEntityNames";
+			var cacheKey = $"Yagasoft.Common.GetEntityNames";
 			var entityNames = CacheHelpers.GetFromMemCache<IDictionary<string, string>>(cacheKey, orgId);
 
 			if (entityNames != null)
@@ -4346,7 +4346,7 @@ namespace Yagasoft.Libraries.Common
 		/// </summary>
 		public static List<EntityMetadata> GetEntities(IOrganizationService service, string orgId, params string[] attributes)
 		{
-			var cacheKey = $"LinDev.Common.GetEntities|{attributes.Aggregate("", (a1, a2) => a1 + "," + a2)}";
+			var cacheKey = $"Yagasoft.Common.GetEntities|{attributes.Aggregate("", (a1, a2) => a1 + "," + a2)}";
 			var entities = CacheHelpers.GetFromMemCache<List<EntityMetadata>>(cacheKey, orgId);
 
 			if (entities != null)
@@ -4407,7 +4407,7 @@ namespace Yagasoft.Libraries.Common
 		/// </summary>
 		public static EntityMetadata GetEntity(IOrganizationService service, string logicalName, string orgId)
 		{
-			var cacheKey = $"LinDev.Common.GetEntity|{logicalName}";
+			var cacheKey = $"Yagasoft.Common.GetEntity|{logicalName}";
 			var entity = CacheHelpers.GetFromMemCache<EntityMetadata>(cacheKey, orgId);
 
 			if (entity != null)
@@ -4497,7 +4497,7 @@ namespace Yagasoft.Libraries.Common
 		/// </summary>
 		public static bool IsEntityExist(IOrganizationService service, string logicalName, string orgId)
 		{
-			var cacheKey = $"LinDev.Common.IsEntityExist|{logicalName}";
+			var cacheKey = $"Yagasoft.Common.IsEntityExist|{logicalName}";
 			var isExist = CacheHelpers.GetFromMemCache<bool?>(cacheKey, orgId);
 
 			if (isExist.HasValue)
@@ -4543,7 +4543,7 @@ namespace Yagasoft.Libraries.Common
 		public static T GetEntityAttribute<T>(IOrganizationService service, string entityName,
 			MetadataHelpers.EntityAttribute attribute, string orgId)
 		{
-			var cacheKey = $"LinDev.Common.GetEntityAttribute|{entityName}|{attribute}";
+			var cacheKey = $"Yagasoft.Common.GetEntityAttribute|{entityName}|{attribute}";
 			var attributeCached = CacheHelpers.GetFromMemCache<T>(cacheKey, orgId);
 
 			if (attributeCached != null)
@@ -4588,7 +4588,7 @@ namespace Yagasoft.Libraries.Common
 		public static EntityMetadata GetEntityAttributes(IOrganizationService service, string entityName,
 			string orgId, params MetadataHelpers.EntityAttribute[] attributes)
 		{
-			var cacheKey = $"LinDev.Common.GetEntityAttributes|{entityName}|"
+			var cacheKey = $"Yagasoft.Common.GetEntityAttributes|{entityName}|"
 				+ $"{attributes.Select(a => a.ToString()).Aggregate<string>((a1, a2) => a1 + "," + a2)}";
 			var attributesCached = CacheHelpers.GetFromMemCache<EntityMetadata>(cacheKey, orgId);
 
@@ -4634,7 +4634,7 @@ namespace Yagasoft.Libraries.Common
 		/// </summary>
 		public static string GetEntityNameUsingTypeCode(IOrganizationService service, int typeCode, string orgId)
 		{
-			var cacheKey = $"LinDev.Common.GetEntityNameUsingTypeCode|{typeCode}";
+			var cacheKey = $"Yagasoft.Common.GetEntityNameUsingTypeCode|{typeCode}";
 			var entityName = CacheHelpers.GetFromMemCache<string>(cacheKey, orgId);
 
 			if (entityName != null)
@@ -4690,7 +4690,7 @@ namespace Yagasoft.Libraries.Common
 		public static T GetFieldAttribute<T>(IOrganizationService service, string entityName, string fieldName,
 			MetadataHelpers.FieldAttribute attribute, string orgId)
 		{
-			var cacheKey = $"LinDev.Common.GetFieldAttribute|{entityName}|{fieldName}|{attribute}";
+			var cacheKey = $"Yagasoft.Common.GetFieldAttribute|{entityName}|{fieldName}|{attribute}";
 			var attributeCached = CacheHelpers.GetFromMemCache<T>(cacheKey, orgId);
 
 			if (attributeCached != null)
@@ -4765,7 +4765,7 @@ namespace Yagasoft.Libraries.Common
 		public static IEnumerable<RelationMetadata> GetEntityRelations(IOrganizationService service, string entityName,
 			MetadataHelpers.RelationType? type, string orgId)
 		{
-			var cacheKey = $"LinDev.Common.GetEntityRelations|{entityName}|{type}";
+			var cacheKey = $"Yagasoft.Common.GetEntityRelations|{entityName}|{type}";
 			var metadata = CacheHelpers.GetFromMemCache<EntityMetadata>(cacheKey, orgId);
 
 			if (metadata == null)
@@ -4842,7 +4842,7 @@ namespace Yagasoft.Libraries.Common
 		public static RelationMetadata GetRelation(IOrganizationService service, string entityName, string relationName,
 			string orgId)
 		{
-			var cacheKey = $"LinDev.Common.GetRelation|{entityName}|{relationName}";
+			var cacheKey = $"Yagasoft.Common.GetRelation|{entityName}|{relationName}";
 			var metadata = CacheHelpers.GetFromMemCache<EntityMetadata>(cacheKey, orgId);
 
 			if (metadata == null)
@@ -4913,7 +4913,7 @@ namespace Yagasoft.Libraries.Common
 		public static T GetRelationAttribute<T>(IOrganizationService service, string entityName, string relationName,
 			MetadataHelpers.RelationType type, MetadataHelpers.RelationAttribute attribute, string orgId)
 		{
-			var cacheKey = $"LinDev.Common.GetRelationAttribute|{entityName}|{relationName}|{type}|{attribute}";
+			var cacheKey = $"Yagasoft.Common.GetRelationAttribute|{entityName}|{relationName}|{type}|{attribute}";
 			var attributeCached = CacheHelpers.GetFromMemCache<T>(cacheKey, orgId);
 
 			if (attributeCached != null)
@@ -4997,7 +4997,7 @@ namespace Yagasoft.Libraries.Common
 			string entityName, MetadataHelpers.RelationType[] types, MetadataHelpers.RelationAttribute[] attributes,
 			string orgId)
 		{
-			var cacheKey = $"LinDev.Common.GetCustomRelationships|{entityName}|"
+			var cacheKey = $"Yagasoft.Common.GetCustomRelationships|{entityName}|"
 				+ $"{types.Select(t => t.ToString()).Aggregate<string>((t1, t2) => t1 + "," + t2)}"
 				+ $"{attributes.Select(a => a.ToString()).Aggregate<string>((a1, a2) => a1 + "," + a2)}";
 			var relations = CacheHelpers.GetFromMemCache<List<RelationshipMetadataBase>>(cacheKey, orgId);
@@ -5510,7 +5510,7 @@ namespace Yagasoft.Libraries.Common
 		/// <param name="processId">The process identifier.</param>
 		public static List<BpfStageInfo> GetStages(IOrganizationService service, Guid processId, string orgId)
 		{
-			var cacheKey = $"LinDev.Common.GetStages|{processId}";
+			var cacheKey = $"Yagasoft.Common.GetStages|{processId}";
 			var process = CacheHelpers.GetFromMemCache<Entity>(cacheKey, orgId)
 				?? CacheHelpers.AddToMemCache(cacheKey,
 					service.Retrieve("workflow", processId, new ColumnSet("xaml")),

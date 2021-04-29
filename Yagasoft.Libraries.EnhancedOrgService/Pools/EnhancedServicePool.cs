@@ -171,7 +171,14 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 
 				try
 				{
-					enhancedOrgServiceBase.FillServicesQueue(Enumerable.Range(0, threads).Select(e => GetCrmService()));
+				    var isSelfWarmUp = poolParams.IsEnableSelfPoolingWarmUp ?? false;
+					enhancedOrgServiceBase.FillServicesQueue(Enumerable.Range(0, isSelfWarmUp ? threads : 0).Select(_ => GetCrmService()));
+
+				    if (!isSelfWarmUp)
+				    {
+				        enhancedOrgServiceBase.MaxThreadCount = threads;
+				        enhancedOrgServiceBase.CreateService = () => GetCrmService();
+				    }
 				}
 				catch
 				{

@@ -2,8 +2,8 @@
 /// <reference path="Sdk.Soap.vsdoc.js" />
 /// <reference path="jquery-1.11.1.js" />
 /// <reference path="Sdk.Soap.vsdoc.js" />
-/// <reference path="Xrm.Page.js" />
 /// <reference path="../CrmSchemaJs.js" />
+/// <reference path="xrm.page.365.d.ts" />
 
 var FormTabNames = {
 	EVERY_MINUTE_PATTERN: 'EveryMinutePatternTab',
@@ -18,8 +18,10 @@ var FormSectionNames = {
 	MOTHLY_WEEK_DAY_PATTERN: 'MonthlyWeekDayPatternSection'
 };
 
-function Recurrence_OnLoad()
+function Recurrence_OnLoad(executionContext)
 {
+    SetAnchoredExecutionContext(executionContext);
+    
 	Date_OnChange();
 	RecurrencePattern_OnChange(true);
 	MonthlyPattern_OnChange(true);
@@ -60,7 +62,6 @@ function RecurrencePattern_OnChange(isOnLoad)
 
             case Sdk.RecurrenceRule.RecurrencePatternEnum.Weekly:
 				SetTabVisible(FormTabNames.WEEKLY_PATTERN, true);
-				LoadOptionSetMultiSelection(Sdk.RecurrenceRule.WeekDays, Sdk.RecurrenceRule.WeekDay, 'Days');
 				if (!isOnLoad) ResetAllPatternTabsExcept(FormTabNames.WEEKLY_PATTERN);
 				SetFieldRequired(Sdk.RecurrenceRule.WeeklyFrequency, true);
 				SetFieldRequired(Sdk.RecurrenceRule.WeekDays, true);
@@ -85,8 +86,6 @@ function MonthlyPattern_OnChange(isOnLoad)
 	SetSectionVisible('MonthlyPatternTab', 'MonthlyDayPatternSection', false);
 	SetSectionVisible('MonthlyPatternTab', 'MonthlyWeekDayPatternSection', false);
 
-	LoadOptionSetMultiSelection(Sdk.RecurrenceRule.Months, Sdk.RecurrenceRule.MonthOfYear, 'Months');
-
     if (monthlyPattern === Sdk.RecurrenceRule.MonthlyPatternEnum.SpecificDays)
 	{
 		if (!isOnLoad)
@@ -97,15 +96,6 @@ function MonthlyPattern_OnChange(isOnLoad)
 
 		SetSectionVisible('MonthlyPatternTab', 'MonthlyDayPatternSection', true);
 		SetSectionVisible('MonthlyPatternTab', 'MonthlyWeekDayPatternSection', false);
-
-		var days = [];
-
-		for (var i = 1 ; i <= 31 ; i++)
-		{
-			days.push({ text: i + '', value: i + '' });
-		}
-
-		LoadMultiSelect(Sdk.RecurrenceRuleException.DaysOfTheMonth, days, 'Days', 150, null, false, true);
 
 		SetFieldRequired(Sdk.RecurrenceRule.DayOccurrences, false);
 		SetFieldRequired(Sdk.RecurrenceRule.WeekDays, false);
@@ -121,15 +111,41 @@ function MonthlyPattern_OnChange(isOnLoad)
 		SetSectionVisible('MonthlyPatternTab', 'MonthlyDayPatternSection', false);
 		SetSectionVisible('MonthlyPatternTab', 'MonthlyWeekDayPatternSection', true);
 
-		LoadOptionSetMultiSelection(Sdk.RecurrenceRule.DayOccurrences,
-			Sdk.RecurrenceRule.MonthlyDayOccurrence, 'On the');
-		LoadOptionSetMultiSelection(Sdk.RecurrenceRule.WeekDays + ':1',
-			Sdk.RecurrenceRule.WeekDay, 'occurrence of');
-
 		SetFieldRequired(Sdk.RecurrenceRule.DaysOfTheMonth, false);
 		SetFieldRequired(Sdk.RecurrenceRule.DayOccurrences, true);
 		SetFieldRequired(Sdk.RecurrenceRule.WeekDays, true);
 	}
+}
+
+function WeeklyTab_OnStateChange()
+{
+    LoadOptionSetMultiSelection(Sdk.RecurrenceRule.WeekDays, Sdk.RecurrenceRule.WeekDay, 'Days');
+}
+
+function MonthlyTab_OnStateChange()
+{
+    LoadOptionSetMultiSelection(Sdk.RecurrenceRule.Months, Sdk.RecurrenceRule.MonthOfYear, 'Months');
+
+    var monthlyPattern = GetFieldValue(Sdk.RecurrenceRule.MonthlyPattern);
+
+    if (monthlyPattern === Sdk.RecurrenceRule.MonthlyPatternEnum.SpecificDays)
+    {
+        var days = [];
+
+        for (var i = 1 ; i <= 31 ; i++)
+        {
+            days.push({ text: i + '', value: i + '' });
+        }
+
+        LoadMultiSelect(Sdk.RecurrenceRuleException.DaysOfTheMonth, days, 'Days', 150, null, false, true);
+    }
+    else if (monthlyPattern === Sdk.RecurrenceRule.MonthlyPatternEnum.DayOccurrence)
+    {
+        LoadOptionSetMultiSelection(Sdk.RecurrenceRule.DayOccurrences,
+        	Sdk.RecurrenceRule.MonthlyDayOccurrence, 'On the');
+        LoadOptionSetMultiSelection(Sdk.RecurrenceRule.WeekDays,
+        	Sdk.RecurrenceRule.WeekDay, 'occurrence of');
+    }
 }
 
 function HideAllPatternTabs()
@@ -141,7 +157,6 @@ function HideAllPatternTabs()
 	SetTabVisible(FormTabNames.MONTHLY_PATTERN, false);
 
 	RemoveMultiSelect(Sdk.RecurrenceRule.WeekDays);
-	RemoveMultiSelect(Sdk.RecurrenceRule.WeekDays + '1');
 	RemoveMultiSelect(Sdk.RecurrenceRule.Months);
 	RemoveMultiSelect(Sdk.RecurrenceRule.DaysOfTheMonth);
 }
@@ -213,7 +228,7 @@ function ResetAllPatternTabsExcept(tabException)
 
 function LoadOptionSetMultiSelection(fieldName, optionSetName, message)
 {
-	var xrmOptions = Xrm.Page.getAttribute(optionSetName).getOptions();
+	var xrmOptions = AnchoredExecutionContext.getFormContext().getAttribute(optionSetName).getOptions();
 
 	var options = $.map(xrmOptions,
 		function(element)

@@ -2,10 +2,13 @@
 /// <reference path="Sdk.Soap.vsdoc.js" />
 /// <reference path="jquery-1.11.1.js" />
 /// <reference path="Sdk.Soap.vsdoc.js" />
-/// <reference path="Xrm.Page.js" />
 /// <reference path="../CrmSchemaJs.js" />
-function Recurrence_OnLoad()
+/// <reference path="xrm.page.365.d.ts" />
+
+function Recurrence_OnLoad(executionContext)
 {
+    SetAnchoredExecutionContext(executionContext);
+    
 	Date_OnChange();
 
 	var minutes = [];
@@ -71,7 +74,7 @@ function Date_OnChange()
 
 function LoadSelection(fieldName, optionSetName, title)
 {
-	var xrmOptions = Xrm.Page.getAttribute(optionSetName).getOptions();
+	var xrmOptions = AnchoredExecutionContext.getFormContext().getAttribute(optionSetName).getOptions();
 
 	var options = $.map(xrmOptions, function(element)
 	{
@@ -84,7 +87,7 @@ function LoadSelection(fieldName, optionSetName, title)
 
 function LoadOptionSetMultiSelection(fieldName, optionSetName, message)
 {
-	var xrmOptions = Xrm.Page.getAttribute(optionSetName).getOptions();
+	var xrmOptions = AnchoredExecutionContext.getFormContext().getAttribute(optionSetName).getOptions();
 
 	var options = $.map(xrmOptions, function (element)
 	{

@@ -70,7 +70,9 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 
 		protected internal static int OperationIndex;
 
+		protected internal Func<IOrganizationService> CreateService;
 		protected internal Action ReleaseService;
+	    protected internal int MaxThreadCount;
 
 		protected internal virtual IOrganizationServiceCache Cache { get; set; }
 		protected internal virtual ObjectCache ObjectCache { get; set; }
@@ -79,8 +81,10 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 		private readonly List<Operation> pendingOperations;
 		private readonly FixedSizeQueue<Operation> executedOperations;
 
+		private bool IsEnableSelfPoolingWarmUp => Parameters?.PoolParams?.IsEnableSelfPoolingWarmUp ?? false;
 		private readonly BlockingQueue<IOrganizationService> servicesQueue = new();
-
+	    private int servicesCount;
+		
 		private IDeferredOrgService deferredOrgService;
 		private bool isUseSdkDeferredOperations;
 
@@ -94,8 +98,6 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 		private IEnumerable<Func<Func<IOrganizationService, object>, Operation, ExecuteParams, Exception, object>> CustomRetryFunctions
 			 => Parameters?.AutoRetryParams?.CustomRetryFunctions;
 
-		private int servicesCount;
-
 		protected internal EnhancedOrgServiceBase(EnhancedServiceParams parameters)
 		{
 			Parameters = parameters;
@@ -105,9 +107,14 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 		
 		public virtual void ValidateState(bool isValid = true)
 		{
-			if (servicesCount <= 0)
+			if (IsEnableSelfPoolingWarmUp && servicesCount <= 0)
 			{
 				throw new StateException("Service is not ready. Try to get a new service from the helper/pool/factory.");
+			}
+
+			if (!IsEnableSelfPoolingWarmUp && MaxThreadCount <= 0)
+			{
+				throw new StateException($"Thread count {MaxThreadCount} given to service is invalid.");
 			}
 		}
 
@@ -134,9 +141,32 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 		{
 			ValidateState();
 
-			var service = servicesQueue.Dequeue();
+		    IOrganizationService service;
 
-			if (service.EnsureTokenValid() == false)
+		    if (IsEnableSelfPoolingWarmUp)
+		    {
+		        service = servicesQueue.Dequeue();
+		    }
+		    else
+		    {
+		        servicesQueue.TryTake(out service);
+
+		        if (service == null)
+		        {
+		            lock (servicesQueue)
+		            {
+		                if (servicesCount < MaxThreadCount)
+		                {
+		                    service = CreateService();
+		                    servicesCount++;
+		                }
+		            }
+		        }
+
+		        service ??= servicesQueue.Dequeue();
+		    }
+
+		    if (service.EnsureTokenValid() == false)
 			{
 				throw new Exception("Service token has expired.");
 			}
@@ -926,7 +956,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 
 			return RetrieveMultipleRangePaged<TEntityType>(query, 1,
 				limit <= 0 ? int.MaxValue : (int)Math.Ceiling(limit / 5000d),
-				limit <= 0 ? int.MaxValue : 5000, executeParams);
+				limit <= 0 ? int.MaxValue : limit, executeParams);
 		}
 
 		public virtual IEnumerable<TEntityType> RetrieveMultipleRangePaged<TEntityType>(QueryExpression query,
