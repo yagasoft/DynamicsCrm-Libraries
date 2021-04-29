@@ -3,7 +3,7 @@
 <package>
   <metadata>
     <id>Yagasoft.Libraries.EnhancedOrgService</id>
-    <version>5.3.1</version>
+    <version>5.3.2</version>
     <authors>Ahmed Elsawalhy</authors>
     <owners>Ahmed Elsawalhy</owners>
     <projectUrl>https://github.com/yagasoft/DynamicsCrm-Libraries</projectUrl>
@@ -23,9 +23,10 @@
     </dependencies>
     <references />
     <releaseNotes>
-      * 5.3.1
+      * 5.3.2
       Added: option to control service internal pool warm up
       Fixed: RetrieveMultiple helper not respecting the limit given
+      Fixed: warm up infinite loop on error
       * 5.2.1
       Added: connection timeout parameter
       * 5.1.4

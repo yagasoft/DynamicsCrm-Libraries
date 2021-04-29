@@ -90,7 +90,9 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 				warmupThread =
 					new Thread(
 						() =>
-						{
+                        {
+                            var isFailed = false;
+
 							while (isWarmUp && createdCrmServicesCount < poolParams.PoolSize)
 							{
 								try
@@ -99,7 +101,14 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 								}
 								catch
 								{
-									// ignored
+								    if (isFailed)
+								    {
+								        isWarmUp = false;
+								    }
+								    else
+								    {
+								        isFailed = true;
+								    }
 								}
 							}
 						}) { IsBackground = true };
