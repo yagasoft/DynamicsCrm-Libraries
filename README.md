@@ -2,7 +2,7 @@
 
 [![Join the chat at https://gitter.im/yagasoft/DynamicsCrm-Libraries](https://badges.gitter.im/yagasoft/DynamicsCrm-Libraries.svg)](https://gitter.im/yagasoft/DynamicsCrm-Libraries?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-### Version: 5.3.1
+### Version: 5.3.3
 ---
 
 A collection of libraries for common and extended operations in Dynamics CRM development that gives power to the developer and saves time.
@@ -11,11 +11,12 @@ A collection of libraries for common and extended operations in Dynamics CRM dev
 
   + Massive JS and CS libraries of common and generic functions and classes
   + An extension to the out-of-the-box IOrganizationService
-    + Automatic service pool/queue handling
-    + Connection warmup to improve initialisation performance
-    + Caching of operation results
+    + Automatic service pool handling (core feature)
+    + Connection warmup to improve initialisation performance (optional)
+    + Caching of operation results (optional)
+    + Automatic retry of failed operations (optional)
+    + Operation events and statistics
     + Load balancer algorithms for multi-node environments
-    + Automatic retry of failed operations
     + Deferred operations to run in a transaction
       + Accumulate operations from across the application to be executed in one go
     + Planned execution to be sent to CRM for execution
@@ -30,10 +31,16 @@ A collection of libraries for common and extended operations in Dynamics CRM dev
       + Single CS file: [Yagasoft.Libraries.Common.File](https://www.nuget.org/packages/Yagasoft.Libraries.Common.File)
     + Enhanced Organisation Service library
       + NuGet: [Yagasoft.Libraries.EnhancedOrgService](https://www.nuget.org/packages/Yagasoft.Libraries.EnhancedOrgService)
+	  + Guide: [EnhancedOrgService – Enterprise-grade CrmServiceClient | SwissKnife Series](https://blog.yagasoft.com/2021/05/enhancedorgservice-enterprise-grade-crmserviceclient-swissknife-series)
 
 ## Changes
 
-#### _v5.3.1 (2021-04-29)_
+#### _v5.3.3 (2021-05-06)_
++ Added: proper warm up logic for all pooling levels
++ Fixed: internal pool initialisation
++ Fixed: timeout configuration
++ Fixed: disposal state
+#### _v5.3.2 (2021-04-29)_
 + Added: [EnhancedOrgService] option to control service internal pool warm up
 + Improved: [Common] performance and memory
 + Fixed: [EnhancedOrgService] RetrieveMultiple helper not respecting the limit given

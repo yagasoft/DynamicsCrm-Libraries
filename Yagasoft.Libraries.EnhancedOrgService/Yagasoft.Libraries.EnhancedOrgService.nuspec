@@ -24,10 +24,10 @@
     <references />
     <releaseNotes>
       * 5.3.3
-      Added: proper warm up logic for all pooling levels.
-      Fixed: internal pool initialisation.
-      Fixed: timeout configuration.
-      Fixed: disposal state.
+      Added: proper warm up logic for all pooling levels
+      Fixed: internal pool initialisation
+      Fixed: timeout configuration
+      Fixed: disposal state
       * 5.3.2
       Added: option to control service internal pool warm up
       Fixed: RetrieveMultiple helper not respecting the limit given
