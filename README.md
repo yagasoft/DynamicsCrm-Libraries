@@ -12,7 +12,7 @@ A collection of libraries for common and extended operations in Dynamics CRM dev
   + Massive JS and CS libraries of common and generic functions and classes
   + An extension to the out-of-the-box IOrganizationService
     + Automatic service pool/queue handling
-    + Connection warmup to improve caching performance
+    + Connection warmup to improve initialisation performance
     + Caching of operation results
     + Load balancer algorithms for multi-node environments
     + Automatic retry of failed operations

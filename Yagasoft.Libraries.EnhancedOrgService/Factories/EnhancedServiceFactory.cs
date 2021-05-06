@@ -210,7 +210,9 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 
 			if (isInitialiseCrmServices)
 			{
-				enhancedService.FillServicesQueue(Enumerable.Range(0, threads).Select(e => CreateCrmService()));
+			    enhancedService.MaxConnectionCount = threads;
+				enhancedService.CreateCrmService = CreateCrmService;
+				enhancedService.InitialiseConnectionQueue();
 			}
 
 			statServices.Add(enhancedService);

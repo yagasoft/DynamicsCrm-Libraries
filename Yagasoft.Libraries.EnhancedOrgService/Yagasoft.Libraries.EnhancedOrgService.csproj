@@ -148,6 +148,7 @@
     <Compile Include="Helpers\ConnectionHelpers.cs" />
     <Compile Include="Helpers\ProcessBase.cs" />
     <Compile Include="Helpers\EnhancedServiceHelper.cs" />
+    <Compile Include="Pools\WarmUp\WarmUp.cs" />
     <Compile Include="Params\CachingParams.cs" />
     <Compile Include="Params\AutoRetryParams.cs" />
     <Compile Include="Params\BasicConnectionParams.cs" />
@@ -164,6 +165,7 @@
     <Compile Include="Operations\IOpStatsAggregate.cs" />
     <Compile Include="Operations\OperationStats.cs" />
     <Compile Include="Operations\IOperationStats.cs" />
+    <Compile Include="Pools\WarmUp\IWarmUp.cs" />
     <Compile Include="Response\Operations\Operation.cs" />
     <Compile Include="Events\EventArgs\OperationStatusEventArgs.cs" />
     <Compile Include="Response\Tokens\IToken.cs" />

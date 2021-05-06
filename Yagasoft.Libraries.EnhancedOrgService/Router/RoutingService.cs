@@ -13,6 +13,8 @@ using Yagasoft.Libraries.EnhancedOrgService.Events.EventArgs;
 using Yagasoft.Libraries.EnhancedOrgService.Exceptions;
 using Yagasoft.Libraries.EnhancedOrgService.Operations;
 using Yagasoft.Libraries.EnhancedOrgService.Params;
+using Yagasoft.Libraries.EnhancedOrgService.Pools;
+using Yagasoft.Libraries.EnhancedOrgService.Pools.WarmUp;
 using Yagasoft.Libraries.EnhancedOrgService.Response.Operations;
 using Yagasoft.Libraries.EnhancedOrgService.Router.Node;
 using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced;
@@ -291,7 +293,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 			Status = Status.Offline;
 		}
 
-		public virtual IRoutingService WarmUp()
+		public virtual void WarmUp()
 		{
 			ValidateState();
 
@@ -299,18 +301,14 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 			{
 				service.Pool.WarmUp();
 			}
-
-			return this;
 		}
 
-		public virtual IRoutingService EndWarmup()
+		public virtual void EndWarmup()
 		{
 			foreach (var service in NodeQueue)
 			{
 				service.Pool.EndWarmup();
 			}
-
-			return this;
 		}
 
 		public virtual IEnhancedOrgService GetService(int threads = 1)

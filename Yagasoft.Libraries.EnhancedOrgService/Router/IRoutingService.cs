@@ -10,6 +10,7 @@ using Yagasoft.Libraries.EnhancedOrgService.Events;
 using Yagasoft.Libraries.EnhancedOrgService.Events.EventArgs;
 using Yagasoft.Libraries.EnhancedOrgService.Operations;
 using Yagasoft.Libraries.EnhancedOrgService.Params;
+using Yagasoft.Libraries.EnhancedOrgService.Pools.WarmUp;
 using Yagasoft.Libraries.EnhancedOrgService.Response.Operations;
 using Yagasoft.Libraries.EnhancedOrgService.Router.Node;
 using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced;
@@ -27,7 +28,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 		Stopping
 	}
 
-	public interface IRoutingService : IOpStatsAggregate, IOpStatsParent
+	public interface IRoutingService : IOpStatsAggregate, IOpStatsParent, IWarmUp
 	{
 		event EventHandler<IRoutingService, RouterEventArgs> RouterEventOccurred;
 
@@ -80,16 +81,6 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 		///     Stops all internal nodes.
 		/// </summary>
 		void StopRouter();
-
-		/// <summary>
-		///     Starts creating connections to fill the internal queues. Makes retrieving the connections a lot faster later.
-		/// </summary>
-		IRoutingService WarmUp();
-
-		/// <summary>
-		///     Stops the warmup process.
-		/// </summary>
-		IRoutingService EndWarmup();
 
 		/// <summary>
 		///     Returns the next node to use, as per the rules defined.

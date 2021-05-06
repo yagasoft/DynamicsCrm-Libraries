@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IdentityModel.Tokens;
 using System.Linq;
 using System.Runtime.Caching;
 using System.Text;
@@ -21,6 +22,7 @@ using Yagasoft.Libraries.EnhancedOrgService.Events.EventArgs;
 using Yagasoft.Libraries.EnhancedOrgService.Exceptions;
 using Yagasoft.Libraries.EnhancedOrgService.Helpers;
 using Yagasoft.Libraries.EnhancedOrgService.Params;
+using Yagasoft.Libraries.EnhancedOrgService.Pools.WarmUp;
 using Yagasoft.Libraries.EnhancedOrgService.Response.Operations;
 using Yagasoft.Libraries.EnhancedOrgService.Response.Tokens;
 using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Deferred;
@@ -70,25 +72,29 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 
 		protected internal static int OperationIndex;
 
-		protected internal Func<IOrganizationService> CreateService;
+		protected internal Func<IOrganizationService> CreateCrmService;
 		protected internal Action ReleaseService;
-	    protected internal int MaxThreadCount;
+	    protected internal int MaxConnectionCount;
 
 		protected internal virtual IOrganizationServiceCache Cache { get; set; }
 		protected internal virtual ObjectCache ObjectCache { get; set; }
 		protected internal virtual bool IsCacheEnabled => Parameters?.IsCachingEnabled == true && Cache != null;
 
+	    protected internal bool IsReleased = true;
+
 		private readonly List<Operation> pendingOperations;
 		private readonly FixedSizeQueue<Operation> executedOperations;
 
-		private bool IsEnableSelfPoolingWarmUp => Parameters?.PoolParams?.IsEnableSelfPoolingWarmUp ?? false;
-		private readonly BlockingQueue<IOrganizationService> servicesQueue = new();
-	    private int servicesCount;
+		private readonly BlockingQueue<IOrganizationService> crmServiceQueue = new();
+	    private int crmServiceCount;
 		
 		private IDeferredOrgService deferredOrgService;
 		private bool isUseSdkDeferredOperations;
 
 		private IPlannedOrgService plannedOrgService;
+
+	    private bool IsAutoPoolWarmUp => Parameters?.PoolParams?.IsAutoPoolWarmUp ?? false;
+		private TimeSpan? DequeueTimeout => Parameters?.PoolParams?.DequeueTimeout;
 
 		private bool IsRetryEnabled => Parameters?.IsAutoRetryEnabled ?? false;
 		private int MaxRetryCount => Parameters?.AutoRetryParams?.MaxRetryCount ?? 1;
@@ -97,6 +103,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 		private TimeSpan? MaxmimumRetryInterval => Parameters?.AutoRetryParams?.MaxmimumRetryInterval;
 		private IEnumerable<Func<Func<IOrganizationService, object>, Operation, ExecuteParams, Exception, object>> CustomRetryFunctions
 			 => Parameters?.AutoRetryParams?.CustomRetryFunctions;
+
+	    private WarmUp warmUp;
 
 		protected internal EnhancedOrgServiceBase(EnhancedServiceParams parameters)
 		{
@@ -107,33 +115,73 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 		
 		public virtual void ValidateState(bool isValid = true)
 		{
-			if (IsEnableSelfPoolingWarmUp && servicesCount <= 0)
+			if (IsReleased)
 			{
-				throw new StateException("Service is not ready. Try to get a new service from the helper/pool/factory.");
-			}
-
-			if (!IsEnableSelfPoolingWarmUp && MaxThreadCount <= 0)
-			{
-				throw new StateException($"Thread count {MaxThreadCount} given to service is invalid.");
+			    throw new StateException("Service is not ready. Try to get a new service from the helper/pool/factory.");
 			}
 		}
 
 		#region Service
 
-		protected internal virtual void FillServicesQueue(IEnumerable<IOrganizationService> services)
+	    public virtual void WarmUp()
+	    {
+	        lock (this)
+	        {
+	            warmUp ??= new WarmUp(
+	                () =>
+                    {
+                        lock (crmServiceQueue)
+                        {
+                            if (crmServiceCount < MaxConnectionCount)
+                            {
+                                crmServiceQueue.Enqueue(CreateCrmServiceInner());
+                            }
+                            else
+                            {
+                                EndWarmup();
+                            }
+                        }
+                    });
+	        }
+
+	        warmUp.Start();
+	    }
+
+	    public virtual void EndWarmup()
+	    {
+	        warmUp.End();
+	    }
+
+	    protected internal virtual void InitialiseConnectionQueue(IEnumerable<IOrganizationService> services = null)
 		{
-			foreach (var service in services)
-			{
-				servicesQueue.Add(service);
-				servicesCount++;
-			}
+		    if (services != null)
+		    {
+		        foreach (var service in services)
+		        {
+		            crmServiceQueue.Add(service);
+		            crmServiceCount++;
+		        }
+		    }
+
+			// ensure at least one connection is ready for action
+		    if (crmServiceCount <= 0)
+		    {
+		        crmServiceQueue.Enqueue(CreateCrmServiceInner());
+		    }
+
+		    IsReleased = false;
+
+		    if (IsAutoPoolWarmUp)
+		    {
+		        WarmUp();
+		    }
 		}
 
-		protected internal virtual IOrganizationService[] ClearServicesQueue()
+		protected internal virtual IOrganizationService[] ClearConnectionQueue()
 		{
-			var services = servicesQueue.ToArray();
-			servicesQueue.Clear();
-			servicesCount = 0;
+			var services = crmServiceQueue.ToArray();
+			crmServiceQueue.Clear();
+			crmServiceCount = 0;
 			return services;
 		}
 
@@ -143,38 +191,54 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 
 		    IOrganizationService service;
 
-		    if (IsEnableSelfPoolingWarmUp)
-		    {
-		        service = servicesQueue.Dequeue();
-		    }
-		    else
-		    {
-		        servicesQueue.TryTake(out service);
+            try
+            {
+                crmServiceQueue.TryTake(out service);
 
-		        if (service == null)
-		        {
-		            lock (servicesQueue)
-		            {
-		                if (servicesCount < MaxThreadCount)
-		                {
-		                    service = CreateService();
-		                    servicesCount++;
-		                }
-		            }
-		        }
+                if (service == null)
+                {
+                    lock (crmServiceQueue)
+                    {
+                        if (crmServiceCount < MaxConnectionCount)
+                        {
+                            service = CreateCrmServiceInner();
+                        }
+                    }
+                }
 
-		        service ??= servicesQueue.Dequeue();
+                service ??= crmServiceQueue.Dequeue(DequeueTimeout);
+            }
+            catch (TimeoutException)
+            {
+                service = CreateCrmServiceInner();
+            }
+
+		    if (service == null)
+		    {
+		        throw new TimeoutException("Failed to find an internal CRM service in time.");
 		    }
 
 		    if (service.EnsureTokenValid() == false)
 			{
-				throw new Exception("Service token has expired.");
+				throw new SecurityTokenExpiredException("Service token has expired.");
 			}
 
-			return new SelfDisposingService(service, () => servicesQueue.Enqueue(service));
+			return new SelfDisposingService(service, () => crmServiceQueue.Enqueue(service));
 		}
 
-		#endregion
+	    private IOrganizationService CreateCrmServiceInner()
+	    {
+	        var crmService = CreateCrmService?.Invoke();
+
+	        lock (crmServiceQueue)
+	        {
+	            crmServiceCount++;
+	        }
+
+	        return crmService;
+	    }
+
+	    #endregion
 
 		#region Transactions
 
@@ -265,6 +329,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 
 		protected virtual OrganizationResponse InnerExecute(OrganizationRequest request)
 		{
+			// TODO dead-lock potential: second call in a row
 			using var service = GetService();
 			return service.Execute(request is KeyedRequest keyedRequest ? keyedRequest.Request : request);
 		}
@@ -1048,8 +1113,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 
 		#region Operation Handling
 
-		protected internal virtual TResult TryRunOperation<TResult>(Func<IOrganizationService, TResult> action, Operation operation,
-			ExecuteParams executeParams, bool isDelegated = false)
+		protected internal virtual TResult TryRunOperation<TResult>(Func<IOrganizationService, TResult> action,
+            Operation operation, ExecuteParams executeParams, bool isDelegated = false)
 		{
 			var isRetryEnabled = executeParams?.IsAutoRetryEnabled ?? IsRetryEnabled;
 			var maxRetryCount = executeParams?.AutoRetryParams?.MaxRetryCount ?? MaxRetryCount;
@@ -1072,8 +1137,11 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 					try
 					{
 						operation.OperationStatus = Status.InProgress;
-						using var service = GetService();
-						return action(service);
+
+					    using (var service = GetService())
+					    {
+					        return action(service);
+					    }
 					}
 					catch (Exception ex)
 					{
@@ -1162,6 +1230,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 
 		public virtual void Dispose()
 		{
+		    IsReleased = true;
 			InnerOperationStatusChanged = null;
 			CancelPlanning();
 			CancelDeferredRequests();

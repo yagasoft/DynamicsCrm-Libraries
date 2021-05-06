@@ -41,8 +41,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 		private readonly PoolParams poolParams;
 		private int createdCrmServicesCount;
 
-		private Thread warmupThread;
-		private bool isWarmUp;
+		private WarmUp.WarmUp warmUp;
 
 		public EnhancedServicePool(EnhancedServiceFactory<TServiceInterface, TEnhancedOrgService> factory, int poolSize)
 		{
@@ -64,6 +63,11 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 			}
 
 			this.poolParams = poolParams ?? factory.Parameters?.PoolParams ?? new PoolParams();
+
+		    if (this.poolParams.IsAutoPoolWarmUp == true)
+		    {
+		        WarmUp();
+		    }
 		}
 
 		public int CreatedServices { get; private set; }
@@ -76,50 +80,30 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 			return GetInitialisedService(threads, service);
 		}
 
-		public void WarmUp()
-		{
-			lock (this)
-			{
-				isWarmUp = true;
-
-				if (warmupThread?.IsAlive == true)
-				{
-					return;
-				}
-
-				warmupThread =
-					new Thread(
-						() =>
+	    public void WarmUp()
+	    {
+	        lock (this)
+	        {
+	            warmUp ??= new WarmUp.WarmUp(
+	                () =>
+                    {
+                        if (createdCrmServicesCount < poolParams.PoolSize)
                         {
-                            var isFailed = false;
+                            crmServicesQueue.Enqueue(GetCrmService(true));
+                        }
+                        else
+                        {
+                            EndWarmup();
+                        }
+                    });
+	        }
 
-							while (isWarmUp && createdCrmServicesCount < poolParams.PoolSize)
-							{
-								try
-								{
-									crmServicesQueue.Enqueue(GetCrmService(true));
-								}
-								catch
-								{
-								    if (isFailed)
-								    {
-								        isWarmUp = false;
-								    }
-								    else
-								    {
-								        isFailed = true;
-								    }
-								}
-							}
-						}) { IsBackground = true };
+	        warmUp.Start();
+	    }
 
-				warmupThread.Start();
-			}
-		}
-
-		public void EndWarmup()
+	    public void EndWarmup()
 		{
-			isWarmUp = false;
+	        warmUp.End();
 		}
 
 		private IOrganizationService GetCrmService(bool isSkipQueue = false)
@@ -162,9 +146,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 
 			try
 			{
-				enhancedService ??= servicesQueue
-					.Dequeue(TimeSpan
-						.FromMilliseconds(poolParams.DequeueTimeoutInMillis ?? 2 * 65 * 1000));
+				enhancedService ??= servicesQueue.Dequeue(poolParams.DequeueTimeout);
 			}
 			catch (TimeoutException)
 			{
@@ -180,14 +162,13 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 
 				try
 				{
-				    var isSelfWarmUp = poolParams.IsEnableSelfPoolingWarmUp ?? false;
-					enhancedOrgServiceBase.FillServicesQueue(Enumerable.Range(0, isSelfWarmUp ? threads : 0).Select(_ => GetCrmService()));
+			        enhancedOrgServiceBase.MaxConnectionCount = threads;
+                    enhancedOrgServiceBase.CreateCrmService = () => GetCrmService();
 
-				    if (!isSelfWarmUp)
-				    {
-				        enhancedOrgServiceBase.MaxThreadCount = threads;
-				        enhancedOrgServiceBase.CreateService = () => GetCrmService();
-				    }
+				    enhancedOrgServiceBase.InitialiseConnectionQueue(
+				        Enumerable.Range(0, threads)
+				            .Select(_ => crmServicesQueue.TryDequeue(out var crmService) ? crmService : null)
+				            .Where(s => s != null));
 				}
 				catch
 				{
@@ -221,7 +202,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 		{
 			if (enhancedService is EnhancedOrgServiceBase enhancedOrgServiceBase)
 			{
-				var releasedServices = enhancedOrgServiceBase.ClearServicesQueue();
+				var releasedServices = enhancedOrgServiceBase.ClearConnectionQueue();
 
 				foreach (var service in releasedServices)
 				{

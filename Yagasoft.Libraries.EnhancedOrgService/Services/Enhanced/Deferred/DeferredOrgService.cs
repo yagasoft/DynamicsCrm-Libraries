@@ -49,12 +49,15 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Deferred
 		{
 			ValidateDeferredQueueState();
 
-			using var service = enhancedOrgServiceBase.GetService();
+		    IDictionary<OrganizationRequest, ExecuteBulkResponse> bulkResponse;
 
-			var bulkResponse = deferredRequests
-				.Cast<OrganisationRequestToken<OrganizationResponse>>()
-				.Select(e => e.Request)
-				.ExecuteTransaction(service, true, bulkSize);
+		    using (var service = enhancedOrgServiceBase.GetService())
+		    {
+		        bulkResponse = deferredRequests
+		            .Cast<OrganisationRequestToken<OrganizationResponse>>()
+		            .Select(e => e.Request)
+		            .ExecuteTransaction(service, true, bulkSize);
+		    }
 
 			var responses = deferredRequests
 				.Cast<OrganisationRequestToken<OrganizationResponse>>()

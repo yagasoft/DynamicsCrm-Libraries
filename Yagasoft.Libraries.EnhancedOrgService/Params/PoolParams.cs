@@ -1,5 +1,6 @@
 ﻿#region Imports
 
+using System;
 using Yagasoft.Libraries.Common;
 using Yagasoft.Libraries.EnhancedOrgService.Pools;
 
@@ -40,35 +41,34 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 		}
 
 		/// <summary>
-		///     Threshold time in seconds from actual expiry of the connection token.
-		///     Can be used in service pools to automatically renew tokens.<br />
+		///     Threshold time to wait for a connection to become available in the connection pool.<br />
 		///     Default value: 2 minutes.
 		/// </summary>
-		public int? DequeueTimeoutInMillis
+		public TimeSpan? DequeueTimeout
 		{
-			get => dequeueTimeoutInMillis ?? 2 * 60 * 1000;
-			set
-			{
-				ValidateLock();
-				value?.RequireAtLeast(1, nameof(DequeueTimeoutInMillis));
-				dequeueTimeoutInMillis = value;
-			}
+		    get => dequeueTimeout ?? TimeSpan.FromMinutes(2);
+		    set
+		    {
+		        ValidateLock();
+		        value?.TotalSeconds.RequireAtLeast(1, nameof(DequeueTimeout));
+		        dequeueTimeout = value;
+		    }
 		}
 
 	    /// <summary>
-	    ///     When a <see cref="IEnhancedServicePool{TService}.GetService" /> is passed a number of threads,
-	    ///     an internally managed pool is created this service only.
-	    ///     Enable this option to pre-create all connections (same as thread count);
+	    ///     When a pool is created
+	    ///     or a <see cref="IEnhancedServicePool{TService}.GetService" /> is passed a number of threads,
+	    ///     this option enables pre-creating maximum number of connections to be ready when needed;
 	    ///     otherwise, connections are created when needed only.<br />
 	    ///     Default value: false.
 	    /// </summary>
-	    public bool? IsEnableSelfPoolingWarmUp
+	    public bool? IsAutoPoolWarmUp
 	    {
-	        get => isSelfPoolingWarmUp;
+	        get => isInnerPoolingWarmUp;
 	        set
 	        {
 	            ValidateLock();
-	            isSelfPoolingWarmUp = value;
+	            isInnerPoolingWarmUp = value;
 	        }
 	    }
 
@@ -89,8 +89,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 
 		private int? poolSize;
 		private int? tokenExpiryCheckSecs;
-		private int? dequeueTimeoutInMillis;
-		private bool? isSelfPoolingWarmUp;
+		private TimeSpan? dequeueTimeout;
+		private bool? isInnerPoolingWarmUp;
 		private int? dotNetSetMinAppReservedThreads;
 	}
 }

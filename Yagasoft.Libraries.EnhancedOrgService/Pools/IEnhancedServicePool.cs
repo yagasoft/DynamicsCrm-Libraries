@@ -2,6 +2,7 @@
 
 using Yagasoft.Libraries.EnhancedOrgService.Factories;
 using Yagasoft.Libraries.EnhancedOrgService.Operations;
+using Yagasoft.Libraries.EnhancedOrgService.Pools.WarmUp;
 using Yagasoft.Libraries.EnhancedOrgService.Response.Operations;
 using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced;
 using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Transactions;
@@ -15,7 +16,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 	///     Releasing the services to the pool is done manually, or through the 'using' keyword.<br />
 	///     Author: Ahmed Elsawalhy
 	/// </summary>
-	public interface IEnhancedServicePool<out TService> : IOpStatsAggregate, IOpStatsParent
+	public interface IEnhancedServicePool<out TService> : IOpStatsAggregate, IOpStatsParent, IWarmUp
 		where TService : IEnhancedOrgService
 	{
 		int CreatedServices { get; }
@@ -31,16 +32,6 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 		/// </summary>
 		/// <param name="threads">Number of internal CRM services to create.</param>
 		TService GetService(int threads = 1);
-
-		/// <summary>
-		///     Starts creating connections to fill the internal queue. Makes retrieving the connections a lot faster later.
-		/// </summary>
-		void WarmUp();
-
-		/// <summary>
-		///     Stops the warmup process.
-		/// </summary>
-		void EndWarmup();
 
 		/// <summary>
 		///     Clears the cache of the Factory used to initialise the Pool.

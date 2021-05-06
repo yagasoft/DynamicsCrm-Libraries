@@ -10,6 +10,8 @@ using Yagasoft.Libraries.EnhancedOrgService.Events;
 using Yagasoft.Libraries.EnhancedOrgService.Events.EventArgs;
 using Yagasoft.Libraries.EnhancedOrgService.Exceptions;
 using Yagasoft.Libraries.EnhancedOrgService.Params;
+using Yagasoft.Libraries.EnhancedOrgService.Pools;
+using Yagasoft.Libraries.EnhancedOrgService.Pools.WarmUp;
 using Yagasoft.Libraries.EnhancedOrgService.Response.Operations;
 using Yagasoft.Libraries.EnhancedOrgService.Router;
 using Yagasoft.Libraries.EnhancedOrgService.Services.SelfDisposing;
@@ -52,22 +54,43 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Balancing
 		{
 			routingService.Require(nameof(routingService));
 			RoutingService = routingService;
+		    IsReleased = false;
 		}
 
 		public override void ValidateState(bool isValid = true)
 		{
+		    base.ValidateState(isValid);
+
 			if (RoutingService?.Status != Status.Online)
 			{
 				throw new StateException("Service is not ready. Try to get a new service from the helper/pool/factory.");
 			}
 		}
 
-		protected internal override IDisposableService GetService()
-		{
-			return RoutingService.GetService();
-		}
+	    public override void WarmUp()
+	    {
+	        RoutingService?.WarmUp();
+	    }
 
-		public override Transaction BeginTransaction(string transactionId = null)
+	    public override void EndWarmup()
+	    {
+	        RoutingService?.EndWarmup();
+	    }
+
+	    protected internal override void InitialiseConnectionQueue(IEnumerable<IOrganizationService> services = null)
+	    { }
+
+	    protected internal override IOrganizationService[] ClearConnectionQueue()
+	    {
+	        return new IOrganizationService[0];
+	    }
+
+	    protected internal override IDisposableService GetService()
+	    {
+	        return RoutingService.GetService();
+	    }
+
+	    public override Transaction BeginTransaction(string transactionId = null)
 		{
 			throw new NotSupportedException(NotSupportedOperation);
 		}
@@ -358,6 +381,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Balancing
 
 		public override void Dispose()
 		{
+		    IsReleased = true;
 			RoutingService.StopRouter();
 		}
 	}

@@ -151,9 +151,12 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Planned
 					Parameters = new ParameterCollection { { "ExecutionPlan", serialised.Compress() } }
 				};
 
-			using var service = enhancedOrgServiceBase.GetService();
+		    string response;
 
-			var response = ((string)service.Execute(request)["SerialisedResult"]).Decompress();
+		    using (var service = enhancedOrgServiceBase.GetService())
+		    {
+		        response = ((string)service.Execute(request)["SerialisedResult"]).Decompress();
+		    }
 
 			var result = response.DeserialiseContractJson<MockDictionary>(true,
 				surrogate: new DateTimeCrmContractSurrogateCustom())
