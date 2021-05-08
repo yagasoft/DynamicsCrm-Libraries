@@ -2,6 +2,7 @@
 
 using System;
 using System.Runtime.Caching;
+using Microsoft.Xrm.Sdk;
 using Yagasoft.Libraries.Common;
 using Yagasoft.Libraries.EnhancedOrgService.Factories;
 using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced;
@@ -107,7 +108,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 		/// <summary>
 		///     Custom cache to use instead of <see cref="MemoryCache"/> or the <see cref="ObjectCache"/>.
 		/// </summary>
-		public Func<IServiceFactory, EnhancedServiceParams, IEnhancedOrgService, ObjectCache> CustomCacheFactory
+		public Func<IServiceFactory<IOrganizationService>, ServiceParams, IOrganizationService, ObjectCache> CustomCacheFactory
 		{
 			get => customCacheFactory;
 			set
@@ -122,6 +123,6 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 		private double? offset;
 		private TimeSpan? slidingExpiration;
 		private CacheItemPriority? priority;
-		private Func<IServiceFactory, EnhancedServiceParams, IEnhancedOrgService, ObjectCache> customCacheFactory;
+		private Func<IServiceFactory<IOrganizationService>, ServiceParams, IOrganizationService, ObjectCache> customCacheFactory;
 	}
 }

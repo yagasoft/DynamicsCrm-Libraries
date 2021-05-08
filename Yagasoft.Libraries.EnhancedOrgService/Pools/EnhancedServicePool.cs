@@ -1,143 +1,100 @@
 ﻿#region Imports
 
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.InteropServices;
-using System.Threading;
 using Microsoft.Xrm.Sdk;
 using Yagasoft.Libraries.Common;
+using Yagasoft.Libraries.EnhancedOrgService.Exceptions;
 using Yagasoft.Libraries.EnhancedOrgService.Factories;
 using Yagasoft.Libraries.EnhancedOrgService.Helpers;
 using Yagasoft.Libraries.EnhancedOrgService.Operations;
 using Yagasoft.Libraries.EnhancedOrgService.Params;
-using Yagasoft.Libraries.EnhancedOrgService.Response.Operations;
 using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced;
-using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Transactions;
 
 #endregion
 
 namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 {
 	/// <inheritdoc cref="IEnhancedServicePool{TService}" />
-	public class EnhancedServicePool<TServiceInterface, TEnhancedOrgService> : IEnhancedServicePool<TServiceInterface>
-		where TServiceInterface : IEnhancedOrgService
-		where TEnhancedOrgService : EnhancedOrgServiceBase, TServiceInterface
+	public class EnhancedServicePool<TService, TEnhancedOrgService> : ServicePool<TService>, IEnhancedServicePool<TService>
+		where TService : IEnhancedOrgService
+		where TEnhancedOrgService : EnhancedOrgServiceBase, TService
 	{
 		public IOperationStats Stats { get; }
 
 		public virtual IEnumerable<IOperationStats> StatTargets => statServices;
 
-		public IEnhancedServiceFactory<TServiceInterface> Factory => factory;
-
-		private readonly EnhancedServiceFactory<TServiceInterface, TEnhancedOrgService> factory;
-
-		private readonly BlockingQueue<TServiceInterface> servicesQueue = new();
-		private readonly ConcurrentQueue<IOrganizationService> crmServicesQueue = new();
+		private readonly ServicePool<IOrganizationService> crmPool;
 
 		private readonly HashSet<IOperationStats> statServices = new();
 
-		private readonly PoolParams poolParams;
-		private int createdCrmServicesCount;
+		public EnhancedServicePool(EnhancedServiceFactory<TService, TEnhancedOrgService> factory, int poolSize = 2)
+			: this(factory, new PoolParams { PoolSize = poolSize })
+		{ }
 
-		private WarmUp.WarmUp warmUp;
-
-		public EnhancedServicePool(EnhancedServiceFactory<TServiceInterface, TEnhancedOrgService> factory, int poolSize)
+		public EnhancedServicePool(EnhancedServiceFactory<TService, TEnhancedOrgService> factory, PoolParams poolParams = null)
+			: base(factory, poolParams)
 		{
+			factory.Require(nameof(factory));
+
 			Stats = new OperationStats(this);
-
-			this.factory = factory;
-			poolParams = new PoolParams { PoolSize = poolSize };
-		}
-
-		public EnhancedServicePool(EnhancedServiceFactory<TServiceInterface, TEnhancedOrgService> factory, PoolParams poolParams = null)
-		{
-			Stats = new OperationStats(this);
-
-			this.factory = factory;
 
 			if (poolParams != null)
 			{
-				poolParams.IsLocked = true;
+				ParamHelpers.SetPerformanceParams(poolParams);
 			}
 
-			this.poolParams = poolParams ?? factory.Parameters?.PoolParams ?? new PoolParams();
-
-		    if (this.poolParams.IsAutoPoolWarmUp == true)
-		    {
-		        WarmUp();
-		    }
+			crmPool = new ServicePool<IOrganizationService>(
+				new ServiceFactory(factory.Parameters.ConnectionParams, factory.Parameters.PoolParams?.TokenExpiryCheck), poolParams);
 		}
 
-		public int CreatedServices { get; private set; }
-		public int CurrentPoolSize => servicesQueue.Count;
-
-		public TServiceInterface GetService(int threads = 1)
+		public override void WarmUp()
 		{
-			threads.RequireAtLeast(1);
-			servicesQueue.TryTake(out var service);
-			return GetInitialisedService(threads, service);
+			crmPool.WarmUp();
+			base.WarmUp();
 		}
 
-	    public void WarmUp()
-	    {
-	        lock (this)
-	        {
-	            warmUp ??= new WarmUp.WarmUp(
-	                () =>
-                    {
-                        if (createdCrmServicesCount < poolParams.PoolSize)
-                        {
-                            crmServicesQueue.Enqueue(GetCrmService(true));
-                        }
-                        else
-                        {
-                            EndWarmup();
-                        }
-                    });
-	        }
-
-	        warmUp.Start();
-	    }
-
-	    public void EndWarmup()
+		public override void EndWarmup()
 		{
-	        warmUp.End();
+			crmPool.EndWarmup();
+			base.EndWarmup();
 		}
 
-		private IOrganizationService GetCrmService(bool isSkipQueue = false)
+		public override TService GetService()
 		{
-			IOrganizationService crmService = null;
-
-			if (!isSkipQueue)
-			{
-				crmServicesQueue.TryDequeue(out crmService);
-			}
-
-			if (crmService.EnsureTokenValid(poolParams.TokenExpiryCheckSecs ?? 600) == false)
-			{
-				crmService = null;
-			}
-
-			if (crmService != null)
-			{
-				return crmService;
-			}
-
-			crmService = factory.CreateCrmService();
-			createdCrmServicesCount++;
-
-			return crmService;
+			ServicesQueue.TryTake(out var service);
+			return GetInitialisedService(service);
 		}
 
-		private TServiceInterface GetInitialisedService(int threads, [Optional] TServiceInterface enhancedService)
+		public override void ReleaseService(IOrganizationService service)
+		{
+			service.Require(nameof(service));
+
+			if (service is EnhancedOrgServiceBase enhancedOrgServiceBase)
+			{
+				var releasedService = enhancedOrgServiceBase.ClearConnection();
+				crmPool.ReleaseService(releasedService);
+			}
+
+			if (service is TService thisService)
+			{
+				ServicesQueue.Enqueue(thisService);
+			}
+		}
+
+		public void ClearFactoryCache()
+		{
+			(Factory as IEnhancedServiceFactory<TService>)?.ClearCache();
+		}
+
+		private TService GetInitialisedService(TService enhancedService = default)
 		{
 			if (enhancedService == null)
 			{
-				lock (servicesQueue)
+				lock (ServicesQueue)
 				{
-					if (CreatedServices < poolParams.PoolSize)
+					if (CreatedServices < PoolParams.PoolSize)
 					{
 						enhancedService = GetEnhancedService();
 					}
@@ -146,11 +103,11 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 
 			try
 			{
-				enhancedService ??= servicesQueue.Dequeue(poolParams.DequeueTimeout);
+				enhancedService ??= ServicesQueue.Dequeue(PoolParams.DequeueTimeout);
 			}
 			catch (TimeoutException)
 			{
-				lock (servicesQueue)
+				lock (ServicesQueue)
 				{
 					enhancedService = GetEnhancedService();
 				}
@@ -162,13 +119,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 
 				try
 				{
-			        enhancedOrgServiceBase.MaxConnectionCount = threads;
-                    enhancedOrgServiceBase.CreateCrmService = () => GetCrmService();
-
-				    enhancedOrgServiceBase.InitialiseConnectionQueue(
-				        Enumerable.Range(0, threads)
-				            .Select(_ => crmServicesQueue.TryDequeue(out var crmService) ? crmService : null)
-				            .Where(s => s != null));
+					enhancedOrgServiceBase.InitialiseConnection(crmPool.GetService());
 				}
 				catch
 				{
@@ -186,34 +137,16 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 			return enhancedService;
 		}
 
-		private TServiceInterface GetEnhancedService()
+		private TService GetEnhancedService()
 		{
-			var enhancedService = factory.CreateEnhancedServiceInternal(false);
+			if (Factory is not EnhancedServiceFactory<TService, TEnhancedOrgService> enhancedFactory)
+			{
+				throw new StateException("Unable to create a service due to type mismatch on factory result.");
+			}
+
+			var enhancedService = enhancedFactory.CreateEnhancedService();
 			CreatedServices++;
 			return enhancedService;
-		}
-
-		public void ClearFactoryCache()
-		{
-			factory.ClearCache();
-		}
-
-		public void ReleaseService(IEnhancedOrgService enhancedService)
-		{
-			if (enhancedService is EnhancedOrgServiceBase enhancedOrgServiceBase)
-			{
-				var releasedServices = enhancedOrgServiceBase.ClearConnectionQueue();
-
-				foreach (var service in releasedServices)
-				{
-					crmServicesQueue.Enqueue(service);
-				}
-			}
-
-			if (enhancedService is TServiceInterface thisService)
-			{
-				servicesQueue.Enqueue(thisService);
-			}
 		}
 	}
 }

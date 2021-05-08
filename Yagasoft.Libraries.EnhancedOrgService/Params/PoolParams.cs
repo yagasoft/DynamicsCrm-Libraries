@@ -25,18 +25,18 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 		}
 
 		/// <summary>
-		///     Threshold time in seconds from actual expiry of the connection token.
+		///     Threshold time from actual expiry of the connection token.
 		///     Can be used in service pools to automatically renew tokens.<br />
 		///     Default value: 1 hour.
 		/// </summary>
-		public int? TokenExpiryCheckSecs
+		public TimeSpan? TokenExpiryCheck
 		{
-			get => tokenExpiryCheckSecs ?? 60 * 60;
+			get => tokenExpiryCheck ?? TimeSpan.FromHours(1);
 			set
 			{
 				ValidateLock();
-				value?.RequireAtLeast(1, nameof(TokenExpiryCheckSecs));
-				tokenExpiryCheckSecs = value;
+			    value?.TotalSeconds.RequireAtLeast(1, nameof(TokenExpiryCheck));
+				tokenExpiryCheck = value;
 			}
 		}
 
@@ -56,23 +56,6 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 		}
 
 	    /// <summary>
-	    ///     When a pool is created
-	    ///     or a <see cref="IEnhancedServicePool{TService}.GetService" /> is passed a number of threads,
-	    ///     this option enables pre-creating maximum number of connections to be ready when needed;
-	    ///     otherwise, connections are created when needed only.<br />
-	    ///     Default value: false.
-	    /// </summary>
-	    public bool? IsAutoPoolWarmUp
-	    {
-	        get => isInnerPoolingWarmUp;
-	        set
-	        {
-	            ValidateLock();
-	            isInnerPoolingWarmUp = value;
-	        }
-	    }
-
-	    /// <summary>
 		///     Bump up the min threads reserved for this app. Default: 4.<br />
 		///     This is an app-wide (global on the .Net Framework level) setting.
 		/// </summary>
@@ -88,9 +71,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 		}
 
 		private int? poolSize;
-		private int? tokenExpiryCheckSecs;
+		private TimeSpan? tokenExpiryCheck;
 		private TimeSpan? dequeueTimeout;
-		private bool? isInnerPoolingWarmUp;
 		private int? dotNetSetMinAppReservedThreads;
 	}
 }

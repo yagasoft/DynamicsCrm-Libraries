@@ -2,7 +2,7 @@
 
 [![Join the chat at https://gitter.im/yagasoft/DynamicsCrm-Libraries](https://badges.gitter.im/yagasoft/DynamicsCrm-Libraries.svg)](https://gitter.im/yagasoft/DynamicsCrm-Libraries?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-### Version: 5.3.3
+### Version: 6.1.1
 ---
 
 A collection of libraries for common and extended operations in Dynamics CRM development that gives power to the developer and saves time.
@@ -35,6 +35,13 @@ A collection of libraries for common and extended operations in Dynamics CRM dev
 
 ## Changes
 
+#### _v6.1.1 (2021-05-08)_
++ Added: default factory and pool implementations for easier connection kick off
++ Improved: reworked the implicit pooling implementation for easier usage and more powerful features
++ Improved: reworked the self-balancing implementation for better code and maintenance
++ Improved: made the routing service more generic
++ Improved: reworked the interfaces to make more sense and for better maintenance (it breaks backward compatibility but the library hasn't been downloaded yet)
++ Improved: helpers for easier usage
 #### _v5.3.3 (2021-05-06)_
 + Added: proper warm up logic for all pooling levels
 + Fixed: internal pool initialisation

@@ -8,7 +8,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 	///     <br />
 	///     Auto-retry can be enabled per operation even if disabled on the service itself.
 	/// </summary>
-	public class ExecuteParams : EnhancedServiceParamsBase
+	public class ExecuteParams : ServiceParamsBase
 	{
 		public AutoRetryParams AutoRetryParams { get; set; }
 		public bool IsExcludeFromHistory { get; set; }

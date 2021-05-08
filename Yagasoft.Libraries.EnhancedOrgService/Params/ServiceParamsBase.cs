@@ -1,6 +1,6 @@
 ﻿namespace Yagasoft.Libraries.EnhancedOrgService.Params
 {
-	public class EnhancedServiceParamsBase : ParamsBase
+	public class ServiceParamsBase : ParamsBase
 	{
 		public bool? IsCachingEnabled
 		{

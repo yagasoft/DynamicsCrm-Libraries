@@ -3,27 +3,19 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
 using System.Reflection;
 using System.Runtime.Caching;
-using System.Threading;
 using Microsoft.Xrm.Client.Caching;
 using Microsoft.Xrm.Client.Services;
 using Microsoft.Xrm.Sdk;
-using Microsoft.Xrm.Sdk.Client;
-using Microsoft.Xrm.Sdk.WebServiceClient;
-using Microsoft.Xrm.Tooling.Connector;
 using Yagasoft.Libraries.Common;
 using Yagasoft.Libraries.EnhancedOrgService.Cache;
 using Yagasoft.Libraries.EnhancedOrgService.Helpers;
 using Yagasoft.Libraries.EnhancedOrgService.Operations;
 using Yagasoft.Libraries.EnhancedOrgService.Params;
-using Yagasoft.Libraries.EnhancedOrgService.Response.Operations;
-using Yagasoft.Libraries.EnhancedOrgService.Router;
+using Yagasoft.Libraries.EnhancedOrgService.Pools;
 using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced;
-using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Balancing;
 using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Cache;
-using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Transactions;
 using Yagasoft.Libraries.EnhancedOrgService.Transactions;
 
 #endregion
@@ -31,48 +23,27 @@ using Yagasoft.Libraries.EnhancedOrgService.Transactions;
 namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 {
 	/// <inheritdoc cref="IEnhancedServiceFactory{TEnhancedOrgService}" />
-	public class EnhancedServiceFactory<TServiceInterface, TEnhancedOrgService> : IEnhancedServiceFactory<TServiceInterface>
-		where TServiceInterface : IEnhancedOrgService
-		where TEnhancedOrgService : EnhancedOrgServiceBase, TServiceInterface
+	public class EnhancedServiceFactory<TService, TEnhancedOrgService> : IEnhancedServiceFactory<TService>
+		where TService : IEnhancedOrgService
+		where TEnhancedOrgService : EnhancedOrgServiceBase, TService
 	{
 		public IOperationStats Stats { get; }
 
 		public virtual IEnumerable<IOperationStats> StatTargets => statServices;
 
-		internal readonly EnhancedServiceParams Parameters;
+		internal readonly ServiceParams Parameters;
+
+		private readonly ServiceFactory crmFactory;
 
 		private readonly ObjectCache factoryCache;
 		private readonly List<ObjectCache> customFactoryCaches = new();
-		private readonly Func<IServiceFactory, EnhancedServiceParams, IEnhancedOrgService, ObjectCache> customCacheFactory;
 
-		private readonly Func<string, IOrganizationService> customServiceFactory = ConnectionHelpers.CreateCrmService;
-		private CrmServiceClient serviceCloneBase;
+		private readonly Func<IServiceFactory<IOrganizationService>, ServiceParams, IOrganizationService, ObjectCache>
+			customCacheFactory;
 
 		private readonly HashSet<IOperationStats> statServices = new();
 
-		private readonly IRoutingService routeringService;
-
-		public EnhancedServiceFactory(IRoutingService routeringService)
-		{
-			Stats = new OperationStats(this);
-
-			this.routeringService = routeringService;
-			var enhancedOrgType = typeof(TEnhancedOrgService);
-
-			if (enhancedOrgType.IsAbstract)
-			{
-				throw new NotSupportedException("Given Enhanced Org type must be concrete.");
-			}
-
-			if (!typeof(ISelfBalancingOrgService).IsAssignableFrom(typeof(TServiceInterface)))
-			{
-				throw new NotSupportedException("Given Enhanced Org interface must be self-balancing.");
-			}
-
-			routeringService.Require(nameof(routeringService));
-		}
-
-		public EnhancedServiceFactory(EnhancedServiceParams parameters)
+		public EnhancedServiceFactory(ServiceParams parameters)
 		{
 			Stats = new OperationStats(this);
 
@@ -84,6 +55,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 			}
 
 			parameters.Require(nameof(parameters));
+			parameters.ConnectionParams.Require(nameof(parameters.ConnectionParams));
 
 			var isCachingService = typeof(ICachingOrgService).IsAssignableFrom(typeof(TEnhancedOrgService));
 
@@ -92,7 +64,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 				throw new NotSupportedException("Cannot create a caching service factory unless the given service is caching.");
 			}
 
-			SetPerformanceParams(parameters);
+			ParamHelpers.SetPerformanceParams(parameters.ConnectionParams);
 
 			parameters.IsLocked = true;
 			Parameters = parameters;
@@ -104,13 +76,15 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 				switch (parameters.CachingParams.CacheScope)
 				{
 					case CacheScope.Global:
-						factoryCache = customCacheFactory == null ? MemoryCache.Default : customCacheFactory(this, Parameters, null);
+						factoryCache = customCacheFactory == null
+							? MemoryCache.Default
+							: customCacheFactory((IServiceFactory<IOrganizationService>)this, Parameters, null);
 						break;
 
 					case CacheScope.Factory:
 						factoryCache = customCacheFactory == null
 							? (parameters.CachingParams.ObjectCache ?? new MemoryCache(parameters.ConnectionParams.ConnectionString))
-							: customCacheFactory(this, Parameters, null);
+							: customCacheFactory((IServiceFactory<IOrganizationService>)this, Parameters, null);
 						break;
 
 					case CacheScope.Service:
@@ -121,80 +95,49 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 				}
 			}
 
-			customServiceFactory = parameters.ConnectionParams.CustomIOrgSvcFactory ?? customServiceFactory;
+			crmFactory = new ServiceFactory(parameters.ConnectionParams, parameters.PoolParams?.TokenExpiryCheck);
 		}
 
-		public virtual TServiceInterface CreateEnhancedService(int threads = 1)
+		public virtual TService CreateService()
 		{
-			threads.RequireAtLeast(1);
-
-			if (routeringService != null)
-			{
-				if (threads > 1)
-				{
-					throw new NotSupportedException($"Self-balancing services don't require the '{nameof(threads)}' parameter to be defined.");
-				}
-			}
-
-			return CreateEnhancedServiceInternal(true, threads);
-		}
-
-		public IOrganizationService CreateCrmService()
-		{
-			IOrganizationService service = null;
-
-			var timeout = Parameters.ConnectionParams.Timeout;
-
-			if (timeout != null)
-			{
-				CrmServiceClient.MaxConnectionTimeout = timeout.Value;
-			}
-
-			if (serviceCloneBase == null)
-			{
-				service = customServiceFactory(Parameters.ConnectionParams.ConnectionString);
-				serviceCloneBase = service as CrmServiceClient;
-			}
-
-			if (serviceCloneBase != null)
-			{
-				service = serviceCloneBase.Clone();
-			}
-
-			if (service.EnsureTokenValid(Parameters.PoolParams?.TokenExpiryCheckSecs ?? 0) == false)
-			{
-				service = null;
-			}
-
-			service ??= customServiceFactory(Parameters.ConnectionParams.ConnectionString);
-
-			if (timeout != null)
-			{
-				if (service is OrganizationServiceProxy proxyService)
-				{
-					proxyService.Timeout = timeout.Value;
-				}
-
-				if (service is OrganizationWebProxyClient webProxyService)
-				{
-					webProxyService.InnerChannel.OperationTimeout = timeout.Value;
-				}
-			}
-
+			var service = CreateEnhancedService();
+			(service as TEnhancedOrgService)?.InitialiseConnection(crmFactory.CreateService());
 			return service;
 		}
 
-		internal virtual TServiceInterface CreateEnhancedServiceInternal(bool isInitialiseCrmServices = true, int threads = 1)
+		public virtual TService CreateService(IServicePool<IOrganizationService> servicePool)
 		{
-			if (routeringService != null)
-			{
-				var balancingService = (TEnhancedOrgService)Activator.CreateInstance(typeof(TEnhancedOrgService),
-					BindingFlags.NonPublic | BindingFlags.Instance, null, new object[] { routeringService }, null);
+			servicePool.Require(nameof(servicePool));
+			var service = CreateEnhancedService();
+			(service as TEnhancedOrgService)?.InitialiseConnection(servicePool);
+			return service;
+		}
 
-				return balancingService;
-				// TODO propagate events
+		public void ClearCache()
+		{
+			if (Parameters.IsCachingEnabled != true)
+			{
+				throw new NotSupportedException("Cannot clear the cache because caching is not enabled.");
 			}
 
+			if (Parameters.CachingParams?.CacheScope == CacheScope.Service)
+			{
+				foreach (var service in statServices.OfType<ICachingOrgService>())
+				{
+					service.ClearCache();
+				}
+			}
+
+			factoryCache?.Clear();
+
+			foreach (var cache in customFactoryCaches)
+			{
+				cache?.Clear();
+			}
+		}
+
+		internal virtual TService CreateEnhancedService()
+		{
 			var enhancedService = (TEnhancedOrgService)Activator.CreateInstance(typeof(TEnhancedOrgService),
 				BindingFlags.NonPublic | BindingFlags.Instance, null, new object[] { Parameters }, null);
 
@@ -206,13 +149,6 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 			if (Parameters.IsCachingEnabled == true)
 			{
 				InitialiseCaching(enhancedService);
-			}
-
-			if (isInitialiseCrmServices)
-			{
-			    enhancedService.MaxConnectionCount = threads;
-				enhancedService.CreateCrmService = CreateCrmService;
-				enhancedService.InitialiseConnectionQueue();
 			}
 
 			statServices.Add(enhancedService);
@@ -229,6 +165,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 				return;
 			}
 
+			enhancedService.Require(nameof(enhancedService));
+
 			ObjectCache cache;
 
 			switch (Parameters.CachingParams.CacheScope)
@@ -241,7 +179,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 				case CacheScope.Service:
 					cache = customCacheFactory == null
 						? new MemoryCache(Parameters.ConnectionParams.ConnectionString)
-						: customCacheFactory(this, Parameters, enhancedService);
+						: customCacheFactory((IServiceFactory<IOrganizationService>)this, Parameters, enhancedService);
 					break;
 
 				default:
@@ -271,57 +209,6 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 
 			enhancedService.Cache = new OrganizationServiceCache(cache, cacheSettings);
 			enhancedService.ObjectCache = cache;
-		}
-
-		private static void SetPerformanceParams(EnhancedServiceParams parameters)
-		{
-			if (parameters.ConnectionParams?.DotNetDefaultConnectionLimit.HasValue == true)
-			{
-				ServicePointManager.DefaultConnectionLimit = parameters.ConnectionParams.DotNetDefaultConnectionLimit.Value;
-			}
-
-			if (parameters.PoolParams?.DotNetSetMinAppReservedThreads.HasValue == true)
-			{
-				var minThreads = parameters.PoolParams.DotNetSetMinAppReservedThreads.Value;
-				ThreadPool.SetMinThreads(minThreads, minThreads);
-			}
-
-			if (parameters.ConnectionParams?.IsDotNetDisableWaitForConnectConfirm.HasValue == true)
-			{
-				ServicePointManager.Expect100Continue =
-					!parameters.ConnectionParams.IsDotNetDisableWaitForConnectConfirm.Value;
-			}
-
-			if (parameters.ConnectionParams?.IsDotNetDisableNagleAlgorithm.HasValue == true)
-			{
-				ServicePointManager.UseNagleAlgorithm = !parameters.ConnectionParams.IsDotNetDisableNagleAlgorithm.Value;
-			}
-		}
-
-		/// <summary>
-		///     Clears the memory cache on the level of the factory and any services created.
-		/// </summary>
-		public void ClearCache()
-		{
-			if (Parameters.IsCachingEnabled != true)
-			{
-				throw new NotSupportedException("Cannot clear the cache because caching is not enabled.");
-			}
-
-			if (Parameters.CachingParams?.CacheScope == CacheScope.Service)
-			{
-				foreach (var service in statServices.OfType<ICachingOrgService>())
-				{
-					service.ClearCache();
-				}
-			}
-
-			factoryCache?.Clear();
-
-			foreach (var cache in customFactoryCaches)
-			{
-				cache?.Clear();
-			}
 		}
 	}
 }

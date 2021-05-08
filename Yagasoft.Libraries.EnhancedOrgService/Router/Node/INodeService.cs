@@ -1,6 +1,7 @@
 ﻿#region Imports
 
 using System;
+using Microsoft.Xrm.Sdk;
 using Yagasoft.Libraries.EnhancedOrgService.Events;
 using Yagasoft.Libraries.EnhancedOrgService.Events.EventArgs;
 using Yagasoft.Libraries.EnhancedOrgService.Operations;
@@ -25,9 +26,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router.Node
 	{
 		event EventHandler<INodeService, NodeStatusEventArgs> NodeStatusChanged;
 
-		EnhancedServiceParams Params { get; }
 		int Weight { get; }
-		IEnhancedServicePool<IEnhancedOrgService> Pool { get; }
+		IServicePool<IOrganizationService> Pool { get; }
 		NodeStatus Status { get; }
 		bool IsPrimary { get; }
 

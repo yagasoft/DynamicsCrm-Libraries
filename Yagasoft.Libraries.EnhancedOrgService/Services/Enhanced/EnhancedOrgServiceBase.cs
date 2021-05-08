@@ -1,18 +1,14 @@
 ﻿#region Imports
 
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens;
 using System.Linq;
 using System.Runtime.Caching;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Xrm.Client.Caching;
 using Microsoft.Xrm.Client.Services;
-using Microsoft.Xrm.Client.Services.Messages;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Messages;
 using Microsoft.Xrm.Sdk.Query;
@@ -22,6 +18,7 @@ using Yagasoft.Libraries.EnhancedOrgService.Events.EventArgs;
 using Yagasoft.Libraries.EnhancedOrgService.Exceptions;
 using Yagasoft.Libraries.EnhancedOrgService.Helpers;
 using Yagasoft.Libraries.EnhancedOrgService.Params;
+using Yagasoft.Libraries.EnhancedOrgService.Pools;
 using Yagasoft.Libraries.EnhancedOrgService.Pools.WarmUp;
 using Yagasoft.Libraries.EnhancedOrgService.Response.Operations;
 using Yagasoft.Libraries.EnhancedOrgService.Response.Tokens;
@@ -38,7 +35,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 	/// <inheritdoc cref="IEnhancedOrgService" />
 	public abstract class EnhancedOrgServiceBase : IStateful, IEnhancedOrgService
 	{
-		public virtual event EventHandler<IEnhancedOrgService, OperationStatusEventArgs> OperationStatusChanged
+		public virtual event EventHandler<IOrganizationService, OperationStatusEventArgs> OperationStatusChanged
 		{
 			add
 			{
@@ -47,7 +44,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 			}
 			remove => InnerOperationStatusChanged -= value;
 		}
-		protected virtual event EventHandler<IEnhancedOrgService, OperationStatusEventArgs> InnerOperationStatusChanged;
+
+		protected virtual event EventHandler<IOrganizationService, OperationStatusEventArgs> InnerOperationStatusChanged;
 
 		public virtual IEnumerable<Operation> PendingOperations => pendingOperations;
 		public virtual IEnumerable<Operation> ExecutedOperations => executedOperations;
@@ -66,34 +64,31 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 		public virtual double FailureRate => FailureCount / (double)(RequestCount == 0 ? 1 : RequestCount);
 		public virtual int RetryCount { get; protected internal set; }
 
-		public EnhancedServiceParams Parameters { get; protected internal set; }
+		public ServiceParams Parameters { get; protected internal set; }
 
 		protected internal virtual ITransactionManager TransactionManager { get; set; }
 
 		protected internal static int OperationIndex;
 
-		protected internal Func<IOrganizationService> CreateCrmService;
+		protected internal IOrganizationService CrmService;
+		protected internal IServicePool<IOrganizationService> ServicePool;
+
 		protected internal Action ReleaseService;
-	    protected internal int MaxConnectionCount;
 
 		protected internal virtual IOrganizationServiceCache Cache { get; set; }
 		protected internal virtual ObjectCache ObjectCache { get; set; }
 		protected internal virtual bool IsCacheEnabled => Parameters?.IsCachingEnabled == true && Cache != null;
 
-	    protected internal bool IsReleased = true;
+		protected internal bool IsReleased = true;
 
 		private readonly List<Operation> pendingOperations;
 		private readonly FixedSizeQueue<Operation> executedOperations;
 
-		private readonly BlockingQueue<IOrganizationService> crmServiceQueue = new();
-	    private int crmServiceCount;
-		
 		private IDeferredOrgService deferredOrgService;
 		private bool isUseSdkDeferredOperations;
 
 		private IPlannedOrgService plannedOrgService;
 
-	    private bool IsAutoPoolWarmUp => Parameters?.PoolParams?.IsAutoPoolWarmUp ?? false;
 		private TimeSpan? DequeueTimeout => Parameters?.PoolParams?.DequeueTimeout;
 
 		private bool IsRetryEnabled => Parameters?.IsAutoRetryEnabled ?? false;
@@ -101,144 +96,91 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 		private TimeSpan RetryInterval => Parameters?.AutoRetryParams?.RetryInterval ?? TimeSpan.FromSeconds(5);
 		private double RetryBackoffMultiplier => Parameters?.AutoRetryParams?.BackoffMultiplier ?? 1;
 		private TimeSpan? MaxmimumRetryInterval => Parameters?.AutoRetryParams?.MaxmimumRetryInterval;
+
 		private IEnumerable<Func<Func<IOrganizationService, object>, Operation, ExecuteParams, Exception, object>> CustomRetryFunctions
-			 => Parameters?.AutoRetryParams?.CustomRetryFunctions;
+			=> Parameters?.AutoRetryParams?.CustomRetryFunctions;
 
-	    private WarmUp warmUp;
-
-		protected internal EnhancedOrgServiceBase(EnhancedServiceParams parameters)
+		protected internal EnhancedOrgServiceBase(ServiceParams parameters)
 		{
 			Parameters = parameters;
 			pendingOperations = new List<Operation>();
 			executedOperations = new FixedSizeQueue<Operation>(parameters?.OperationHistoryLimit ?? int.MaxValue);
 		}
-		
+
 		public virtual void ValidateState(bool isValid = true)
 		{
 			if (IsReleased)
 			{
-			    throw new StateException("Service is not ready. Try to get a new service from the helper/pool/factory.");
+				throw new StateException("Service is not ready. Try to get a new service from the helper/pool/factory.");
 			}
 		}
 
 		#region Service
 
-	    public virtual void WarmUp()
-	    {
-	        lock (this)
-	        {
-	            warmUp ??= new WarmUp(
-	                () =>
-                    {
-                        lock (crmServiceQueue)
-                        {
-                            if (crmServiceCount < MaxConnectionCount)
-                            {
-                                crmServiceQueue.Enqueue(CreateCrmServiceInner());
-                            }
-                            else
-                            {
-                                EndWarmup();
-                            }
-                        }
-                    });
-	        }
-
-	        warmUp.Start();
-	    }
-
-	    public virtual void EndWarmup()
-	    {
-	        warmUp.End();
-	    }
-
-	    protected internal virtual void InitialiseConnectionQueue(IEnumerable<IOrganizationService> services = null)
+		public virtual void WarmUp()
 		{
-		    if (services != null)
-		    {
-		        foreach (var service in services)
-		        {
-		            crmServiceQueue.Add(service);
-		            crmServiceCount++;
-		        }
-		    }
-
-			// ensure at least one connection is ready for action
-		    if (crmServiceCount <= 0)
-		    {
-		        crmServiceQueue.Enqueue(CreateCrmServiceInner());
-		    }
-
-		    IsReleased = false;
-
-		    if (IsAutoPoolWarmUp)
-		    {
-		        WarmUp();
-		    }
+			if (ServicePool != null)
+			{
+				ServicePool.WarmUp();
+			}
 		}
 
-		protected internal virtual IOrganizationService[] ClearConnectionQueue()
+		public virtual void EndWarmup()
 		{
-			var services = crmServiceQueue.ToArray();
-			crmServiceQueue.Clear();
-			crmServiceCount = 0;
-			return services;
+			if (ServicePool != null)
+			{
+				ServicePool.EndWarmup();
+			}
+		}
+
+		protected internal virtual void InitialiseConnection(IOrganizationService service)
+		{
+			service.Require(nameof(service));
+			CrmService = service;
+			IsReleased = false;
+		}
+
+		protected internal virtual void InitialiseConnection(IServicePool<IOrganizationService> servicePool)
+		{
+			servicePool.Require(nameof(servicePool));
+			ServicePool = servicePool;
+			IsReleased = false;
+		}
+
+		protected internal virtual IOrganizationService ClearConnection()
+		{
+			var service = CrmService;
+			CrmService = null;
+			return service;
 		}
 
 		protected internal virtual IDisposableService GetService()
 		{
 			ValidateState();
 
-		    IOrganizationService service;
+			var service = CrmService;
 
-            try
-            {
-                crmServiceQueue.TryTake(out service);
+			if (ServicePool != null)
+			{
+				service = ServicePool.GetService() ?? CrmService;
+			}
 
-                if (service == null)
-                {
-                    lock (crmServiceQueue)
-                    {
-                        if (crmServiceCount < MaxConnectionCount)
-                        {
-                            service = CreateCrmServiceInner();
-                        }
-                    }
-                }
+			if (service == null)
+			{
+				throw new StateException("Failed to find an internal CRM service.");
+			}
 
-                service ??= crmServiceQueue.Dequeue(DequeueTimeout);
-            }
-            catch (TimeoutException)
-            {
-                service = CreateCrmServiceInner();
-            }
-
-		    if (service == null)
-		    {
-		        throw new TimeoutException("Failed to find an internal CRM service in time.");
-		    }
-
-		    if (service.EnsureTokenValid() == false)
+			if (service.EnsureTokenValid() == false)
 			{
 				throw new SecurityTokenExpiredException("Service token has expired.");
 			}
 
-			return new SelfDisposingService(service, () => crmServiceQueue.Enqueue(service));
+			return ServicePool == null
+				? new SelfDisposingService(service, () => { })
+				: new SelfDisposingService(service, () => ServicePool.ReleaseService(service));
 		}
 
-	    private IOrganizationService CreateCrmServiceInner()
-	    {
-	        var crmService = CreateCrmService?.Invoke();
-
-	        lock (crmServiceQueue)
-	        {
-	            crmServiceCount++;
-	        }
-
-	        return crmService;
-	    }
-
-	    #endregion
+		#endregion
 
 		#region Transactions
 
@@ -351,12 +293,14 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 			Delete(entityName, id, null);
 		}
 
-		public virtual void Associate(string entityName, Guid entityId, Relationship relationship, EntityReferenceCollection relatedEntities)
+		public virtual void Associate(string entityName, Guid entityId, Relationship relationship,
+			EntityReferenceCollection relatedEntities)
 		{
 			Associate(entityName, entityId, relationship, relatedEntities, null);
 		}
 
-		public virtual void Disassociate(string entityName, Guid entityId, Relationship relationship, EntityReferenceCollection relatedEntities)
+		public virtual void Disassociate(string entityName, Guid entityId, Relationship relationship,
+			EntityReferenceCollection relatedEntities)
 		{
 			Disassociate(entityName, entityId, relationship, relatedEntities, null);
 		}
@@ -592,7 +536,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 			return operation as Operation<AssociateResponse>;
 		}
 
-		public virtual Operation<DisassociateResponse> DisassociateAsOperation(string entityName, Guid entityId, Relationship relationship,
+		public virtual Operation<DisassociateResponse> DisassociateAsOperation(string entityName, Guid entityId,
+			Relationship relationship,
 			EntityReferenceCollection relatedEntities, ExecuteParams executeParams = null)
 		{
 			ValidateState();
@@ -650,20 +595,20 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 				TryRunOperation(
 					service =>
 					{
-					Entity resultInner;
+						Entity resultInner;
 
-					if (IsCacheEnabled && executeParams?.IsCachingEnabled != false)
-					{
-						resultInner = InnerExecute<RetrieveResponse>(request)?.Entity;
-					}
-					else
-					{
-						resultInner = service.Retrieve(entityName, id, columnSet);
-					}
+						if (IsCacheEnabled && executeParams?.IsCachingEnabled != false)
+						{
+							resultInner = InnerExecute<RetrieveResponse>(request)?.Entity;
+						}
+						else
+						{
+							resultInner = service.Retrieve(entityName, id, columnSet);
+						}
 
-					return resultInner;
-				},
-				operation, executeParams);
+						return resultInner;
+					},
+					operation, executeParams);
 
 			operation.Response =
 				new RetrieveResponse
@@ -674,7 +619,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 			return operation as Operation<RetrieveResponse>;
 		}
 
-		public virtual Operation<RetrieveMultipleResponse> RetrieveMultipleAsOperation(QueryBase query, ExecuteParams executeParams = null)
+		public virtual Operation<RetrieveMultipleResponse> RetrieveMultipleAsOperation(QueryBase query,
+			ExecuteParams executeParams = null)
 		{
 			ValidateState();
 
@@ -689,20 +635,20 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 				TryRunOperation(
 					service =>
 					{
-					EntityCollection resultInner;
+						EntityCollection resultInner;
 
-					if (IsCacheEnabled && executeParams?.IsCachingEnabled != false)
-					{
-						resultInner = InnerExecute<RetrieveMultipleResponse>(request)?.EntityCollection;
-					}
-					else
-					{
-						resultInner = service.RetrieveMultiple(query);
-					}
+						if (IsCacheEnabled && executeParams?.IsCachingEnabled != false)
+						{
+							resultInner = InnerExecute<RetrieveMultipleResponse>(request)?.EntityCollection;
+						}
+						else
+						{
+							resultInner = service.RetrieveMultiple(query);
+						}
 
-					return resultInner;
-				},
-				operation, executeParams);
+						return resultInner;
+					},
+					operation, executeParams);
 
 			operation.Response =
 				new RetrieveMultipleResponse
@@ -794,7 +740,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 			}
 		}
 
-		public virtual IDictionary<OrganizationRequest, OrganisationRequestToken<OrganizationResponse>> ExecuteDeferredRequests(int bulkSize = 1000)
+		public virtual IDictionary<OrganizationRequest, OrganisationRequestToken<OrganizationResponse>> ExecuteDeferredRequests(
+			int bulkSize = 1000)
 		{
 			ValidateDeferredQueueState();
 			return deferredOrgService?.ExecuteDeferredRequests(bulkSize);
@@ -858,7 +805,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 		}
 
 		public virtual TResponse Execute<TResponse, TRequest>(OrganizationRequest request, ExecuteParams executeParams = null,
-			Func<IOrganizationService, TRequest, OrganizationRequest> undoFunction = null) 
+			Func<IOrganizationService, TRequest, OrganizationRequest> undoFunction = null)
 			where TResponse : OrganizationResponse
 			where TRequest : OrganizationRequest
 		{
@@ -866,7 +813,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 				(Func<IOrganizationService, OrganizationRequest, OrganizationRequest>)undoFunction);
 		}
 
-		public virtual Operation<TResponse> ExecuteAsOperation<TResponse>(OrganizationRequest request, ExecuteParams executeParams = null)
+		public virtual Operation<TResponse> ExecuteAsOperation<TResponse>(OrganizationRequest request,
+			ExecuteParams executeParams = null)
 			where TResponse : OrganizationResponse
 		{
 			return ExecuteAsOperation(request, executeParams, null) as Operation<TResponse>;
@@ -1050,7 +998,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 			return entities;
 		}
 
-		public virtual IEnumerable<TEntityType> RetrieveMultiplePage<TEntityType>(QueryExpression query, int pageSize = 5000, int page = 1,
+		public virtual IEnumerable<TEntityType> RetrieveMultiplePage<TEntityType>(QueryExpression query, int pageSize = 5000,
+			int page = 1,
 			ExecuteParams executeParams = null)
 			where TEntityType : Entity
 		{
@@ -1114,7 +1063,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 		#region Operation Handling
 
 		protected internal virtual TResult TryRunOperation<TResult>(Func<IOrganizationService, TResult> action,
-            Operation operation, ExecuteParams executeParams, bool isDelegated = false)
+			Operation operation, ExecuteParams executeParams, bool isDelegated = false)
 		{
 			var isRetryEnabled = executeParams?.IsAutoRetryEnabled ?? IsRetryEnabled;
 			var maxRetryCount = executeParams?.AutoRetryParams?.MaxRetryCount ?? MaxRetryCount;
@@ -1138,10 +1087,10 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 					{
 						operation.OperationStatus = Status.InProgress;
 
-					    using (var service = GetService())
-					    {
-					        return action(service);
-					    }
+						using (var service = GetService())
+						{
+							return action(service);
+						}
 					}
 					catch (Exception ex)
 					{
@@ -1208,10 +1157,10 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 				operation.ClearEventHandlers();
 			}
 		}
-		
-		protected virtual void OnOperationStatusChanged(OperationStatusEventArgs e)  
-		{  
-			InnerOperationStatusChanged?.Invoke(this, e);  
+
+		protected virtual void OnOperationStatusChanged(OperationStatusEventArgs e)
+		{
+			InnerOperationStatusChanged?.Invoke(this, e);
 		}
 
 		protected virtual Operation PrepOperation<TResponse>(OrganizationRequest request) where TResponse : OrganizationResponse
@@ -1230,7 +1179,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 
 		public virtual void Dispose()
 		{
-		    IsReleased = true;
+			IsReleased = true;
 			InnerOperationStatusChanged = null;
 			CancelPlanning();
 			CancelDeferredRequests();

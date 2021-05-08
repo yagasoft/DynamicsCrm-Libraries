@@ -10,9 +10,9 @@ using Yagasoft.Libraries.EnhancedOrgService.Params;
 
 namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Cache
 {
-    public class CachingOrgService : EnhancedOrgServiceBase, ICachingOrgService
+    public class CachingOrgService : EnhancedOrgService, ICachingOrgService
     {
-	    protected internal CachingOrgService(EnhancedServiceParams parameters) : base(parameters)
+	    protected internal CachingOrgService(ServiceParams parameters) : base(parameters)
 	    { }
 
 	    public virtual void RemoveFromCache(Entity record)

@@ -25,9 +25,10 @@ using NodeStatus = Yagasoft.Libraries.EnhancedOrgService.Router.Node.NodeStatus;
 
 namespace Yagasoft.Libraries.EnhancedOrgService.Router
 {
-	public class RoutingService : IStateful, IRoutingService
+	public class RoutingService<TService> : IStateful, IRoutingService<TService>
+		where TService : IOrganizationService
 	{
-		public virtual event EventHandler<IRoutingService, RouterEventArgs> RouterEventOccurred
+		public virtual event EventHandler<IRoutingService<TService>, RouterEventArgs> RouterEventOccurred
 		{
 			add
 			{
@@ -36,7 +37,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 			}
 			remove => InnerRouterEventOccurred -= value;
 		}
-		protected virtual event EventHandler<IRoutingService, RouterEventArgs> InnerRouterEventOccurred;
+		protected virtual event EventHandler<IRoutingService<TService>, RouterEventArgs> InnerRouterEventOccurred;
 		
 		public RouterRules Rules { get; protected internal set; }
 
@@ -100,9 +101,9 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 			}
 		}
 
-		public virtual INodeService AddNode(EnhancedServiceParams serviceParams, int weight = 1)
+		public virtual INodeService AddNode(IServicePool<TService> pool, int weight = 1)
 		{
-			serviceParams.Require(nameof(serviceParams), "Service Parameters must be set first.");
+			pool.Require(nameof(pool));
 			weight.RequireAtLeast(1, nameof(weight));
 
 			if (Status != Status.Offline)
@@ -110,7 +111,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 				throw new StateException("Router is not stopped.");
 			}
 
-			var node = new NodeService(serviceParams, weight);
+			var node = new NodeService((IServicePool<IOrganizationService>)pool, weight);
 
 			if (NodeQueue.IsEmpty)
 			{
@@ -128,7 +129,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 			return node;
 		}
 
-		public IRoutingService SetPrimaryNode(INodeService node)
+		public IRoutingService<TService> SetPrimaryNode(INodeService node)
 		{
 			if (node is NodeService nodeService)
 			{
@@ -147,7 +148,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 			return this;
 		}
 
-		public IRoutingService RemoveNode(INodeService nodeToRemove)
+		public IRoutingService<TService> RemoveNode(INodeService nodeToRemove)
 		{
 			ValidateState();
 
@@ -163,7 +164,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 			return this;
 		}
 
-		public virtual IRoutingService DefineRules(RouterRules rules)
+		public virtual IRoutingService<TService> DefineRules(RouterRules rules)
 		{
 			rules.Require(nameof(rules));
 
@@ -190,32 +191,32 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 			return this;
 		}
 
-		public virtual IRoutingService AddException(Func<OrganizationRequest, IEnhancedOrgService, bool> evaluator,
+		public virtual IRoutingService<TService> AddException(Func<OrganizationRequest, TService, bool> evaluator,
 			INodeService targetNode)
 		{
 			throw new NotSupportedException("Exceptions are not supported yet.");
 
-			Exceptions[evaluator] = targetNode;
-			return this;
+			//Exceptions[evaluator] = targetNode;
+			//return this;
 		}
 
-		public virtual IRoutingService ClearExceptions()
+		public virtual IRoutingService<TService> ClearExceptions()
 		{
 			throw new NotSupportedException("Exceptions are not supported yet.");
 
-			Exceptions.Clear();
-			return this;
+			//Exceptions.Clear();
+			//return this;
 		}
 
-		public virtual IRoutingService ClearExceptions(INodeService targetNode)
+		public virtual IRoutingService<TService> ClearExceptions(INodeService targetNode)
 		{
 			throw new NotSupportedException("Exceptions are not supported yet.");
 
-			Exceptions.TryRemove(Exceptions.FirstOrDefault(e => e.Value == targetNode).Key, out _);
-			return this;
+			//Exceptions.TryRemove(Exceptions.FirstOrDefault(e => e.Value == targetNode).Key, out _);
+			//return this;
 		}
 
-		public virtual IRoutingService DefineFallback(IOrderedEnumerable<INodeService> fallbackNodes)
+		public virtual IRoutingService<TService> DefineFallback(IOrderedEnumerable<INodeService> fallbackNodes)
 		{
 			fallbackNodes.Require(nameof(fallbackNodes));
 
@@ -311,10 +312,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 			}
 		}
 
-		public virtual IEnhancedOrgService GetService(int threads = 1)
+		public virtual TService GetService()
 		{
-			threads.RequireAtLeast(1);
-
 			for (var i = 0; i < (60 * 1000 / 100) && Status == Status.Starting; i++)
 			{
 				Thread.Sleep(100);
@@ -355,11 +354,11 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 							{
 								var currentNode = NodeQueue.FirstOrDefault();
 								var latestNode = NodeQueue.LastOrDefault();
-								var currentNodeExecutions = currentNode?.Pool.Stats.RequestCount;
-								var latestNodeExecutions = latestNode?.Pool.Stats.RequestCount;
+								var currentNodeExecutions = (currentNode?.Pool as IOpStatsAggregate)?.Stats.RequestCount;
+								var latestNodeExecutions = (latestNode?.Pool as IOpStatsAggregate)?.Stats.RequestCount;
 
 								if (currentNode?.Status == NodeStatus.Online
-									&& (currentNodeExecutions / (double?)latestNodeExecutions) < (currentNode?.Weight / (double?)latestNode?.Weight))
+									&& (currentNodeExecutions / Math.Max(0.0001, latestNodeExecutions ?? 0)) < (currentNode?.Weight / (double?)latestNode?.Weight))
 								{
 									node = currentNode;
 								}
@@ -391,11 +390,11 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 									new
 									{
 										n,
-										load = n.Pool.Stats.PendingOperations
+										load = (n.Pool as IOpStatsAggregate)?.Stats.PendingOperations
 											.Count(o => o.OperationStatus != Response.Operations.Status.Success
 												&& o.OperationStatus != Response.Operations.Status.Failure)
 									})
-								.Where(e => e.n.Status == NodeStatus.Online)
+								.Where(e => e.n.Status == NodeStatus.Online && e.load != null)
 								.OrderBy(e => e.load)
 								.FirstOrDefault()?.n;
 							break;
@@ -427,15 +426,15 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 				throw new NodeSelectException("Cannot find a valid node.");
 			}
 
-			var service = node.Pool.GetService(threads);
+			var service = node.Pool.GetService();
 
-			if (Rules.IsFallbackEnabled == true
-				&& service.Parameters.AutoRetryParams?.CustomRetryFunctions.Contains(CustomRetry) == false)
+			if (Rules.IsFallbackEnabled == true && service is IEnhancedOrgService enhancedService
+				&& enhancedService.Parameters.AutoRetryParams?.CustomRetryFunctions.Contains(CustomRetry) == false)
 			{
-				service.Parameters.AutoRetryParams.CustomRetryFunctions?.Add(CustomRetry);
+				enhancedService.Parameters.AutoRetryParams.CustomRetryFunctions?.Add(CustomRetry);
 			}
 
-			return service;
+			return (TService)service;
 		}
 
 		protected internal virtual object CustomRetry(Func<IOrganizationService, object> action, Operation operation,

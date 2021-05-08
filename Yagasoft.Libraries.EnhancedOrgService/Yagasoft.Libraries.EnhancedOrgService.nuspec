@@ -3,7 +3,7 @@
 <package>
   <metadata>
     <id>Yagasoft.Libraries.EnhancedOrgService</id>
-    <version>5.3.3</version>
+    <version>6.1.1</version>
     <authors>Ahmed Elsawalhy</authors>
     <owners>Ahmed Elsawalhy</owners>
     <projectUrl>https://github.com/yagasoft/DynamicsCrm-Libraries</projectUrl>
@@ -23,6 +23,13 @@
     </dependencies>
     <references />
     <releaseNotes>
+      * 6.1.1
+      Added: default factory and pool implementations for easier connection kick off
+      Improved: reworked the implicit pooling implementation for easier usage and more powerful features
+      Improved: reworked the self-balancing implementation for better code and maintenance
+      Improved: made the routing service more generic
+      Improved: reworked the interfaces to make more sense and for better maintenance (it breaks backward compatibility but the library hasn't been downloaded yet)
+      Improved: helpers for easier usage
       * 5.3.3
       Added: proper warm up logic for all pooling levels
       Fixed: internal pool initialisation

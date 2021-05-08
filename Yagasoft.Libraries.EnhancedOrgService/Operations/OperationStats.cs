@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.Xrm.Sdk;
 using Yagasoft.Libraries.EnhancedOrgService.Events;
 using Yagasoft.Libraries.EnhancedOrgService.Events.EventArgs;
 using Yagasoft.Libraries.EnhancedOrgService.Response.Operations;
@@ -14,7 +15,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Operations
 {
 	public class OperationStats : IOperationStats
 	{
-		public virtual event EventHandler<IEnhancedOrgService, OperationStatusEventArgs> OperationStatusChanged
+		public virtual event EventHandler<IOrganizationService, OperationStatusEventArgs> OperationStatusChanged
 		{
 			add
 			{
@@ -69,7 +70,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Operations
 			if (InnerOperationStatusChanged != null)
 			{
 				foreach (var invocation in InnerOperationStatusChanged.GetInvocationList()
-					.OfType<EventHandler<IEnhancedOrgService, OperationStatusEventArgs>>().ToArray())
+					.OfType<EventHandler<IOrganizationService, OperationStatusEventArgs>>().ToArray())
 				{
 					OperationStatusChanged += invocation;
 				}

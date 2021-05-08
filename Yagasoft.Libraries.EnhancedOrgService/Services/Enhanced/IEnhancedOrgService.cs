@@ -31,7 +31,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 	///     <c>    </c>2- Manual:<br />
 	///     <c>        </c>a) Create a factory: create an object of
 	///     <see cref="EnhancedServiceFactory{TServiceInterface,TEnhancedOrgService}" />,
-	///     passing <see cref="EnhancedServiceParams" /> as a parameter to the constructor<br />
+	///     passing <see cref="ServiceParams" /> as a parameter to the constructor<br />
 	///     <c>        </c>b) Optionally, pool services created by the factory: create a pool object of
 	///     <see cref="EnhancedServicePool{TServiceInterface,TEnhancedOrgService}" />,
 	///     passing the factory as a parameter to the constructor<br />
@@ -40,7 +40,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 	public interface IEnhancedOrgService : IDisposableService, ITransactionOrgService, IOperationStats, IWarmUp
 	{
 		IEnumerable<OrganizationRequest> DeferredRequests { get; }
-		EnhancedServiceParams Parameters { get; }
+		ServiceParams Parameters { get; }
 
 		/// <summary>
 		///     Upsert a record.

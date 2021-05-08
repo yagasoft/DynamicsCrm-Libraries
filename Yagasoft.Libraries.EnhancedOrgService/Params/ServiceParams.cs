@@ -8,7 +8,7 @@ using Yagasoft.Libraries.EnhancedOrgService.Response.Operations;
 
 namespace Yagasoft.Libraries.EnhancedOrgService.Params
 {
-	public class EnhancedServiceParams : EnhancedServiceParamsBase
+	public class ServiceParams : ServiceParamsBase
 	{
 		public override bool IsLocked
 		{
@@ -121,10 +121,10 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 		private PoolParams poolParams;
 		private int? operationHistoryLimit;
 
-		public EnhancedServiceParams()
+		public ServiceParams()
 		{ }
 
-		public EnhancedServiceParams(string connectionString)
+		public ServiceParams(string connectionString)
 		{
 			connectionParams = new ConnectionParams { ConnectionString = connectionString };
 		}
@@ -134,7 +134,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 		///     <br />
 		///     Those parameters are app-wide -- global on the .Net Framework level; so they will affect all logic in this process.
 		/// </summary>
-		public EnhancedServiceParams AutoSetMaxPerformanceParams()
+		public ServiceParams AutoSetMaxPerformanceParams()
 		{
 			ConnectionParams ??= new ConnectionParams();
 			ConnectionParams.DotNetDefaultConnectionLimit = 30000;

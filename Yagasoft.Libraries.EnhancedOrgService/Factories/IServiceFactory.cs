@@ -2,19 +2,17 @@
 
 using Microsoft.Xrm.Sdk;
 using Yagasoft.Libraries.EnhancedOrgService.Pools;
-using Yagasoft.Libraries.EnhancedOrgService.Response.Operations;
-using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced;
-using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Transactions;
 
 #endregion
 
 namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 {
-	public interface IServiceFactory
+	public interface IServiceFactory<out TService>
+		where TService : IOrganizationService
 	{
 		/// <summary>
-		///     Creates a vanilla CRM service using the connection string from the factory template.
+		///     Creates a Service using the factory parameters.
 		/// </summary>
-		IOrganizationService CreateCrmService();
+		TService CreateService();
 	}
 }

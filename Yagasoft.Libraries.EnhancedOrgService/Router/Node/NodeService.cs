@@ -34,9 +34,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router.Node
 		}
 		protected virtual event EventHandler<INodeService, NodeStatusEventArgs> InnerNodeStatusChanged;
 		
-		public EnhancedServiceParams Params { get; protected internal set; }
 		public int Weight { get; protected internal set; }
-		public virtual IEnhancedServicePool<IEnhancedOrgService> Pool { get; protected internal set; }
+		public IServicePool<IOrganizationService> Pool { get; protected internal set; }
 
 		public virtual NodeStatus Status
 		{
@@ -65,7 +64,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router.Node
 
 		public IOperationStats Stats { get; }
 
-		public virtual IEnumerable<IOperationStats> StatTargets => Pool == null ? new IOperationStats[0] : new[] { Pool.Stats };
+		public virtual IEnumerable<IOperationStats> StatTargets =>
+			Pool is IOpStatsAggregate aggr ? new[] { aggr.Stats } : new IOperationStats[0];
 
 		protected internal Thread LatencyEvaluator;
 		protected internal IOrganizationService LatencyEvaluatorService;
@@ -73,11 +73,11 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router.Node
 		protected internal FixedSizeQueue<TimeSpan> LatencyHistory = new(5);
 		private NodeStatus status;
 
-		protected internal NodeService(EnhancedServiceParams @params, int weight = 1)
+		protected internal NodeService(IServicePool<IOrganizationService> pool, int weight = 1)
 		{
 			Stats = new OperationStats(this);
 
-			Params = @params;
+			Pool = pool;
 			Weight = weight;
 
 			LatencyEvaluator =
@@ -151,9 +151,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router.Node
 			{
 				Status = NodeStatus.Starting;
 				LatestConnectionError = null;
-				Pool = EnhancedServiceHelper.GetPool(Params);
 				(Stats as OperationStats)?.Propagate();
-				LatencyEvaluatorService = Pool.Factory.CreateCrmService();
+				LatencyEvaluatorService = Pool.Factory.CreateService();
 				LatencyEvaluator.Start();
 				Started = DateTime.Now;
 				Downtime = TimeSpan.Zero;

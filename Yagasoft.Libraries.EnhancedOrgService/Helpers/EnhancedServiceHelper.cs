@@ -2,12 +2,13 @@
 
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.Xrm.Sdk;
+using Yagasoft.Libraries.Common;
 using Yagasoft.Libraries.EnhancedOrgService.Factories;
 using Yagasoft.Libraries.EnhancedOrgService.Params;
 using Yagasoft.Libraries.EnhancedOrgService.Pools;
 using Yagasoft.Libraries.EnhancedOrgService.Router;
 using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced;
-using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Balancing;
 using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Cache;
 
 #endregion
@@ -21,95 +22,143 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 	public static class EnhancedServiceHelper
 	{
 		/// <summary>
-		///     <inheritdoc cref="EnhancedServiceParams.AutoSetMaxPerformanceParams" /><br />
-		///     <b>This setting is applied if 'true', and only right after creating the next pool.</b>
+		///     <inheritdoc cref="ServiceParams.AutoSetMaxPerformanceParams" /><br />
+		///     <b>This setting is applied if 'true', and only when creating the upcoming pools.</b>
 		/// </summary>
 		public static bool AutoSetMaxPerformanceParams { get; set; }
 
-		public static IEnhancedServicePool<IEnhancedOrgService> GetPool(EnhancedServiceParams serviceParams)
-		{
-			var factory = new EnhancedServiceFactory<IEnhancedOrgService, Services.Enhanced.EnhancedOrgService>(serviceParams);
-			return new EnhancedServicePool<IEnhancedOrgService, Services.Enhanced.EnhancedOrgService>(factory);
-		}
-
-		public static IEnhancedServicePool<ICachingOrgService> GetPoolCaching(EnhancedServiceParams serviceParams)
-		{
-			var factory = new EnhancedServiceFactory<ICachingOrgService, CachingOrgService>(serviceParams);
-			return new EnhancedServicePool<ICachingOrgService, CachingOrgService>(factory);
-		}
-
 		public static IEnhancedServicePool<IEnhancedOrgService> GetPool(string connectionString, int poolSize = 2)
 		{
-			var parameters = BuildBaseParams(connectionString, poolSize);
-			var factory = new EnhancedServiceFactory<IEnhancedOrgService, Services.Enhanced.EnhancedOrgService>(parameters);
-			return new EnhancedServicePool<IEnhancedOrgService, Services.Enhanced.EnhancedOrgService>(factory, poolSize);
-		}
-
-		public static IEnhancedServicePool<ICachingOrgService> GetPoolCaching(string connectionString, int poolSize = 2,
-			CachingParams cachingParams = null)
-		{
-			var parameters = BuildBaseParams(connectionString, poolSize, null,
-				cachingParams: cachingParams ?? new CachingParams());
-			var factory = new EnhancedServiceFactory<ICachingOrgService, CachingOrgService>(parameters);
-			return new EnhancedServicePool<ICachingOrgService, CachingOrgService>(factory, poolSize);
+			connectionString.RequireFilled(nameof(connectionString));
+			return GetPool(BuildBaseParams(connectionString, poolSize));
 		}
 
 		public static IEnhancedServicePool<IEnhancedOrgService> GetPool(string connectionString, PoolParams poolParams)
 		{
-			var parameters = BuildBaseParams(connectionString, 2, poolParams);
-			var factory = new EnhancedServiceFactory<IEnhancedOrgService, Services.Enhanced.EnhancedOrgService>(parameters);
-			return new EnhancedServicePool<IEnhancedOrgService, Services.Enhanced.EnhancedOrgService>(factory, poolParams);
-		}
-
-		public static IEnhancedServicePool<ICachingOrgService> GetPoolCaching(string connectionString, PoolParams poolParams,
-			CachingParams cachingParams = null)
-		{
-			var parameters = BuildBaseParams(connectionString, 2, null,
-				cachingParams: cachingParams ?? new CachingParams());
-			var factory = new EnhancedServiceFactory<ICachingOrgService, CachingOrgService>(parameters);
-			return new EnhancedServicePool<ICachingOrgService, CachingOrgService>(factory, poolParams);
+			connectionString.RequireFilled(nameof(connectionString));
+			poolParams.Require(nameof(poolParams));
+			return GetPool(BuildBaseParams(connectionString, null, poolParams));
 		}
 
 		public static IEnhancedServicePool<IEnhancedOrgService> GetPool(ConnectionParams connectionParams, PoolParams poolParams)
 		{
-			var parameters = BuildBaseParams(string.Empty, 2, poolParams, connectionParams);
-			var factory = new EnhancedServiceFactory<IEnhancedOrgService, Services.Enhanced.EnhancedOrgService>(parameters);
-			return new EnhancedServicePool<IEnhancedOrgService, Services.Enhanced.EnhancedOrgService>(factory, poolParams);
+			connectionParams.Require(nameof(connectionParams));
+			poolParams.Require(nameof(poolParams));
+			return GetPool(BuildBaseParams(null, null, poolParams, connectionParams));
 		}
 
-		public static IEnhancedServicePool<ICachingOrgService> GetPoolCaching(ConnectionParams connectionParams, PoolParams poolParams,
+		public static IEnhancedServicePool<IEnhancedOrgService> GetPool(ServiceParams serviceParams)
+		{
+			serviceParams.Require(nameof(serviceParams));
+			var factory = new EnhancedServiceFactory<IEnhancedOrgService, Services.Enhanced.EnhancedOrgService>(serviceParams);
+			return new EnhancedServicePool<IEnhancedOrgService, Services.Enhanced.EnhancedOrgService>(factory, serviceParams.PoolParams);
+		}
+
+		public static IEnhancedServicePool<ICachingOrgService> GetCachingPool(string connectionString, int poolSize = 2,
 			CachingParams cachingParams = null)
 		{
-			var parameters = BuildBaseParams(string.Empty, 2, null, connectionParams,
-				cachingParams ?? new CachingParams());
-			var factory = new EnhancedServiceFactory<ICachingOrgService, CachingOrgService>(parameters);
-			return new EnhancedServicePool<ICachingOrgService, CachingOrgService>(factory, poolParams);
+			connectionString.RequireFilled(nameof(connectionString));
+			return GetCachingPool(BuildBaseParams(connectionString, poolSize, null,
+				cachingParams: cachingParams ?? new CachingParams()));
 		}
 
-		public static async Task<ISelfBalancingOrgService> GetSelfBalancingService(IEnumerable<EnhancedServiceParams> nodeParameters, RouterRules rules)
+		public static IEnhancedServicePool<ICachingOrgService> GetCachingPool(string connectionString, PoolParams poolParams,
+			CachingParams cachingParams = null)
 		{
-			var routingService = new RoutingService();
+			connectionString.RequireFilled(nameof(connectionString));
+			poolParams.Require(nameof(poolParams));
+			return GetCachingPool(BuildBaseParams(connectionString, null, poolParams,
+				cachingParams: cachingParams ?? new CachingParams()));
+		}
 
-			foreach (var parameters in nodeParameters)
+		public static IEnhancedServicePool<ICachingOrgService> GetCachingPool(ConnectionParams connectionParams, PoolParams poolParams,
+			CachingParams cachingParams = null)
+		{
+			connectionParams.Require(nameof(connectionParams));
+			poolParams.Require(nameof(poolParams));
+			return GetCachingPool(BuildBaseParams(null, null, poolParams, connectionParams,
+				cachingParams ?? new CachingParams()));
+		}
+
+		public static IEnhancedServicePool<ICachingOrgService> GetCachingPool(ServiceParams serviceParams)
+		{
+			serviceParams.Require(nameof(serviceParams));
+			var factory = new EnhancedServiceFactory<ICachingOrgService, CachingOrgService>(serviceParams);
+			return new EnhancedServicePool<ICachingOrgService, CachingOrgService>(factory, serviceParams.PoolParams);
+		}
+
+		public static IEnhancedOrgService GetPoolingService(string connectionString, int poolSize = 2)
+		{
+			connectionString.RequireFilled(nameof(connectionString));
+			return GetPoolingService(BuildBaseParams(connectionString, poolSize));
+		}
+
+		public static IEnhancedOrgService GetPoolingService(ServiceParams serviceParams)
+		{
+			serviceParams.Require(nameof(serviceParams));
+			var pool = new DefaultServicePool(serviceParams);
+			var factory = new DefaultEnhancedFactory(serviceParams);
+			return factory.CreateService(pool);
+		}
+
+		public static ICachingOrgService GetPoolingCachingService(string connectionString, int poolSize = 2,
+			CachingParams cachingParams = null)
+		{
+			connectionString.RequireFilled(nameof(connectionString));
+			return GetCachingPoolingService(BuildBaseParams(connectionString, poolSize, null,
+				cachingParams: cachingParams ?? new CachingParams()));
+		}
+
+		public static ICachingOrgService GetCachingPoolingService(ServiceParams serviceParams)
+		{
+			serviceParams.Require(nameof(serviceParams));
+			var pool = new DefaultServicePool(serviceParams);
+			var factory = new EnhancedServiceFactory<ICachingOrgService, CachingOrgService>(serviceParams);
+			return factory.CreateService(pool);
+		}
+
+		public static async Task<IEnhancedOrgService> GetSelfBalancingService(string connectionString,
+			IEnumerable<IServicePool<IOrganizationService>> pools, RouterRules rules = null)
+		{
+			connectionString.RequireFilled(nameof(connectionString));
+			return await GetSelfBalancingService(BuildBaseParams(connectionString), pools, rules);
+		}
+
+		public static async Task<IEnhancedOrgService> GetSelfBalancingService(ServiceParams parameters,
+			IEnumerable<IServicePool<IOrganizationService>> pools, RouterRules rules = null)
+		{
+			parameters.Require(nameof(parameters));
+			pools.Require(nameof(pools));
+
+			var routingService = new RoutingService<IOrganizationService>();
+
+			foreach (var pool in pools)
 			{
-				routingService.AddNode(parameters);
+				routingService.AddNode(pool);
 			}
 
-			routingService.DefineRules(rules);
+			if (rules != null)
+			{
+				routingService.DefineRules(rules);
+			}
+			
 			await routingService.StartRouter();
 
-			return new EnhancedServiceFactory<ISelfBalancingOrgService, SelfBalancingOrgService>(routingService).CreateEnhancedService();
+			var routingPool = new RoutingPool<IOrganizationService>(routingService);
+
+			return new EnhancedServiceFactory<IEnhancedOrgService, Services.Enhanced.EnhancedOrgService>(parameters)
+				.CreateService(routingPool);
 		}
 
-		private static EnhancedServiceParams BuildBaseParams(string connectionString, int poolSize,
+		private static ServiceParams BuildBaseParams(string connectionString, int? poolSize = null,
 			PoolParams poolParams = null, ConnectionParams connectionParams = null,
 			CachingParams cachingParams = null)
 		{
 			var parameters =
-				new EnhancedServiceParams
+				new ServiceParams
 				{
 					ConnectionParams = connectionParams ?? new ConnectionParams { ConnectionString = connectionString },
-					PoolParams = poolParams ?? new PoolParams { PoolSize = poolSize }
+					PoolParams = poolParams ?? (poolSize == null ? null : new PoolParams { PoolSize = poolSize })
 				};
 
 			if (cachingParams != null)
