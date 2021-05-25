@@ -126,7 +126,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 
 		public ServiceParams(string connectionString)
 		{
-			connectionParams = new ConnectionParams { ConnectionString = connectionString };
+			ConnectionParams.ConnectionString = connectionString;
 		}
 
 		/// <summary>

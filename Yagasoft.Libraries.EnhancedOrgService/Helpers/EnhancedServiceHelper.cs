@@ -23,7 +23,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 	{
 		/// <summary>
 		///     <inheritdoc cref="ServiceParams.AutoSetMaxPerformanceParams" /><br />
-		///     <b>This setting is applied if 'true', and only when creating the upcoming pools.</b>
+		///     <b>This setting is applied if 'true', and only when creating the upcoming connections.</b>
 		/// </summary>
 		public static bool AutoSetMaxPerformanceParams { get; set; }
 
@@ -50,6 +50,12 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 		public static IEnhancedServicePool<IEnhancedOrgService> GetPool(ServiceParams serviceParams)
 		{
 			serviceParams.Require(nameof(serviceParams));
+
+			if (AutoSetMaxPerformanceParams)
+			{
+				serviceParams.AutoSetMaxPerformanceParams();
+			}
+
 			var factory = new EnhancedServiceFactory<IEnhancedOrgService, Services.Enhanced.EnhancedOrgService>(serviceParams);
 			return new EnhancedServicePool<IEnhancedOrgService, Services.Enhanced.EnhancedOrgService>(factory, serviceParams.PoolParams);
 		}
@@ -83,6 +89,12 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 		public static IEnhancedServicePool<ICachingOrgService> GetCachingPool(ServiceParams serviceParams)
 		{
 			serviceParams.Require(nameof(serviceParams));
+
+			if (AutoSetMaxPerformanceParams)
+			{
+				serviceParams.AutoSetMaxPerformanceParams();
+			}
+
 			var factory = new EnhancedServiceFactory<ICachingOrgService, CachingOrgService>(serviceParams);
 			return new EnhancedServicePool<ICachingOrgService, CachingOrgService>(factory, serviceParams.PoolParams);
 		}
@@ -96,6 +108,12 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 		public static IEnhancedOrgService GetPoolingService(ServiceParams serviceParams)
 		{
 			serviceParams.Require(nameof(serviceParams));
+
+			if (AutoSetMaxPerformanceParams)
+			{
+				serviceParams.AutoSetMaxPerformanceParams();
+			}
+
 			var pool = new DefaultServicePool(serviceParams);
 			var factory = new DefaultEnhancedFactory(serviceParams);
 			return factory.CreateService(pool);
@@ -112,6 +130,12 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 		public static ICachingOrgService GetCachingPoolingService(ServiceParams serviceParams)
 		{
 			serviceParams.Require(nameof(serviceParams));
+
+			if (AutoSetMaxPerformanceParams)
+			{
+				serviceParams.AutoSetMaxPerformanceParams();
+			}
+
 			var pool = new DefaultServicePool(serviceParams);
 			var factory = new EnhancedServiceFactory<ICachingOrgService, CachingOrgService>(serviceParams);
 			return factory.CreateService(pool);
@@ -129,6 +153,11 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 		{
 			parameters.Require(nameof(parameters));
 			pools.Require(nameof(pools));
+
+			if (AutoSetMaxPerformanceParams)
+			{
+				parameters.AutoSetMaxPerformanceParams();
+			}
 
 			var routingService = new RoutingService<IOrganizationService>();
 
