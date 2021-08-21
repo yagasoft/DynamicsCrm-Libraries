@@ -3,7 +3,7 @@
 <package>
   <metadata>
     <id>Yagasoft.Libraries.Common.File</id>
-    <version>4.4.5</version>
+    <version>5.1.1</version>
     <authors>Ahmed Elsawalhy</authors>
     <owners>Ahmed Elsawalhy</owners>
     <projectUrl>https://github.com/yagasoft/DynamicsCrm-Libraries</projectUrl>
@@ -26,6 +26,13 @@
     </frameworkAssemblies>
     <references />
     <releaseNotes>
+      * 5.1.1
+      Added: CRM Parser solution
+      Improved: performance
+      Fixed: Advanced Find and HTML Editor upgrade to v9 CRM
+      Fixed: issues
+      * 4.4.6
+      Added: default type parser for logging
       * 4.4.5
       Improved: performance and memory
       Fixed: issues

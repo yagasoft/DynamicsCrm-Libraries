@@ -3,7 +3,7 @@
 <package>
   <metadata>
     <id>Yagasoft.Libraries.EnhancedOrgService</id>
-    <version>6.1.2</version>
+    <version>6.1.3</version>
     <authors>Ahmed Elsawalhy</authors>
     <owners>Yagasoft</owners>
     <projectUrl>https://github.com/yagasoft/DynamicsCrm-Libraries</projectUrl>
@@ -18,12 +18,12 @@
     <dependencies>
       <group>
         <dependency id="Microsoft.CrmSdk.XrmTooling.CoreAssembly" version="9.1.0.26" />
-        <dependency id="Yagasoft.Libraries.Common" version="2.4.5" />
+        <dependency id="Yagasoft.Libraries.Common" version="3.1.1" />
       </group>
     </dependencies>
     <references />
     <releaseNotes>
-      * 6.1.2
+      * 6.1.3
       Fixed: NuGet package requirements
       * 6.1.1
       Added: default factory and pool implementations for easier connection kick off

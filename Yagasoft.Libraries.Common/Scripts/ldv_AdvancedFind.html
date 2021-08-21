@@ -278,15 +278,12 @@
 	}
 
 	function GetObjectTypeCode(entityName)
-	{
-		var lookupService = new RemoteCommand("LookupService", "RetrieveTypeCode");
-		lookupService.SetParameter("entityName", entityName);
+    {
+        const result = RetrieveEntityMetadata(entityName, 'ObjectTypeCode').responseJSON.value;
 
-		var result = lookupService.Execute();
-
-		if (result.Success && typeof result.ReturnValue == "number")
+        if (result.length && result[0].ObjectTypeCode)
 		{
-			return result.ReturnValue;
+            return result[0].ObjectTypeCode;
 		}
 		else
 		{

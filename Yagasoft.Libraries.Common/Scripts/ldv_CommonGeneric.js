@@ -3,8 +3,8 @@
 /// <reference path="Sdk.Soap.vsdoc.js" />
 /// <reference path="AnchoredExecutionContext.getFormContext().365.d.ts" />
 
-// Author: Ahmed Elsawalhy
-// Version: 1.11.6
+// Author: Ahmed Elsawalhy (yagasoft.com)
+// Version: 1.12.1
 
 var IsCommonGenericLibraryLoaded = true;
 var $ = window.$ || parent.$;
@@ -204,6 +204,7 @@ function LoadAdvancedFind(fieldName, logicalName, height, entityNameFieldName)
 
 	if (!fieldContainer)
 	{
+        setTimeout(() => LoadAdvancedFind(fieldName, logicalName, height, entityNameFieldName), 1000);
 		return;
 	}
 
@@ -216,10 +217,10 @@ function LoadAdvancedFind(fieldName, logicalName, height, entityNameFieldName)
         '#' + logicalName + '#' + 5;
 
 	// insert editor frame right after the field as a new row
-	fieldContainer.before('<tr id="advancedFindRow_' + fieldName + '"><td colspan="2">' +
+	fieldContainer.after('<div id="advancedFindRow_' + fieldName + '">' +
 		'<iframe id="advancedFindFrame_' + fieldName + '"' +
-		'src="' +iFrameUrl + '" frameborder="0" scrolling="no"></iframe>' +
-		'</td></tr>');
+		'src="' +iFrameUrl + '" frameborder="0" scrolling="no" style="width: 100%;"></iframe>' +
+		'</div>');
 }
 
 function IsAdvancedFindLoaded(fieldName)
