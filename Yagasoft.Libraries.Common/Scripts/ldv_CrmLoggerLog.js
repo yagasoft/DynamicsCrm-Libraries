@@ -1,20 +1,23 @@
 ﻿/// <reference path="ldv_CommonGeneric.js" />
-/// <reference path="xrm.page.365.d.ts" />
+/// <reference path="AnchoredExecutionContext.getFormContext().365.d.ts" />
 var $ = parent.$ || window.$;
 
 var LogPageNumber = '1';
 
-function OnLoad()
+function OnLoad(executionContext)
 {
-	var type = Xrm.Page.getAttribute('ldv_regardingtype').getValue();
-	var id = Xrm.Page.getAttribute('ldv_regardingid').getValue();
+    SetAnchoredExecutionContext(executionContext);
+
+	var type = AnchoredExecutionContext.getFormContext().getAttribute('ldv_regardingtype').getValue();
+	var id = AnchoredExecutionContext.getFormContext().getAttribute('ldv_regardingid').getValue();
 
 	if (type && id)
 	{
-		Xrm.Page.getAttribute('ldv_recordurl').setSubmitMode('never');
-		Xrm.Page.getAttribute('ldv_recordurl').setValue(Xrm.Page.context.getClientUrl() + '/main.aspx?' +
-			'etc=' + GetObjectTypeCode(type) + '&id=%7b' + id + '%7d' + '&newWindow=true&pagetype=entityrecord');
-	}
+		AnchoredExecutionContext.getFormContext().getAttribute('ldv_recordurl').setSubmitMode('never');
+        AnchoredExecutionContext.getFormContext().getAttribute('ldv_recordurl')
+            .setValue(Xrm.Utility.getGlobalContext().getClientUrl() + '/main.aspx?' +
+                'etc=' + GetObjectTypeCode(type) + '&id=%7b' + id + '%7d' + '&newWindow=true&pagetype=entityrecord');
+    }
 
 	HighlightLogEntries();
 }
@@ -283,15 +286,15 @@ function HighlightLogEntries()
 
 function LogTree_OnStateChange(context)
 {
-	if (context.getEventSource().getDisplayState() === 'collapsed')
+	if (context.getEventSource().getDisplayState() === 'expanded')
 	{
 		setTimeout(
 			function()
 			{
 				var section = $('#\\{21ce4317-c55d-e300-164c-a0ee06c9aa98\\}', parent.document);
-				section.find('.ms-crm-Field-Data-Print:eq(1)').remove();
+				section.find('#iFrame_clt').remove();
 				section.find('.ms-crm-Field-Data-Print:eq(0)').append('<iframe id="iFrame_clt"' +
-					'src="' + Xrm.Page.context.getClientUrl() +
+					'src="' + Xrm.Utility.getGlobalContext().getClientUrl() +
 					'/WebResources/ldv_/CrmLogger/html/Tree.html" frameborder="0" scrolling="yes" style="height:350px"></iframe>');
 			}, 500);
 	}

@@ -252,5 +252,5 @@ function LoadWebResources(resources, callback)
 			callback();
 		}
 	};
-	LoadScript(Xrm.Page.context.getClientUrl() + '/WebResources/' + resources[0], localCallback);
+	LoadScript(Xrm.Utility.getGlobalContext().getClientUrl() + '/WebResources/' + resources[0], localCallback);
 }

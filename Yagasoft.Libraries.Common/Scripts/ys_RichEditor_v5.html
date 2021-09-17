@@ -1,0 +1,277 @@
+﻿<!-- Author: Ahmed Elsawalhy -->
+<!DOCTYPE html>
+<html>
+<head>
+<title>Rich Editor</title>
+<meta charset="utf-8">
+<script>
+    var Xrm = window.Xrm || parent.Xrm;
+    var $ = window.$ || parent.$;
+    var AnchoredExecutionContext = window.AnchoredExecutionContext || parent.AnchoredExecutionContext;
+
+    var RichEditorMap = parent.RichEditorMap;
+
+    var ParentIFrame;
+
+    var Params;
+    var ControlName;
+    var Height;
+
+    var BaseUrl;
+
+    function InitRichEditor()
+    {
+        if (typeof ($) === "undefined")
+        {
+            console.error("Can't find $ in advanced find frame.");
+            return;
+        }
+
+        // get the params from the URL
+        Params = $(location).attr('hash').split('#');
+
+        ControlName = Params[1];
+        Height = parseInt(Params[2]);
+
+        BaseUrl = Xrm.Page.context.getClientUrl();
+
+        ParentIFrame = $("#richEditorFrame_" + ControlName, parent.document);
+
+        $(window, document).bind('keydown', function(event)
+        {
+            if (event.ctrlKey || event.metaKey)
+            {
+                switch (String.fromCharCode(event.which).toLowerCase())
+                {
+                    case 's':
+                        setTimeout(
+                            function()
+                            {
+                                Xrm.Page.data.save();
+                            }, 500);
+
+                        event.preventDefault();
+                        break;
+                }
+            }
+        });
+
+        var isSkipFireOnChange = false;
+
+        const editorJsUrl = BaseUrl + '/WebResources/ys_/RichEditor/v5/ckeditor.js';
+
+        // load CKEditor script
+        const headTag = document.getElementsByTagName("head")[0];
+        const jqTag = document.createElement('script');
+        jqTag.type = 'text/javascript';
+        jqTag.src = editorJsUrl;
+
+        const htmlTagSettings =
+            [
+                    'a', 'abbr', 'address', 'area', 'article', 'aside', 'audio', 'b', 'base', 'bdi', 'bdo',
+                    'blockquote', 'body', 'br', 'button', 'canvas', 'caption', 'cite', 'code',
+                    'col', 'colgroup', 'data', 'datalist', 'dd', 'del', 'details', 'dfn', 'dialog',
+                    'div', 'dl', 'dt', 'em', 'embed', 'fieldset', 'figcaption', 'figure', 'footer',
+                    'form', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'head', 'header', 'hr', 'html', 'i',
+                    'iframe', 'img', 'input', 'ins', 'kbd', 'label', 'legend', 'li', 'link', 'main',
+                    'map', 'mark', 'math', 'menu', 'meta', 'meter', 'nav', 'noscript', 'object', 'ol',
+                    'optgroup', 'option', 'output', 'p', 'param', 'picture', 'portal', 'pre', 'progress',
+                    'q', 'rp', 'rt', 'ruby', 's', 'samp', 'script', 'section', 'select', 'slot', 'small',
+                    'source', 'span', 'strong', 'style', 'sub', 'summary', 'sup', 'svg', 'table', 'tbody', 'td', 'template',
+                    'textarea', 'tfoot', 'th', 'thead', 'time', 'title', 'tr', 'track', 'u', 'ul', 'var', 'video', 'wbr'
+                ]
+                .map(e =>
+                {
+                    return {
+                        name: e,
+                        attributes: true,
+                        classes: true,
+                        styles: true
+                    };
+                });
+
+        // form the editor and its events
+        jqTag.onload = function()
+        {
+            ClassicEditor
+                .create(document.querySelector('#ckWysiwyg'), {
+                    toolbar: {
+                        items: [
+                            'heading',
+                            '|',
+                            'bold',
+                            'italic',
+                            'underline',
+                            'strikethrough',
+                            'link',
+                            'bulletedList',
+                            'numberedList',
+                            'superscript',
+                            'subscript',
+                            '|',
+                            'fontFamily',
+                            'fontSize',
+                            'fontColor',
+                            'fontBackgroundColor',
+                            '|',
+                            'alignment:left', 'alignment:center', 'alignment:right', 'alignment:justify',
+                            'outdent',
+                            'indent',
+                            '-',
+                            'sourceEditing',
+                            '|',
+                            'undo',
+                            'redo',
+                            '|',
+                            'removeFormat',
+                            '|',
+                            'insertTable',
+                            'imageInsert',
+                            'mediaEmbed',
+                            '|',
+                            'blockQuote',
+                            'code',
+                            'codeBlock',
+                            'htmlEmbed',
+                            '|',
+                            'horizontalLine',
+                            'specialCharacters',
+                            'todoList',
+                            '|',
+                            'findAndReplace',
+                            '|',
+                            'highlight', 'removeHighlight'
+                        ],
+                        shouldNotGroupWhenFull: true
+                    },
+                    language: 'en',
+                    image: {
+                        toolbar: [
+                            'imageTextAlternative',
+                            'imageStyle:inline',
+                            'imageStyle:block',
+                            'imageStyle:side',
+                            'linkImage'
+                        ]
+                    },
+                    table: {
+                        contentToolbar: [
+                            'tableColumn',
+                            'tableRow',
+                            'mergeTableCells',
+                            'tableCellProperties',
+                            'tableProperties'
+                        ]
+                    },
+                    licenseKey: '',
+                    htmlSupport: {
+                        allow: htmlTagSettings
+                    }
+                })
+                .then(editor =>
+                {
+                    setTimeout(() => ParentIFrame.height($("body", document).height() + 11), 50);
+
+                    // initial editor data copied from field
+                    var setEditorData = function()
+                    {
+                        // prevent looping
+                        if (isSkipFireOnChange)
+                        {
+                            isSkipFireOnChange = false;
+                            return;
+                        }
+
+                        const existingData = AnchoredExecutionContext.getFormContext().getAttribute(ControlName).getValue();
+                        editor.setData(existingData || '');
+
+                        var editorFindLoop =
+                            function()
+                            {
+                                var editorElement = $('.ck-editor', document);
+
+                                if (editorElement.length)
+                                {
+                                    $(editorElement[0].contentWindow).bind('keydown', function(event)
+                                    {
+                                        if (event.ctrlKey || event.metaKey)
+                                        {
+                                            switch (String.fromCharCode(event.which).toLowerCase())
+                                            {
+                                                case 's':
+                                                    setTimeout(
+                                                        function()
+                                                        {
+                                                            AnchoredExecutionContext.getFormContext().data.save();
+                                                        }, 100);
+
+                                                    event.preventDefault();
+                                                    break;
+                                            }
+                                        }
+                                    });
+                                }
+                                else
+                                {
+                                    setTimeout(editorFindLoop, 500);
+                                }
+                            };
+
+                        editorFindLoop();
+                    };
+
+                    const handler = RichEditorMap[ControlName] = setEditorData;
+
+                    // add an OnChange event to copy field data to editor
+                    AnchoredExecutionContext.getFormContext().getAttribute(ControlName).addOnChange(handler);
+
+                    setEditorData();
+
+                    // add an OnChange event to copy editor data to field
+                    editor.model.document.on('change',
+                        function()
+                        {
+                            setTimeout(() =>
+                            {
+                                const currentHeight = $("body", document).height();
+
+                                if (Height !== 0 && (currentHeight - 79) >= Height)
+                                {
+                                    editor.editing.view
+                                        .change(
+                                            writer =>
+                                            {
+                                                writer.setStyle('height', Height + 'px', editor.editing.view.document.getRoot());
+                                            });
+                                }
+
+                                setTimeout(() => ParentIFrame.height($("body", document).height() + 11), 10);
+                            }, 50);
+
+                            AnchoredExecutionContext.getFormContext().getAttribute(ControlName).setValue(editor.getData());
+                            // prevent looping
+                            isSkipFireOnChange = true;
+                            AnchoredExecutionContext.getFormContext().getAttribute(ControlName).fireOnChange();
+                        });
+                })
+                .catch(error =>
+                {
+                    console.error('Oops, something went wrong!');
+                    console.error('Please, report the following error on https://github.com/ckeditor/ckeditor5/issues with the build id and the error stack trace:');
+                    console.warn('Build id: h4uffobyo92l-yykkkd4ixitr');
+                    console.error(error);
+                });
+        };
+
+        headTag.appendChild(jqTag);
+    }
+
+    window.onload = InitRichEditor;
+</script>
+</head>
+<body>
+<div>
+    <textarea name="ckWysiwyg" id="ckWysiwyg"></textarea>
+</div>
+</body>
+</html>

@@ -10,8 +10,9 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Yagasoft.Libraries.Plugins</RootNamespace>
     <AssemblyName>Yagasoft.Libraries.Plugins</AssemblyName>
-    <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.6.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -79,33 +80,35 @@
     <Compile Include="..\Yagasoft.Libraries.Common\Common.cs">
       <Link>Common.cs</Link>
     </Compile>
-    <Compile Include="ExecutionPlan\Base\PlannedCollection.cs" />
-    <Compile Include="ExecutionPlan\Base\PlannedMapBase.cs" />
-    <Compile Include="ExecutionPlan\Planning\IPlannedValue.cs" />
-    <Compile Include="ExecutionPlan\Planning\PlannedOperation.cs" />
-    <Compile Include="ExecutionPlan\Planning\PlannedResponse.cs" />
-    <Compile Include="ExecutionPlan\Planning\PlannedValue.cs" />
-    <Compile Include="ExecutionPlan\SdkMocks\PlannedEntity.cs" />
-    <Compile Include="ExecutionPlan\SdkMocks\PlannedEntityCollection.cs" />
-    <Compile Include="ExecutionPlan\SdkMocks\PlannedEntityReference.cs" />
-    <Compile Include="ExecutionPlan\SdkMocks\PlannedEntityReferenceCollection.cs" />
-    <Compile Include="ExecutionPlan\SdkMocks\PlannedMoney.cs" />
-    <Compile Include="ExecutionPlan\SdkMocks\PlannedOptionSetValue.cs" />
-    <Compile Include="ExecutionPlan\SdkMocks\PlannedOptionSetValueCollection.cs" />
-    <Compile Include="ExecutionPlan\SerialiseWorkarounds\MockCollection.cs" />
-    <Compile Include="ExecutionPlan\SerialiseWorkarounds\MockColumnSet.cs" />
-    <Compile Include="ExecutionPlan\SerialiseWorkarounds\MockEntityReference.cs" />
-    <Compile Include="ExecutionPlan\SerialiseWorkarounds\MockEntity.cs" />
-    <Compile Include="ExecutionPlan\SerialiseWorkarounds\MockHelpers.cs" />
-    <Compile Include="ExecutionPlan\SerialiseWorkarounds\MockDictionary.cs" />
-    <Compile Include="ExecutionPlan\SerialiseWorkarounds\MockKeyValue.cs" />
-    <Compile Include="ExecutionPlan\SerialiseWorkarounds\MockOrgRequest.cs" />
-    <Compile Include="ExecutionPlan\SerialiseWorkarounds\MockOrgResponse.cs" />
+    <Compile Include="PlannedExec\ExecutionPlan\Base\PlannedCollection.cs" />
+    <Compile Include="PlannedExec\ExecutionPlan\Base\PlannedMapBase.cs" />
+    <Compile Include="PlannedExec\ExecutionPlan\Planning\IPlannedValue.cs" />
+    <Compile Include="PlannedExec\ExecutionPlan\Planning\PlannedOperation.cs" />
+    <Compile Include="PlannedExec\ExecutionPlan\Planning\PlannedResponse.cs" />
+    <Compile Include="PlannedExec\ExecutionPlan\Planning\PlannedValue.cs" />
+    <Compile Include="PlannedExec\ExecutionPlan\SdkMocks\PlannedEntity.cs" />
+    <Compile Include="PlannedExec\ExecutionPlan\SdkMocks\PlannedEntityCollection.cs" />
+    <Compile Include="PlannedExec\ExecutionPlan\SdkMocks\PlannedEntityReference.cs" />
+    <Compile Include="PlannedExec\ExecutionPlan\SdkMocks\PlannedEntityReferenceCollection.cs" />
+    <Compile Include="PlannedExec\ExecutionPlan\SdkMocks\PlannedMoney.cs" />
+    <Compile Include="PlannedExec\ExecutionPlan\SdkMocks\PlannedOptionSetValue.cs" />
+    <Compile Include="PlannedExec\ExecutionPlan\SdkMocks\PlannedOptionSetValueCollection.cs" />
+    <Compile Include="PlannedExec\ExecutionPlan\SerialiseWorkarounds\MockCollection.cs" />
+    <Compile Include="PlannedExec\ExecutionPlan\SerialiseWorkarounds\MockColumnSet.cs" />
+    <Compile Include="PlannedExec\ExecutionPlan\SerialiseWorkarounds\MockEntityReference.cs" />
+    <Compile Include="PlannedExec\ExecutionPlan\SerialiseWorkarounds\MockEntity.cs" />
+    <Compile Include="PlannedExec\ExecutionPlan\SerialiseWorkarounds\MockHelpers.cs" />
+    <Compile Include="PlannedExec\ExecutionPlan\SerialiseWorkarounds\MockDictionary.cs" />
+    <Compile Include="PlannedExec\ExecutionPlan\SerialiseWorkarounds\MockKeyValue.cs" />
+    <Compile Include="PlannedExec\ExecutionPlan\SerialiseWorkarounds\MockOrgRequest.cs" />
+    <Compile Include="PlannedExec\ExecutionPlan\SerialiseWorkarounds\MockOrgResponse.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="YsPlannedExecStep.cs" />
+    <Compile Include="PlannedExec\Steps\YsPlannedExecStep.cs" />
+    <Compile Include="CrmParser\Steps\YsCrmParserStep.cs" />
     <None Include="key.snk" />
     <None Include="packages.config" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

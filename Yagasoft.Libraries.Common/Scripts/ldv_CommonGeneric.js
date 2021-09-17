@@ -19,24 +19,38 @@ window.onerror = function(msg, url, line)
 function SetAnchoredExecutionContext(executionContext)
 {
     AnchoredExecutionContext = executionContext;
+
+    if (typeof parent !== "undefined")
+    {
+        parent.AnchoredExecutionContext = AnchoredExecutionContext;
+    }
 }
 
 function BuildAnchoredExecutionContext(formContext)
 {
     AnchoredExecutionContext = window.AnchoredExecutionContext || { getFormContext: () => formContext };
+
+    if (typeof parent !== "undefined")
+    {
+        parent.AnchoredExecutionContext = AnchoredExecutionContext;
+    }
 }
 
 /////////////////////////////////////////////////////
 //#region >>>>>>>>> UI custom controls <<<<<<<<<<< //
 
-function LoadRichEditor(fieldName, suffix, callback, isDelayApplied)
+var RichEditorMap = window.RichEditorMap || {};
+
+function LoadRichEditor(fieldName, height, isFullHtml, callback, isDelayApplied)
 {
 	/// <summary>
 	///     Appends the rich editor frame to the specified field and hides the field using the DOM.<br />
 	///     Author: Ahmed Elsawalhy, Tarek Selem
 	/// </summary>
 	/// <param name="fieldName" type="String">The logical name of the field to replace.</param>
-	/// <param name="suffix" type="String">Editor frame DIV suffix. Must be passed if more than one editor on form.</param>
+    /// <param name="height" type="Number">[OPTIONAL=unlimited]The height of the frame.</param>
+    /// <param name="isFullHtml" type="Boolean">[OPTIONAL=false]Includes the whole HTML code in the editor -- not just the 'body'.</param>
+    /// <param name="isDelayApplied" type="Boolean">[INTERNAL-USE]</param>
 	if (!fieldName)
 	{
 		var message = 'Parameter values are not set correctly.';
@@ -44,20 +58,13 @@ function LoadRichEditor(fieldName, suffix, callback, isDelayApplied)
 		throw message;
 	}
 
-    suffix = suffix || '';
-    const id = 'ckWysiwyg_' + suffix;
-
-    if ($('#' + id, parent.document).length > 0
-        || $('#' + id).length > 0)
-    {
-        return;
-    }
-
 	if (!isDelayApplied)
     {
-        setTimeout(() => LoadRichEditor(fieldName, suffix, callback, true), 500);
+        setTimeout(() => LoadRichEditor(fieldName, height, isFullHtml, callback, true), 500);
         return;
     }
+
+    RemoveRichEditor(fieldName);
 
 	var fieldContainer = GetInsertionRow(fieldName);
 
@@ -66,102 +73,110 @@ function LoadRichEditor(fieldName, suffix, callback, isDelayApplied)
 		return;
 	}
 
-	var isSkipFireOnChange = false;
+    fieldContainer.hide();
 
-	var editorJsUrl = Xrm.Utility.getGlobalContext().getClientUrl() + '/WebResources/ldv_/CkRichEditor/ckeditor.js';
+    if (typeof parent !== "undefined")
+    {
+        parent.RichEditorMap = RichEditorMap;
+    }
+
+    const iFrameUrl = Xrm.Utility.getGlobalContext().getClientUrl() + '/WebResources/ys_/RichEditor/RichEditor.html#' + fieldName +
+        '#' + (height || 0)  + '#' + isFullHtml;
+
+    // insert editor frame right after the field as a new row
+    fieldContainer.after('<div id="richEditorRow_' + fieldName + '">' +
+        '<iframe id="richEditorFrame_' + fieldName + '"' +
+        'src="' +iFrameUrl + '" frameborder="0" scrolling="no" style="width: 100%;"></iframe>' +
+        '</div>');
+
+    if (callback) {
+        setTimeout(callback, 50);
+    }
+}
+
+function IsRichEditorLoaded(fieldName)
+{
+    var oldFrame = $('#richEditorFrame_' + fieldName, parent.document);
+
+    // CRM 2015-
+    if (oldFrame.length <= 0)
+    {
+        oldFrame = $('#richEditorFrame_' + fieldName);
+    }
+
+    return oldFrame.length > 0;
+}
+
+function RemoveRichEditor(fieldName)
+{
+    var oldFrameRow = $('#richEditorRow_' + fieldName, parent.document);
+
+    // CRM 2015-
+    if (oldFrameRow.length <= 0)
+    {
+        oldFrameRow = $('#richEditorRow_' + fieldName);
+    }
+
+    if (oldFrameRow.length > 0)
+    {
+        oldFrameRow.remove();
+    }
+
+    if (AdvancedFindMap[fieldName])
+    {
+        RemoveOnChange(fieldName, AdvancedFindMap[fieldName]);
+    }
+}
+
+function LoadRichEditorV5(fieldName, height, callback, isDelayApplied)
+{
+	/// <summary>
+	///     Appends the rich editor frame to the specified field and hides the field using the DOM.<br />
+	///     Author: Ahmed Elsawalhy, Tarek Selem
+	/// </summary>
+	/// <param name="fieldName" type="String">The logical name of the field to replace.</param>
+    /// <param name="height" type="Number">[OPTIONAL=unlimited]The height of the frame.</param>
+	if (!fieldName)
+	{
+		var message = 'Parameter values are not set correctly.';
+		console.error(message);
+		throw message;
+	}
+
+	if (!isDelayApplied)
+    {
+        setTimeout(() => LoadRichEditor(fieldName, height, callback, true), 500);
+        return;
+    }
+
+    RemoveRichEditor(fieldName);
+
+	var fieldContainer = GetInsertionRow(fieldName);
+
+	if (!fieldContainer)
+	{
+		return;
+	}
 
     fieldContainer.hide();
 
-    // add the control that is going to be replaced by CK Editor
-	fieldContainer.after('<div>' +
-		'<textarea name="' + id + '" id="' + id + '"></textarea>' +
-		'</div>');
+    if (typeof parent !== "undefined")
+    {
+        parent.RichEditorMap = RichEditorMap;
+    }
 
-	// load CKEditor script
-	var headTag = parent.document.getElementsByTagName("head")[0];
-    var jqTag = parent.document.createElement('script');
-	jqTag.type = 'text/javascript';
-	jqTag.src = editorJsUrl;
+    const iFrameUrl = Xrm.Utility.getGlobalContext().getClientUrl() + '/WebResources/ys_/RichEditor/v5/RichEditor.html#' + fieldName +
+        '#' + (height || 0);
 
-	// form the editor and its events
-	jqTag.onload = function ()
-	{
-		parent.CKEDITOR.replace(id);
+    // insert editor frame right after the field as a new row
+    fieldContainer.after('<div id="richEditorRow_' + fieldName + '">' +
+        '<iframe id="richEditorFrame_' + fieldName + '"' +
+        'src="' +iFrameUrl + '" frameborder="0" scrolling="no" style="width: 100%;"></iframe>' +
+        '</div>');
 
-		var editor = parent.CKEDITOR.dom.element.get(id).getEditor();
-
-		if (editor)
-		{
-			// initial editor data copied from field
-			var setEditorData = function ()
-			{
-				// prevent looping
-				if (isSkipFireOnChange)
-				{
-					isSkipFireOnChange = false;
-					return;
-				}
-
-				parent.CKEDITOR.instances[id].setData(AnchoredExecutionContext.getFormContext().getAttribute(fieldName).getValue());
-
-                var editorFindLoop =
-					function()
-					{
-						var editorElement = $('.cke_wysiwyg_frame', parent.document);
-
-						if (editorElement.length)
-						{
-							$(editorElement[0].contentWindow).bind('keydown', function(event)
-							{
-								if (event.ctrlKey || event.metaKey)
-								{
-									switch (String.fromCharCode(event.which).toLowerCase())
-									{
-										case 's':
-											setTimeout(
-												function()
-												{
-													AnchoredExecutionContext.getFormContext().data.save();
-												}, 100);
-
-											event.preventDefault();
-											break;
-									}
-								}
-							});
-						}
-						else
-						{
-							setTimeout(editorFindLoop, 500);
-						}
-					}
-
-				editorFindLoop();
-			};
-
-			// add an OnChange event to copy field data to editor
-            AnchoredExecutionContext.getFormContext().getAttribute(fieldName).addOnChange(setEditorData);
-
-			setEditorData();
-
-			// add an OnChange event to copy editor data to field
-			editor.on('change',
-				function ()
-				{
-                    AnchoredExecutionContext.getFormContext().getAttribute(fieldName).setValue(editor.getData());
-					// prevent looping
-					isSkipFireOnChange = true;
-                    AnchoredExecutionContext.getFormContext().getAttribute(fieldName).fireOnChange();
-				});
-		}
-
-		if (callback)
-		{
-			callback();
-		}
-	};
-
-    headTag.appendChild(jqTag);
+    if (callback) {
+        setTimeout(callback, 50);
+    }
 }
 
 var AdvancedFindMap = window.AdvancedFindMap || {};

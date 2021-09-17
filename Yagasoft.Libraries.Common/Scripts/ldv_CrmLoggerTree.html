@@ -197,8 +197,8 @@
 		}
 		
 		var typeCode = getObjectTypeCode('ldv_logentry');
-		var baseUrl = parent.Xrm.Page.context.getClientUrl();
-		var id = parent.Xrm.Page.data.entity.getId().replace('{', '').replace('}', '');
+        var baseUrl = parent.Xrm.Utility.getGlobalContext().getClientUrl();
+        var id = parent.AnchoredExecutionContext.getFormContext().data.entity.getId().replace('{', '').replace('}', '');
 
 		function loadNode(node, cb)
 		{

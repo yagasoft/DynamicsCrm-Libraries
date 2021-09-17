@@ -106,7 +106,6 @@
     <None Include="Scripts\CrmLogger.js" />
     <None Include="Scripts\ldv_CrmLoggerLog.js" />
     <None Include="Scripts\jquery-1.11.1.js" />
-    <None Include="Scripts\ldv_ckeditor.js" />
     <None Include="Scripts\ldv_CommonGeneric.js" />
     <None Include="Scripts\ldv_AdvancedFind.html" />
   </ItemGroup>
@@ -140,6 +139,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Scripts\ys_RichEditor.html" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Scripts\ys_RichEditor_v5.html" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

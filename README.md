@@ -2,7 +2,7 @@
 
 [![Join the chat at https://gitter.im/yagasoft/DynamicsCrm-Libraries](https://badges.gitter.im/yagasoft/DynamicsCrm-Libraries.svg)](https://gitter.im/yagasoft/DynamicsCrm-Libraries?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-### Version: 6.1.2
+### Version: 7.1.1
 ---
 
 A collection of libraries for common and extended operations in Dynamics CRM development that gives power to the developer and saves time.
@@ -12,6 +12,7 @@ A collection of libraries for common and extended operations in Dynamics CRM dev
 ### Common Library
 
   + Massive JS and CS libraries of common and generic functions and classes
+    + [CRM Text Parser](https://github.com/yagasoft/Dynamics365-CrmTextParser)
 
 ### Enhanced Organisation Service library
 
@@ -42,6 +43,10 @@ A collection of libraries for common and extended operations in Dynamics CRM dev
 
 ## Changes
 
+#### _v7.1.1 (2021-09-17)_
++ Added: CRM Text Parser
++ Improved: updated rich editor
++ Fixed: issues
 #### _v6.1.2 (2021-05-25)_
 + Fixed: NuGet package requirements
 #### _v6.1.1 (2021-05-08)_

@@ -2,578 +2,181 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Advanced Find</title>
+<title>Rich Editor</title>
 <meta charset="utf-8">
 <script>
-</script>
-<script>
-	/// <reference path="ldv_ckeditor.js" />
-	/// <reference path="Xrm.Page.js" />
-
-	var LatestError = '';
-
-	window.alert =
-		function(message)
-		{
-			if (message)
-			{
-				console.error(message);
-				LatestError = message;
-			}
-		};
-
-	var IsConfirmed = true;
-	var oldConfirm = confirm;
-	var IsSuppressConfirm = false;
-
-	window.confirm =
-		function(message)
-		{
-			if (IsSuppressConfirm)
-			{
-				return IsConfirmed = true;
-			}
-
-			IsConfirmed = oldConfirm(message);
-			return IsConfirmed;
-		};
-
-	// CRM 2016+
-	var Xrm = window.Xrm || parent.Xrm;
-	var $ = window.$ || parent.$;
-
-	var RemoteCommand = window.RemoteCommand || parent.RemoteCommand;
-	var AdvancedFindMap = parent.AdvancedFindMap;
-
-	var ParentIFrame;
-	var SearchWindow;
-	var AdvancedFindObject;
-	var LatestFetchXml = "";
-	var IntervalHandle;
-
-	var IsMinimal;
-
-	var Params;
-	var ControlName;
-	var EntityName;
-	var Height;
-
-	var TypeCode;
-	var BaseUrl;
-
-	var StorageKey;
-
-	function RetrieveEntityMetadata(logicalName, properties)
-	{
-		properties = (properties && properties.indexOf('*') >= 0) ? null : (properties || 'LogicalName');
-		var condition = logicalName ? "LogicalName eq '" + logicalName + "'" : '';
-
-		return $.ajax({
-				type: "GET",
-				contentType: "application/json; charset=utf-8",
-				datatype: "json",
-				url: Xrm.Page.context.getClientUrl() + "/api/data/v8.1/EntityDefinitions?" +
-					(properties ? ("$select=" + properties) : '') +
-					(condition ? ((properties ? '&' : '') + "$filter=" + condition) : ''),
-				beforeSend: function(xmlHttpRequest)
-				{
-					xmlHttpRequest.setRequestHeader("OData-MaxVersion", "4.0");
-					xmlHttpRequest.setRequestHeader("OData-Version", "4.0");
-					xmlHttpRequest.setRequestHeader("Accept", "application/json");
-				},
-				async: false
-			});
-	}
-
-	function GetObjectTypeCode(entityName)
-	{
-		var lookupService = new RemoteCommand("LookupService", "RetrieveTypeCode");
-		lookupService.SetParameter("entityName", entityName);
-
-		var result = lookupService.Execute();
-
-		if (result.Success && typeof result.ReturnValue == "number")
-		{
-			return result.ReturnValue;
-		}
-		else
-		{
-			return null;
-		}
-	}
-
-	function InitAdvancedFind()
-	{
-		if (typeof ($) === "undefined")
-		{
-			console.error("Can't find $ in advanced find frame.");
-			return;
-		}
-
-		// get the params from the URL
-		Params = $(location).attr('hash').split('#');
-
-		ControlName = Params[1];
-		EntityName = Params[2];
-		Height = parseInt(Params[3]) + 35;
-
-		TypeCode = GetObjectTypeCode(EntityName);
-		BaseUrl = Xrm.Page.context.getClientUrl();
-
-		ParentIFrame = $("#advancedFindFrame_" + ControlName, parent.document);
-
-		$(window, document).bind('keydown', function(event)
-		{
-			if (event.ctrlKey || event.metaKey)
-			{
-				switch (String.fromCharCode(event.which).toLowerCase())
-				{
-					case 's':
-						setTimeout(
-							function()
-							{
-								Xrm.Page.data.save();
-							}, 500);
-
-						event.preventDefault();
-						break;
-				}
-			}
-		});
-
-		StorageKey = Xrm.Page.data.entity.getEntityName() + '_' + ControlName;
-
-		$("#defaultOpenCheckbox", document).change(
-			function()
-			{
-				UpdateStorage(StorageKey, this.checked);
-			});
-
-		if (GetFromStorage(StorageKey))
-		{
-			$('#defaultOpenCheckbox', document).prop('checked', true);
-		}
-
-		if ($("#defaultOpenCheckbox", document)[0].checked)
-		{
-			ShowEditor(true);
-			return;
-		}
-
-		$('#minimalEditorButton', document).show();
-		$('#fullEditorButton', document).show();
-		$('#formatTextButton', document).show();
-
-		ParentIFrame.height(Height);
-	}
-
-	function ShowEditor(isMinimal)
-	{
-		$('#minimalEditorButton', document).hide();
-		$('#fullEditorButton', document).hide();
-		$('#formatTextButton', document).hide();
-
-		LoadAdvancedFind(isMinimal);
-	}
-
-	function HideEditor()
-	{
-		$('#hideEditorButton', document).hide();
-		$('#fireButton', document).hide();
-		$('#defaultOpenContainer', document).hide();
-
-		if (IntervalHandle)
-		{
-			clearInterval(IntervalHandle);
-		}
-
-		LatestFetchXml = "";
-		AdvancedFindObject = null;
-
-		setTimeout(function()
-		{
-			Xrm.Page.getAttribute(ControlName).removeOnChange(AdvancedFindMap[ControlName]);
-			$('#advancedFindFrame', document).remove();
-
-			ParentIFrame.height(Height);
-
-			Xrm.Page.getControl(ControlName).clearNotification();
-
-			$('#minimalEditorButton', document).show();
-			$('#fullEditorButton', document).show();
-			$('#formatTextButton', document).show();
-		}, 500);
-	}
-
-	function LoadAdvancedFind(isMinimal)
-	{
-		if (typeof ($) === "undefined")
-		{
-			console.error("Can't find $ in advanced find frame.");
-			return;
-		}
-
-		IsMinimal = isMinimal;
-
-		var height = Height + (IsMinimal ? 250 : 400);
-
-		var windowTitle = top.document.title;
-
-		var advancedFindUrl = BaseUrl +
-			(IsMinimal
-				 ? '/SFA/goal/ParticipatingQueryCondition.aspx?entitytypecode=' + TypeCode
-				 : '/main.aspx?extraqs=%3fDataProvider%3dMicrosoft.Crm.Application.Platform.Grid.GridDataProviderQueryBuilder' +
-				 '%26EntityCode%3d' + TypeCode + '%26' +
-				 'UIProvider%3dMicrosoft.Crm.Application.Controls.GridUIProvider%26ViewType%3d1039&pagetype=advancedfind');
-
-		$('body', document)
-			.append('<iframe name="advancedFindFrame" id="advancedFindFrame"' +
-				' src="' + advancedFindUrl + '" seamless="seamless" scrolling="yes"' +
-				' style="height: ' + (height - 43) + 'px;width: 99%"></iframe>');
-
-		var initLoop = function()
-		{
-			var searchFrame = $("#advancedFindFrame", document);
-			var content = $("*", searchFrame.contents());
-
-			if (content.length <= 0 || $("#" + (IsMinimal ? 'searchResults' : "crmTopBar"), content).length <= 0)
-			{
-				setTimeout(initLoop, 500);
-			}
-			else
-			{
-				setTimeout(function()
-				{
-					ParentIFrame.height(height);
-
-					SearchWindow = IsMinimal ? searchFrame[0].contentWindow : searchFrame[0].contentWindow.frames[0].window;
-					AdvancedFindObject = SearchWindow.$find('advFind');
-
-					SearchWindow.alert = alert;
-					SearchWindow.confirm = confirm;
-
-					top.document.title = windowTitle;
-
-					LatestFetchXml = AdvancedFindObject.get_fetchXml();
-
-					var fetchXmlUpdateLoop = 
-						function()
-						{
-							try
-							{
-								var latestFetchXml = AdvancedFindObject.get_fetchXml();
-
-								if (LatestFetchXml && latestFetchXml
-									&& LatestFetchXml.replace(/ alias=".*?"/ig, '')
-									!== latestFetchXml.replace(/ alias=".*?"/ig, ''))
-								{
-									SetFetchXmlInField();
-									LatestFetchXml = latestFetchXml;
-								}
-							}
-							finally
-							{
-								IntervalHandle = setTimeout(fetchXmlUpdateLoop, 1000);
-							}
-						}
-
-					fetchXmlUpdateLoop();
-					
-					$('#crmUserInfo', content).hide();
-					$("#searchResults", content).css('width', '99%');
-
-					SetFetchXmlInFrame();
-
-					$(SearchWindow).bind('keydown', function(event)
-					{
-						if (event.ctrlKey || event.metaKey)
-						{
-							switch (String.fromCharCode(event.which).toLowerCase())
-							{
-								case 's':
-									setTimeout(
-										function()
-										{
-											Xrm.Page.data.save();
-										}, 100);
-
-									event.preventDefault();
-									break;
-							}
-						}
-					});
-
-					var handler = AdvancedFindMap[ControlName] =
-						function()
-						{
-							SetFetchXmlInFrame();
-						};
-
-					Xrm.Page.getAttribute(ControlName).addOnChange(handler);
-
-					if (IsMinimal)
-					{
-						$('#defaultOpenContainer', document).show();
-					}
-
-					$('#hideEditorButton', document).show();
-					$('#fireButton', document).show();
-
-					if (!IsMinimal)
-					{
-						top.$('#crmRibbonManager').css('visibility', 'visible');
-					}
-				}, 1000);
-			}
-		};
-
-		initLoop();
-	};
-
-	function SetFetchXmlInFrame()
-	{
-		if (typeof($) === "undefined")
-		{
-			console.error("Can't find $ in advanced find frame.");
-			return;
-		}
-
-		// get Mscrm.AdvancedFind Object
-		// Author: Moamen Ibrahim
-
-		if (!AdvancedFindObject)
-		{
-			return;
-		}
-
-		AdvancedFindObject.Clear(true, false);
-
-		if (!IsConfirmed)
-		{
-			return;
-		}
-
-		IsConfirmed = true;
-
-		// if field has no fetch, skip
-		var fieldFetchXml = Xrm.Page.getAttribute(ControlName).getValue();
-
-		if (!fieldFetchXml)
-		{
-			SetFetchXmlInField(true);
-			return;
-		}
-
-		var fetchXml = CleanFetchXml(fieldFetchXml);
-		AdvancedFindObject.set_fetchXml(fetchXml);
-
-		if (!IsConfirmed)
-		{
-			return;
-		}
-
-		IsConfirmed = true;
-
-		var attributes = $('entity > attribute', fetchXml);
-		var layoutString = '';
-
-		for (var i = 0; i < attributes.length; i++)
-		{
-			var name = $(attributes[i]).attr('name');
-			layoutString += '<cell name="' + name + '" width="100" />';
-		}
-
-		AdvancedFindObject
-			.set_layoutXml('<grid name="resultset" object="1" jump="name" select="1" icon="1" preview="1">' +
-				'<row name="result" id="' + EntityName + 'id">' +
-				layoutString + '</row></grid>');
-
-		if (LatestError)
-		{
-			var message = 'There was a problem setting the conditions in the "Advanced Find" frame. ERROR: ' + LatestError;
-			Xrm.Page.getControl(ControlName).setNotification(message);
-			LatestError = '';
-			return;
-		}
-
-		// just in case there was an issue with the original XML
-		if (GetEntityName(AdvancedFindObject.get_fetchXml()) !== GetEntityName(fieldFetchXml))
-		{
-			SetFetchXmlInField(true);
-		}
-		else
-		{
-			Xrm.Page.getControl(ControlName).clearNotification();
-		}
-
-		IsSuppressConfirm = false;
-	}
-
-	function SetFetchXmlInField(isCleanFetch)
-	{
-		if (typeof ($) === "undefined")
-		{
-			console.error("Can't find $ in Advanced Find frame.");
-			return;
-		}
-
-		try
-		{
-			// get generated FetchXML
-			var fetchXml = GetFetchXmlFromFrame(isCleanFetch);
-			var fieldValue = Xrm.Page.getAttribute(ControlName).getValue();
-
-			if (fieldValue && fetchXml.replace(/ alias=".*?"/ig, '').indexOf(fieldValue.replace(/ alias=".*?"/ig, '')) >= 0)
-			{
-				return;
-			}
-
-			// set it on form
-			Xrm.Page.getAttribute(ControlName).setValue(fetchXml);
-			Xrm.Page.getAttribute(ControlName).setSubmitMode('always');
-		}
-		catch (e)
-		{
-			console.error(e);
-			var message = 'There was a problem parsing the conditions in the "Advanced Find" frame. ERROR: ' + e.message;
-			Xrm.Page.getControl(ControlName).setNotification(message);
-			LatestError = '';
-			return;
-		}
-
-		Xrm.Page.getControl(ControlName).clearNotification();
-	}
-
-	function GetFetchXmlFromFrame(isCleanFetch)
-	{
-		// get Mscrm.AdvancedFind Object
-		if (!AdvancedFindObject)
-		{
-			throw { message: "Couldn't find the 'Advanced Find' frame." };
-		}
-
-		var fetchXml = AdvancedFindObject.get_fetchXml();
-
-		if (!fetchXml)
-		{
-			throw { message: "Failed to retrieve FetchXML from frame. Probable cause: '" + LatestError + "'." };
-		}
-
-		return CleanFetchXml(fetchXml, isCleanFetch);
-	}
-
-	function GetEntityName(fetchXml)
-	{
-		var match = fetchXml.match(/<entity name=".*?">/);
-		return match === null ? null : match[0];
-	}
-
-	function CleanFetchXml(fetchXml, isCleanFetch)
-	{
-		if (isCleanFetch)
-		{
-			// get all attribute nodes
-			var matches = fetchXml.match(/<attribute .*?\/>/g) || [];
-
-			// remove 'order by'
-			fetchXml = fetchXml.replace(/<order .*?\/>/g, '');
-
-			try
-			{
-				var metadata = RetrieveEntityMetadata(EntityName, 'PrimaryIdAttribute,PrimaryNameAttribute', null, null, null)
-					.responseJSON.value;
-
-				metadata = metadata.length > 0 ? metadata[0] : null;
-
-				var i = metadata ? 0 : 1;
-
-				// remove all attribute nodes except first one
-				for (; i < matches.length; i++)
-				{
-					fetchXml = fetchXml.replace(matches[i], '');
-				}
-
-				if (metadata)
-				{
-					var idFieldName = metadata.PrimaryIdAttribute;
-					var primaryFieldName = metadata.PrimaryNameAttribute;
-
-					var d = $.parseXML(fetchXml);
-					var entityNode = $(d).find('entity');
-
-					if (idFieldName)
-					{
-						entityNode.append($('<attribute name="' + idFieldName + '" />'));
-					}
-
-					if (primaryFieldName)
-					{
-						entityNode.append($('<attribute name="' + primaryFieldName + '" />'));
-					}
-
-					fetchXml = new XMLSerializer().serializeToString(d.documentElement).replace(/ xmlns=".*?"/ig, '');
-				}
-			}
-			catch (e)
-			{
-				console.error(e);
-			}
-		}
-
-		return fetchXml.trim();
-	}
-
-	function FormatText(isFireOnChange)
-	{
-		try
-		{
-			var fieldFetchXml = Xrm.Page.getAttribute(ControlName).getValue();
-
-			if (fieldFetchXml)
-			{
-				Xrm.Page.getAttribute(ControlName).setValue(vkbeautify.xml(fieldFetchXml));
-
-				if (isFireOnChange)
-				{
-					Xrm.Page.getAttribute(ControlName).fireOnChange();
-				}
-			}
-		}
-		catch (e)
-		{
-			console.error(e);
-		}
-	}
-
-	function UpdateStorage(key, value)
-	{
-		localStorage.setItem(key, JSON.stringify(value));
-	}
-
-	function GetFromStorage(key)
-	{
-		return JSON.parse(localStorage.getItem(key));
-	}
-
-	function FireOnChange()
-	{
-		IsConfirmed = true;
-		IsSuppressConfirm = true;
-		Xrm.Page.getAttribute(ControlName).fireOnChange();
-	}
-
-	window.onload = InitAdvancedFind;
+    var Xrm = window.Xrm || parent.Xrm;
+    var $ = window.$ || parent.$;
+    var AnchoredExecutionContext = window.AnchoredExecutionContext || parent.AnchoredExecutionContext;
+
+    var RichEditorMap = parent.RichEditorMap;
+
+    var ParentIFrame;
+
+    var Params;
+    var ControlName;
+    var Height;
+    var IsFullHtml;
+
+    var BaseUrl;
+
+    function InitRichEditor()
+    {
+        if (typeof ($) === "undefined")
+        {
+            console.error("Can't find $ in advanced find frame.");
+            return;
+        }
+
+        // get the params from the URL
+        Params = $(location).attr('hash').split('#');
+
+        ControlName = Params[1];
+        Height = parseInt(Params[2]);
+        IsFullHtml = Params[3] === 'true';
+
+        BaseUrl = Xrm.Page.context.getClientUrl();
+
+        ParentIFrame = $("#richEditorFrame_" + ControlName, parent.document);
+
+        $(window, document).bind('keydown', function(event)
+        {
+            if (event.ctrlKey || event.metaKey)
+            {
+                switch (String.fromCharCode(event.which).toLowerCase())
+                {
+                    case 's':
+                        setTimeout(
+                            function()
+                            {
+                                Xrm.Page.data.save();
+                            }, 500);
+
+                        event.preventDefault();
+                        break;
+                }
+            }
+        });
+
+        var isSkipFireOnChange = false;
+
+        const editorJsUrl = BaseUrl + '/WebResources/ys_/RichEditor/ckeditor.js';
+
+        // load CKEditor script
+        const headTag = document.getElementsByTagName("head")[0];
+        const jqTag = document.createElement('script');
+        jqTag.type = 'text/javascript';
+        jqTag.src = editorJsUrl;
+
+        const id = 'ckWysiwyg';
+
+        jqTag.onload = function ()
+        {
+            const config = {};
+
+            if (Height)
+            {
+                config.autoGrow_maxHeight = Height;
+            }
+
+            if (IsFullHtml)
+            {
+                config.fullPage = true;
+            }
+
+            CKEDITOR.replace(id, config);
+
+            var editor = CKEDITOR.dom.element.get(id).getEditor();
+
+            if (editor)
+            {
+                // initial editor data copied from field
+                var setEditorData = function ()
+                {
+                    // prevent looping
+                    if (isSkipFireOnChange)
+                    {
+                        isSkipFireOnChange = false;
+                        return;
+                    }
+
+                    const existingData = AnchoredExecutionContext.getFormContext().getAttribute(ControlName).getValue();
+                    CKEDITOR.instances[id].setData(existingData || '');
+
+                    var editorFindLoop =
+                        function()
+                        {
+                            var editorElement = $('.cke_wysiwyg_frame', document);
+
+                            if (editorElement.length)
+                            {
+                                $(editorElement[0].contentWindow).bind('keydown', function(event)
+                                {
+                                    if (event.ctrlKey || event.metaKey)
+                                    {
+                                        switch (String.fromCharCode(event.which).toLowerCase())
+                                        {
+                                            case 's':
+                                                setTimeout(
+                                                    function()
+                                                    {
+                                                        AnchoredExecutionContext.getFormContext().data.save();
+                                                    }, 100);
+
+                                                event.preventDefault();
+                                                break;
+                                        }
+                                    }
+                                });
+                            }
+                            else
+                            {
+                                setTimeout(editorFindLoop, 500);
+                            }
+                        }
+
+                    editorFindLoop();
+                };
+
+                const handler = RichEditorMap[ControlName] = setEditorData;
+
+                // add an OnChange event to copy field data to editor
+                AnchoredExecutionContext.getFormContext().getAttribute(ControlName).addOnChange(handler);
+
+                setEditorData();
+
+                // add an OnChange event to copy editor data to field
+                editor.on('change',
+                    function ()
+                    {
+                        setTimeout(() =>
+                        {
+                            ParentIFrame.height($("body", document).height() + 11);
+                        }, 150);
+
+                        AnchoredExecutionContext.getFormContext().getAttribute(ControlName).setValue(editor.getData());
+                        // prevent looping
+                        isSkipFireOnChange = true;
+                        AnchoredExecutionContext.getFormContext().getAttribute(ControlName).fireOnChange();
+                    });
+
+                editor.on('instanceReady',
+                    () =>
+                    {
+                        setTimeout(() => ParentIFrame.height($("body", document).height() + 11), 50);
+                    });
+            }
+        };
+
+        headTag.appendChild(jqTag);
+    }
+
+    window.onload = InitRichEditor;
 </script>
 </head>
-<body style="font-family: Segoe UI; font-size: 12px;">
-<button id="minimalEditorButton" onclick="ShowEditor(true)" style="display: none">Minimal Editor</button>
-<button id="fullEditorButton" onclick="ShowEditor()" style="display: none">Full Editor</button>
-<button id="hideEditorButton" onclick="HideEditor()" style="display: none">Close Editor</button>
-<button id="fireButton" onclick="FireOnChange()" style="display: none">Fire OnChange</button>
-<button id="formatTextButton" onclick="FormatText()" style="display: none; margin-left: 20px;">Format FetchXML</button>
-<span id="defaultOpenContainer" style="display: none; margin-left: 20px; vertical-align: middle; font-family: Segoe UI; font-size: 12px;">
-	<input type="checkbox" id="defaultOpenCheckbox"/>
-	<span style="margin-left: 5px; vertical-align: middle; position: relative; bottom: 3px;">Keep open by default</span>
-</span>
+<body>
+<div>
+    <textarea name="ckWysiwyg" id="ckWysiwyg"></textarea>
+</div>
 </body>
 </html>

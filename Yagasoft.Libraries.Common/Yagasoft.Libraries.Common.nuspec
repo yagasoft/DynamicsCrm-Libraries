@@ -3,7 +3,7 @@
 <package>
   <metadata>
     <id>Yagasoft.Libraries.Common</id>
-    <version>3.1.2</version>
+    <version>3.3.1</version>
     <authors>Ahmed Elsawalhy</authors>
     <owners>Ahmed Elsawalhy</owners>
     <projectUrl>https://github.com/yagasoft/DynamicsCrm-Libraries</projectUrl>
@@ -26,6 +26,11 @@
     </frameworkAssemblies>
     <references />
     <releaseNotes>
+      * 3.3.1
+      Added: User construct to CRM Parser
+      Added: localisation support to CRM Parser
+      Added: serialisation helpers
+      Fixed: issues
       * 3.1.2
       Added: CRM Parser solution
       Improved: performance
