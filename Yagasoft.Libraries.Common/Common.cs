@@ -3160,7 +3160,7 @@ namespace Yagasoft.Libraries.Common
 
 							if (related.Any())
 							{
-								c.RelatedEntities.Add(new Relationship(node), new EntityCollection(related));
+								c.RelatedEntities[new Relationship(node)] = new EntityCollection(related);
 							}
 
 							var q = related.AsEnumerable();
@@ -3673,7 +3673,7 @@ namespace Yagasoft.Libraries.Common
 				{
 					if (collection.Entities.Any())
 					{
-						result.RelatedEntities.Add(new Relationship(key), new EntityCollection(collection.Entities));
+						result.RelatedEntities[new Relationship(key)] = new EntityCollection(collection.Entities);
 					}
 				}
 				else
