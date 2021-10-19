@@ -2,7 +2,7 @@
 
 [![Join the chat at https://gitter.im/yagasoft/DynamicsCrm-Libraries](https://badges.gitter.im/yagasoft/DynamicsCrm-Libraries.svg)](https://gitter.im/yagasoft/DynamicsCrm-Libraries?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-### Version: 7.1.2
+### Version: 7.2.1
 ---
 
 A collection of libraries for common and extended operations in Dynamics CRM development that gives power to the developer and saves time.
@@ -43,6 +43,11 @@ A collection of libraries for common and extended operations in Dynamics CRM dev
 
 ## Changes
 
+#### _v7.2.1 (2021-10-01)_
++ [Common] Added: features to the CRM Parser
++ [Common] Fixed: ReplaceGroups issue
+#### _v7.1.3 (2021-09-20)_
++ Fixed: [Common] Params logger throwing an error
 #### _v7.1.2 (2021-09-17)_
 + Added: CRM Text Parser
 + Improved: updated rich editor

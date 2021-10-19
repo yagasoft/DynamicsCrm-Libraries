@@ -1,6 +1,8 @@
 ﻿#region Imports
 
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Xrm.Sdk;
 using Yagasoft.Libraries.Common;
@@ -141,15 +143,20 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 			return factory.CreateService(pool);
 		}
 
-		public static async Task<IEnhancedOrgService> GetSelfBalancingService(string connectionString,
-			IEnumerable<IServicePool<IOrganizationService>> pools, RouterRules rules = null)
+		public static async Task<IEnhancedOrgService> GetSelfBalancingService(ServiceParams serviceParameters,
+			IReadOnlyCollection<ServiceParams> poolParameters, RouterRules rules = null)
 		{
-			connectionString.RequireFilled(nameof(connectionString));
-			return await GetSelfBalancingService(BuildBaseParams(connectionString), pools, rules);
+			return await GetSelfBalancingService(serviceParameters, poolParameters.Select(GetPool).ToArray(), rules);
+		}
+
+		public static async Task<IEnhancedOrgService> GetSelfBalancingService(
+			IReadOnlyCollection<IServicePool<IOrganizationService>> pools, RouterRules rules = null)
+		{
+			return await GetSelfBalancingService(BuildBaseParams(Guid.NewGuid().ToString()), pools, rules);
 		}
 
 		public static async Task<IEnhancedOrgService> GetSelfBalancingService(ServiceParams parameters,
-			IEnumerable<IServicePool<IOrganizationService>> pools, RouterRules rules = null)
+			IReadOnlyCollection<IServicePool<IOrganizationService>> pools, RouterRules rules = null)
 		{
 			parameters.Require(nameof(parameters));
 			pools.Require(nameof(pools));
