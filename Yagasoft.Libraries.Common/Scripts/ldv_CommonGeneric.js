@@ -41,7 +41,7 @@ function BuildAnchoredExecutionContext(formContext)
 
 var RichEditorMap = window.RichEditorMap || {};
 
-function LoadRichEditor(fieldName, height, isFullHtml, callback, isDelayApplied)
+function LoadRichEditor(fieldName, height, isFullHtml, callback)
 {
 	/// <summary>
 	///     Appends the rich editor frame to the specified field and hides the field using the DOM.<br />
@@ -50,7 +50,6 @@ function LoadRichEditor(fieldName, height, isFullHtml, callback, isDelayApplied)
 	/// <param name="fieldName" type="String">The logical name of the field to replace.</param>
     /// <param name="height" type="Number">[OPTIONAL=unlimited]The height of the frame.</param>
     /// <param name="isFullHtml" type="Boolean">[OPTIONAL=false]Includes the whole HTML code in the editor -- not just the 'body'.</param>
-    /// <param name="isDelayApplied" type="Boolean">[INTERNAL-USE]</param>
 	if (!fieldName)
 	{
 		var message = 'Parameter values are not set correctly.';
@@ -58,40 +57,38 @@ function LoadRichEditor(fieldName, height, isFullHtml, callback, isDelayApplied)
 		throw message;
 	}
 
-	if (!isDelayApplied)
-    {
-        setTimeout(() => LoadRichEditor(fieldName, height, isFullHtml, callback, true), 500);
-        return;
-    }
+    InsertCustomControlRow(fieldName,
+        fieldContainer =>
+        {
+            RemoveRichEditor(fieldName);
 
-    RemoveRichEditor(fieldName);
+            if (!fieldContainer)
+            {
+                return;
+            }
 
-	var fieldContainer = GetInsertionRow(fieldName);
+            fieldContainer.hide();
 
-	if (!fieldContainer)
-	{
-		return;
-	}
+            if (typeof parent !== "undefined")
+            {
+                parent.RichEditorMap = RichEditorMap;
+            }
 
-    fieldContainer.hide();
+            const iFrameUrl = Xrm.Utility.getGlobalContext().getClientUrl()
+                + '/WebResources/ys_/RichEditor/RichEditor.html#' + fieldName +
+                '#' + (height || 0) + '#' + isFullHtml;
 
-    if (typeof parent !== "undefined")
-    {
-        parent.RichEditorMap = RichEditorMap;
-    }
+            // insert editor frame right after the field as a new row
+            fieldContainer.after('<div id="richEditorRow_' + fieldName + '">' +
+                '<iframe id="richEditorFrame_' + fieldName + '"' +
+                'src="' + iFrameUrl + '" frameborder="0" scrolling="no" style="width: 100%;"></iframe>' +
+                '</div>');
 
-    const iFrameUrl = Xrm.Utility.getGlobalContext().getClientUrl() + '/WebResources/ys_/RichEditor/RichEditor.html#' + fieldName +
-        '#' + (height || 0)  + '#' + isFullHtml;
-
-    // insert editor frame right after the field as a new row
-    fieldContainer.after('<div id="richEditorRow_' + fieldName + '">' +
-        '<iframe id="richEditorFrame_' + fieldName + '"' +
-        'src="' +iFrameUrl + '" frameborder="0" scrolling="no" style="width: 100%;"></iframe>' +
-        '</div>');
-
-    if (callback) {
-        setTimeout(callback, 50);
-    }
+            if (callback)
+            {
+                setTimeout(callback, 50);
+            }
+        });
 }
 
 function IsRichEditorLoaded(fieldName)
@@ -128,7 +125,7 @@ function RemoveRichEditor(fieldName)
     }
 }
 
-function LoadRichEditorV5(fieldName, height, callback, isDelayApplied)
+function LoadRichEditorV5(fieldName, height, callback)
 {
 	/// <summary>
 	///     Appends the rich editor frame to the specified field and hides the field using the DOM.<br />
@@ -143,40 +140,38 @@ function LoadRichEditorV5(fieldName, height, callback, isDelayApplied)
 		throw message;
 	}
 
-	if (!isDelayApplied)
-    {
-        setTimeout(() => LoadRichEditor(fieldName, height, callback, true), 500);
-        return;
-    }
+    InsertCustomControlRow(fieldName,
+        fieldContainer =>
+        {
+            RemoveRichEditor(fieldName);
 
-    RemoveRichEditor(fieldName);
+            if (!fieldContainer)
+            {
+                return;
+            }
 
-	var fieldContainer = GetInsertionRow(fieldName);
+            fieldContainer.hide();
 
-	if (!fieldContainer)
-	{
-		return;
-	}
+            if (typeof parent !== "undefined")
+            {
+                parent.RichEditorMap = RichEditorMap;
+            }
 
-    fieldContainer.hide();
+            const iFrameUrl = Xrm.Utility.getGlobalContext().getClientUrl()
+                + '/WebResources/ys_/RichEditor/v5/RichEditor.html#' + fieldName +
+                '#' + (height || 0);
 
-    if (typeof parent !== "undefined")
-    {
-        parent.RichEditorMap = RichEditorMap;
-    }
+            // insert editor frame right after the field as a new row
+            fieldContainer.after('<div id="richEditorRow_' + fieldName + '">' +
+                '<iframe id="richEditorFrame_' + fieldName + '"' +
+                'src="' + iFrameUrl + '" frameborder="0" scrolling="no" style="width: 100%;"></iframe>' +
+                '</div>');
 
-    const iFrameUrl = Xrm.Utility.getGlobalContext().getClientUrl() + '/WebResources/ys_/RichEditor/v5/RichEditor.html#' + fieldName +
-        '#' + (height || 0);
-
-    // insert editor frame right after the field as a new row
-    fieldContainer.after('<div id="richEditorRow_' + fieldName + '">' +
-        '<iframe id="richEditorFrame_' + fieldName + '"' +
-        'src="' +iFrameUrl + '" frameborder="0" scrolling="no" style="width: 100%;"></iframe>' +
-        '</div>');
-
-    if (callback) {
-        setTimeout(callback, 50);
-    }
+            if (callback)
+            {
+                setTimeout(callback, 50);
+            }
+        });
 }
 
 var AdvancedFindMap = window.AdvancedFindMap || {};
@@ -213,29 +208,26 @@ function LoadAdvancedFind(fieldName, logicalName, height, entityNameFieldName)
 		return;
 	}
 
-	RemoveAdvancedFind(fieldName);
+    InsertCustomControlRow(fieldName,
+        fieldContainer =>
+        {
+            RemoveAdvancedFind(fieldName);
 
-	var fieldContainer = GetInsertionRow(fieldName);
+            if (typeof parent !== "undefined")
+            {
+                parent.AdvancedFindMap = AdvancedFindMap;
+            }
 
-	if (!fieldContainer)
-	{
-        setTimeout(() => LoadAdvancedFind(fieldName, logicalName, height, entityNameFieldName), 1000);
-		return;
-	}
+            var iFrameUrl = Xrm.Utility.getGlobalContext().getClientUrl() + '/WebResources/ldv_AdvancedFindHtml#'
+                + fieldName +
+                '#' + logicalName + '#' + 5;
 
-	if (typeof parent !== "undefined")
-	{
-		parent.AdvancedFindMap = AdvancedFindMap;
-	}
-
-	var iFrameUrl = Xrm.Utility.getGlobalContext().getClientUrl() + '/WebResources/ldv_AdvancedFindHtml#' + fieldName +
-        '#' + logicalName + '#' + 5;
-
-	// insert editor frame right after the field as a new row
-	fieldContainer.after('<div id="advancedFindRow_' + fieldName + '">' +
-		'<iframe id="advancedFindFrame_' + fieldName + '"' +
-		'src="' +iFrameUrl + '" frameborder="0" scrolling="no" style="width: 100%;"></iframe>' +
-		'</div>');
+            // insert editor frame right after the field as a new row
+            fieldContainer.after('<div id="advancedFindRow_' + fieldName + '">' +
+                '<iframe id="advancedFindFrame_' + fieldName + '"' +
+                'src="' + iFrameUrl + '" frameborder="0" scrolling="no" style="width: 100%;"></iframe>' +
+                '</div>');
+        });
 }
 
 function IsAdvancedFindLoaded(fieldName)
@@ -332,202 +324,195 @@ function LoadAutoAdvancedFind(fieldName, entityNameFieldName, height, callback)
 var MultiSelectPool = window.MultiSelectPool || {};
 
 function LoadMultiSelect(fieldName, options, title, height, callback, isSingleMode, isSkipSort, isKeepVisible,
-		isDisableFlowUi, isVisualiseIndent, isDelayApplied)
-	{
-		/// <summary>
-		///     Appends the multi-select frame to the specified field using the DOM.<br />
-		///     Author: Ahmed Elsawalhy
-		/// </summary>
-		/// <param name="fieldName" type="String" optional="false">
-		///     The logical name of the field to replace.<br />
-		///     It accepts the format 'fieldName:controlSuffix',
-		///     which can be used to add the control to multiple field with the same name on the form.
-		/// </param>
-		/// <param name="options" type="object" optional="false">
-		///     The array of values to display in the form of objects with 'text' and 'value'.
-		///     OR
-		///     the name of the option-set field to load values from
-		///     OR
-		///     an object containing properties:
-		///     'entity', which is the name of the related entity;
-		///     'relation', which is the name of the relationship to load;
-		///     'field', which is the name of the field containing the value to display on the checkboxes
-		/// </param>
-		/// <param name="title" type="String" optional="false">The title to display in the frame.</param>
-		/// <param name="height" type="Number" optional="true">The height of the advanced find frame.</param>
-		/// <param name="isSingleMode" type="bool" optional="true">If 'true', will allow only single selection.</param>
-		/// <param name="isSkipSort" type="bool" optional="true">If 'true', will skip sorting the selection entries.</param>
-		/// <param name="isKeepVisible" type="bool" optional="true">
-		///     If 'true', will keep the bound field visible after loading the
-		///     control.
-		/// </param>
-		/// <param name="isDisableFlowUi" type="bool" optional="true">If 'false', will rearrange the items to fill the width.</param>
-		/// <param name="isVisualiseIndent" type="bool" optional="true">If 'true', will show indentation using '|_' strings for each level.</param>
-		if (!fieldName || !options || !title)
-		{
-			var message = 'Parameter values are not set correctly.';
-			console.error(message);
+    isDisableFlowUi, isVisualiseIndent)
+{
+    /// <summary>
+    ///     Appends the multi-select frame to the specified field using the DOM.<br />
+    ///     Author: Ahmed Elsawalhy
+    /// </summary>
+    /// <param name="fieldName" type="String" optional="false">
+    ///     The logical name of the field to replace.<br />
+    ///     It accepts the format 'fieldName:controlSuffix',
+    ///     which can be used to add the control to multiple field with the same name on the form.
+    /// </param>
+    /// <param name="options" type="object" optional="false">
+    ///     The array of values to display in the form of objects with 'text' and 'value'.
+    ///     OR
+    ///     the name of the option-set field to load values from
+    ///     OR
+    ///     an object containing properties:
+    ///     'entity', which is the name of the related entity;
+    ///     'relation', which is the name of the relationship to load;
+    ///     'field', which is the name of the field containing the value to display on the checkboxes
+    /// </param>
+    /// <param name="title" type="String" optional="false">The title to display in the frame.</param>
+    /// <param name="height" type="Number" optional="true">The height of the advanced find frame.</param>
+    /// <param name="isSingleMode" type="bool" optional="true">If 'true', will allow only single selection.</param>
+    /// <param name="isSkipSort" type="bool" optional="true">If 'true', will skip sorting the selection entries.</param>
+    /// <param name="isKeepVisible" type="bool" optional="true">
+    ///     If 'true', will keep the bound field visible after loading the
+    ///     control.
+    /// </param>
+    /// <param name="isDisableFlowUi" type="bool" optional="true">If 'false', will rearrange the items to fill the width.</param>
+    /// <param name="isVisualiseIndent" type="bool" optional="true">If 'true', will show indentation using '|_' strings for each level.</param>
+    if (!fieldName || !options || !title)
+    {
+        var message = 'Parameter values are not set correctly.';
+        console.error(message);
 
-			if (callback)
-			{
-				callback();
-			}
-
-			throw message;
-		}
-
-        var split = fieldName.split(':');
-        fieldName = split[0];
-        var controlSuffix = split[1];
-        var controlName = fieldName + (controlSuffix || '');
-
-        if ($('#multiSelectRow_' + controlName, parent.document).length > 0
-            || $('#multiSelectRow_' + controlName).length > 0)
+        if (callback)
         {
-            return;
+            callback();
         }
 
-		if (typeof options === "string" && !AnchoredExecutionContext.getFormContext().getAttribute(options))
-		{
-			var message = "Couldn't load options from field: '" + options + "'";
-			console.error(message);
+        throw message;
+    }
 
-			if (callback)
-			{
-				callback();
-			}
+    var split = fieldName.split(':');
+    fieldName = split[0];
+    var controlSuffix = split[1];
+    var controlName = fieldName + (controlSuffix || '');
 
-			throw message;
-		}
+    if ($('#multiSelectRow_' + controlName, parent.document).length > 0
+        || $('#multiSelectRow_' + controlName).length > 0)
+    {
+        return;
+    }
 
-        if (!isDelayApplied)
+    if (typeof options === "string" && !AnchoredExecutionContext.getFormContext().getAttribute(options))
+    {
+        var message = "Couldn't load options from field: '" + options + "'";
+        console.error(message);
+
+        if (callback)
         {
-            setTimeout(() => LoadMultiSelect(fieldName, options, title, height, callback, isSingleMode, isSkipSort, isKeepVisible,
-                isDisableFlowUi, isVisualiseIndent, true), 500);
-            return;
+            callback();
         }
 
-		var fieldContainer = GetInsertionRow(controlName);
+        throw message;
+    }
 
-		if (!fieldContainer)
-		{
-			return;
-		}
-
-		if (typeof parent !== "undefined")
-		{
-			parent.MultiSelectPool = MultiSelectPool;
-			parent.IsUnique = IsUnique;
-			parent.Remove = Remove;
-			parent.Repeat = Repeat;
-		}
-
-		// the function to build the control
-		var buildControl = function()
-		{
-			MultiSelectPool[fieldName] = options;
-
-			var iFrameUrl = Xrm.Utility.getGlobalContext().getClientUrl() + '/WebResources/ldv_MultiSelectHtml#' + fieldName +
-				'#' + encodeURI(title) + '#' + (height || 200) + '#' + (isSingleMode === true) + '#' + (isSkipSort === true) +
-				'#' + (isDisableFlowUi === true) + '#' + (isVisualiseIndent === true);
-
-            fieldContainer.hide();
-
-			// insert editor frame right after the field as a new row
-			fieldContainer.after('<div id="multiSelectRow_' + controlName + '">' +
-				// auto size iFrame
-				'<script type="text/javascript">' +
-				'function AutoSizeMultiSelect(controlName) {' +
-				// make sure there is something to resize
-				'if (!document.getElementById("multiSelectFrame_' + controlName + '")' +
-				' || !document.getElementById("multiSelectFrame_' + controlName + '").contentWindow' +
-				' || !document.getElementById("multiSelectFrame_' + controlName + '").contentWindow.IsFrameLoaded) {' +
-				'setTimeout(function () { AutoSizeMultiSelect(controlName); }, 50);' +
-				'return;' +
-				'}' +
-				// resize frame to the editor size + 5 for padding
-				'setTimeout(function() { $("#multiSelectFrame_" + controlName).height($("body",' +
-				' $("#multiSelectFrame_" + controlName).contents()).height() + 17); }, 300);' +
-				'}' +
-				// add an event for window resize
-				'$(window).resize(function () { AutoSizeMultiSelect("' + controlName + '"); });' +
-				'</script>' +
-				// add editor to frame
-				'<iframe id="multiSelectFrame_' + controlName +
-				'" onload="AutoSizeMultiSelect(\'' + controlName + '\')" src="' +
-				iFrameUrl +
-				'" frameborder="0" scrolling="no"></iframe>' +
-				'</div>');
-
-            if (callback)
+    InsertCustomControlRow(fieldName,
+        fieldContainer =>
+        {
+            if (typeof parent !== "undefined")
             {
-                setTimeout(callback, 500);
+                parent.MultiSelectPool = MultiSelectPool;
+                parent.IsUnique = IsUnique;
+                parent.Remove = Remove;
+                parent.Repeat = Repeat;
             }
-		};
 
-		// process relationship if passed as param
-		if (options.relation)
-		{
-			if (typeof Sdk === "undefined")
-			{
-				LoadWebResources('ldv_sdksoapjs', function()
-				{
-					LoadMultiSelect(fieldName + controlSuffix, options, title, height, callback);
-				});
+            // the function to build the control
+            var buildControl = function()
+            {
+                MultiSelectPool[fieldName] = options;
 
-				return;
-			}
+                var iFrameUrl = Xrm.Utility.getGlobalContext().getClientUrl() + '/WebResources/ldv_MultiSelectHtml#'
+                    + fieldName +
+                    '#' + encodeURI(title) + '#' + (height || 200) + '#' + (isSingleMode === true) + '#'
+                    + (isSkipSort === true) +
+                    '#' + (isDisableFlowUi === true) + '#' + (isVisualiseIndent === true);
 
-			var entityName = GetEntityName();
-			var relatedEntityName = options.entity;
-			var field = options.field;
+                fieldContainer.hide();
 
-			// build query
-			var relatedQuery = new Sdk.Query.QueryExpression(relatedEntityName);
-			relatedQuery.addColumn(relatedEntityName + 'id');
-			relatedQuery.addColumn(field);
+                // insert editor frame right after the field as a new row
+                fieldContainer.after('<div id="multiSelectRow_' + controlName + '">' +
+                    // auto size iFrame
+                    '<script type="text/javascript">' +
+                    'function AutoSizeMultiSelect(controlName) {' +
+                    // make sure there is something to resize
+                    'if (!document.getElementById("multiSelectFrame_' + controlName + '")' +
+                    ' || !document.getElementById("multiSelectFrame_' + controlName + '").contentWindow' +
+                    ' || !document.getElementById("multiSelectFrame_' + controlName
+                    + '").contentWindow.IsFrameLoaded) {' +
+                    'setTimeout(function () { AutoSizeMultiSelect(controlName); }, 50);' +
+                    'return;' +
+                    '}' +
+                    // resize frame to the editor size + 5 for padding
+                    'setTimeout(function() { $("#multiSelectFrame_" + controlName).height($("body",' +
+                    ' $("#multiSelectFrame_" + controlName).contents()).height() + 17); }, 300);' +
+                    '}' +
+                    // add an event for window resize
+                    '$(window).resize(function () { AutoSizeMultiSelect("' + controlName + '"); });' +
+                    '</script>' +
+                    // add editor to frame
+                    '<iframe id="multiSelectFrame_' + controlName +
+                    '" onload="AutoSizeMultiSelect(\'' + controlName + '\')" src="' +
+                    iFrameUrl +
+                    '" frameborder="0" scrolling="no"></iframe>' +
+                    '</div>');
 
-			var rtq = new Sdk.RelationshipQuery(options.relation, relatedQuery);
-			var rqc = new Sdk.RelationshipQueryCollection();
-			rqc.add(rtq);
+                if (callback)
+                {
+                    setTimeout(callback, 500);
+                }
+            };
 
-			var req = new Sdk.RetrieveRequest(
-				new Sdk.EntityReference(entityName, GetRecordId().replace('{', '').replace('}', '')),
-				new Sdk.ColumnSet(entityName + 'id'),
-				rqc);
+            // process relationship if passed as param
+            if (options.relation)
+            {
+                if (typeof Sdk === "undefined")
+                {
+                    LoadWebResources('ldv_sdksoapjs', function()
+                    {
+                        LoadMultiSelect(fieldName + controlSuffix, options, title, height, callback);
+                    });
 
-			Sdk.Async.execute(req, function(result)
-				{
-					var related = result.getEntity()
-						.getRelatedEntities().getRelatedEntitiesByRelationshipName(options.relation).getEntities();
+                    return;
+                }
 
-					// reset options
-					options = [];
+                var entityName = GetEntityName();
+                var relatedEntityName = options.entity;
+                var field = options.field;
 
-					// build 'options' for multi-select control
-					related.forEach(function(relatedEntity)
-					{
-						options.push(
-							{
-								text: relatedEntity.getValue(field),
-								value: relatedEntity.getValue(relatedEntityName + 'id')
-							});
-					});
+                // build query
+                var relatedQuery = new Sdk.Query.QueryExpression(relatedEntityName);
+                relatedQuery.addColumn(relatedEntityName + 'id');
+                relatedQuery.addColumn(field);
 
-					// build the control
-					buildControl();
-				}, function(error)
-				{
-					var message = "Couldn't load related entities for multi-select: '" + error + "'";
-					console.error(message);
-					throw message;
-				});
-		}
-		else
-		{
-			setTimeout(buildControl, 10);
-		}
-	}
+                var rtq = new Sdk.RelationshipQuery(options.relation, relatedQuery);
+                var rqc = new Sdk.RelationshipQueryCollection();
+                rqc.add(rtq);
+
+                var req = new Sdk.RetrieveRequest(
+                    new Sdk.EntityReference(entityName, GetRecordId().replace('{', '').replace('}', '')),
+                    new Sdk.ColumnSet(entityName + 'id'),
+                    rqc);
+
+                Sdk.Async.execute(req, function(result)
+                {
+                    var related = result.getEntity()
+                        .getRelatedEntities().getRelatedEntitiesByRelationshipName(options.relation).getEntities();
+
+                    // reset options
+                    options = [];
+
+                    // build 'options' for multi-select control
+                    related.forEach(function(relatedEntity)
+                    {
+                        options.push(
+                            {
+                                text: relatedEntity.getValue(field),
+                                value: relatedEntity.getValue(relatedEntityName + 'id')
+                            });
+                    });
+
+                    // build the control
+                    buildControl();
+                }, function(error)
+                {
+                    var message = "Couldn't load related entities for multi-select: '" + error + "'";
+                    console.error(message);
+                    throw message;
+                });
+            }
+            else
+            {
+                setTimeout(buildControl, 10);
+            }
+        });
+}
 
 function IsMultiSelectLoaded(fieldName)
 {
@@ -622,20 +607,27 @@ function GetFieldContainer(fieldName, tries)
 	return fieldContainer;
 }
 
-function GetInsertionRow(fieldName)
+function InsertCustomControlRow(fieldName, callback, trials)
 {
 	/// <summary>
 	/// Internal use only!
 	/// </summary>
-	var fieldContainer = GetFieldContainer(fieldName);
+	const fieldContainer = GetFieldContainer(fieldName);
+    trials = trials || 1;
 
 	if (fieldContainer == null)
 	{
-		console.error("Error while creating frame: can't find field with name '" + fieldName + "'.");
-		return null;
-	}
+        if (trials >= 5)
+        {
+            console.error("Error while creating frame: can't find field with name '" + fieldName + "'.");
+            return;
+        }
 
-	return fieldContainer;
+        setTimeout(() => InsertCustomControlRow(fieldName, callback, ++trials), 500);
+        return;
+    }
+
+    callback(fieldContainer);
 }
 
 var BusyIndicatorMessageStack = window.BusyIndicatorMessageStack || [];
