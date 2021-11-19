@@ -143,6 +143,7 @@
   <ItemGroup>
     <None Include="Scripts\ys_RichEditor_v5.html" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>IF "$(ConfigurationName)" == "Release" (

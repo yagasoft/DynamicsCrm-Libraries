@@ -4,7 +4,7 @@
 /// <reference path="AnchoredExecutionContext.getFormContext().365.d.ts" />
 
 // Author: Ahmed Elsawalhy (yagasoft.com)
-// Version: 1.12.1
+// Version: 1.12.2
 
 var IsCommonGenericLibraryLoaded = true;
 var $ = window.$ || parent.$;

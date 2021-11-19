@@ -3,7 +3,7 @@
 <package>
   <metadata>
     <id>Yagasoft.Libraries.Common.File</id>
-    <version>5.4.1</version>
+    <version>6.1.1</version>
     <authors>Ahmed Elsawalhy</authors>
     <owners>Ahmed Elsawalhy</owners>
     <projectUrl>https://github.com/yagasoft/DynamicsCrm-Libraries</projectUrl>
@@ -26,6 +26,8 @@
     </frameworkAssemblies>
     <references />
     <releaseNotes>
+      * 6.1.1
+      Improved: reworked the CRM Logger to be leaner and only concerned with CRM Plugins. Use NLog for everything else.
       * 5.4.1
       Added: features to the CRM Parser
       Fixed: ReplaceGroups issue

@@ -2,7 +2,7 @@
 
 [![Join the chat at https://gitter.im/yagasoft/DynamicsCrm-Libraries](https://badges.gitter.im/yagasoft/DynamicsCrm-Libraries.svg)](https://gitter.im/yagasoft/DynamicsCrm-Libraries?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-### Version: 7.2.1
+### Version: 8.1.1
 ---
 
 A collection of libraries for common and extended operations in Dynamics CRM development that gives power to the developer and saves time.
@@ -12,6 +12,7 @@ A collection of libraries for common and extended operations in Dynamics CRM dev
 ### Common Library
 
   + Massive JS and CS libraries of common and generic functions and classes
+    + [CRM Logger](https://github.com/yagasoft/DynamicsCrm-CrmLogger)
     + [CRM Text Parser](https://github.com/yagasoft/Dynamics365-CrmTextParser)
 
 ### Enhanced Organisation Service library
@@ -43,6 +44,8 @@ A collection of libraries for common and extended operations in Dynamics CRM dev
 
 ## Changes
 
+#### _v8.2.1 (2021-11-20)_
++ [Common] Improved: reworked the CRM Logger to be leaner and only concerned with CRM Plugins. Use NLog for everything else.
 #### _v7.2.1 (2021-10-01)_
 + [Common] Added: features to the CRM Parser
 + [Common] Fixed: ReplaceGroups issue
