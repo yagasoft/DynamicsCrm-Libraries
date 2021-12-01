@@ -1418,6 +1418,16 @@ namespace Yagasoft.Libraries.Common
 						return sb.ToString();
 					}, options ?? RegexOptions.None);
 		}
+
+		public static string EscapeCsv(this string input)
+		{
+			if (string.IsNullOrWhiteSpace(input))
+			{
+				return input;
+			}
+			
+			return "\"" + input.Replace("\"", "\"\"") + "\"";
+		}
 	}
 
 	/// <summary>
@@ -6707,7 +6717,7 @@ namespace Yagasoft.Libraries.Common
 
 			var message = "\nException: " + ex.GetType() + " => \"" + ex.Message + "\"." +
 				"\nSource: " + ex.Source +
-				"\n\n" + (ex.StackTrace ?? Helpers.GetStackTrace(-1, "Yagasoft.Libraries.Common.CrmHelpers")) + "\n" +
+				"\n\n" + (ex.StackTrace ?? Helpers.GetStackTrace(-1, "Yagasoft.Libraries.Common")) + "\n" +
 				(ex.InnerException == null
 					? string.Empty
 					: "\n\nInner exception: " + ex.InnerException.GetType() + " => \"" +
@@ -8239,7 +8249,7 @@ namespace Yagasoft.Libraries.Common
 						+ "\r\n" + (ex.StackTrace
 							?? (isUseExStackTrace
 								? string.Empty
-								: Helpers.GetStackTrace(-1, "Yagasoft.Libraries.Common.CrmHelpers"))));
+								: Helpers.GetStackTrace(-1, "Yagasoft.Libraries.Common"))));
 
 			if (ex is System.ServiceModel.FaultException<OrganizationServiceFault> fault
 				&& fault.CreateMessageFault().HasDetail)
@@ -10629,7 +10639,7 @@ namespace Yagasoft.Libraries.Common
 				{
 					Name = $"Log-{LogStartDate.ToLocalTime():yyyy_MM_dd-HH_mm_ss_fff}",
 					Assembly = Helpers.GetAssemblyName(-1, "Yagasoft.Libraries.Common"),
-					EntryClass = Helpers.GetClassName(-1, "Yagasoft.Libraries.Common.LoggerBase"),
+					EntryClass = Helpers.GetClassName(-1, "Yagasoft.Libraries.Common"),
 					EntryFunction = callingFunction,
 					StartDate = LogStartDate,
 					ExecutionEndState = ExecutionEndState.Success
@@ -10660,7 +10670,7 @@ namespace Yagasoft.Libraries.Common
 
 		public virtual void SetEntryClass(string entryClass = null)
 		{
-			ParentLog.EntryClass = entryClass ?? Helpers.GetClassName(-1, "Yagasoft.Libraries.Common.LoggerBase");
+			ParentLog.EntryClass = entryClass ?? Helpers.GetClassName(-1, "Yagasoft.Libraries.Common");
 		}
 
 		#endregion
@@ -10886,7 +10896,7 @@ namespace Yagasoft.Libraries.Common
 		{
 			Log(new LogEntry(exception, exception.Message, information ?? exception.BuildExceptionMessage())
 				{
-					StackTrace = exception.StackTrace ?? Helpers.GetStackTrace(-1, "Yagasoft.Libraries.Common.LoggerBase")
+					StackTrace = exception.StackTrace ?? Helpers.GetStackTrace(-1, "Yagasoft.Libraries.Common")
 				}, false, null,
 				callingFunction, callingLineNumber);
 		}
@@ -10951,7 +10961,7 @@ namespace Yagasoft.Libraries.Common
 			logEntry.CurrentEntryIndex = CurrentEntryIndex++;
 
 			// code info
-			logEntry.CallingClass = logEntry.CallingClass ?? Helpers.GetClassName(-1, "Yagasoft.Libraries.Common.LoggerBase");
+			logEntry.CallingClass = logEntry.CallingClass ?? Helpers.GetClassName(-1, "Yagasoft.Libraries.Common");
 			logEntry.CallingFunction = logEntry.CallingFunction ?? callingFunction;
 			logEntry.CallingLineNumber = logEntry.CallingLineNumber ?? callingLineNumber;
 

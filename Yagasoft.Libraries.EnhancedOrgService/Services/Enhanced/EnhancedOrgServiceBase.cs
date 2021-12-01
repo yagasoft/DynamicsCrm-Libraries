@@ -961,6 +961,15 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 
 		#region Retrieve multiple
 
+		public virtual IEnumerable<TEntityType> RetrieveMultiple<TEntityType>(string query, int limit = -1,
+			ExecuteParams executeParams = null)
+			where TEntityType : Entity
+		{
+			ValidateState();
+			
+			return RetrieveMultiple<TEntityType>(RequestHelper.CloneQuery(this, null, query), limit, executeParams);
+		}
+
 		public virtual IEnumerable<TEntityType> RetrieveMultiple<TEntityType>(QueryExpression query, int limit = -1,
 			ExecuteParams executeParams = null)
 			where TEntityType : Entity
@@ -1078,7 +1087,10 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 			{
 				if (!isDelegated)
 				{
-					pendingOperations.Add(operation);
+					lock (pendingOperations)
+					{
+						pendingOperations.Add(operation); 
+					}
 				}
 
 				while (true)
@@ -1146,11 +1158,17 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 				{
 					RequestCount++;
 
-					pendingOperations.Remove(operation);
+					lock (pendingOperations)
+					{
+						pendingOperations.Remove(operation);
+					}
 
 					if (executeParams?.IsExcludeFromHistory != true)
 					{
-						executedOperations.Enqueue(operation);
+						lock (executedOperations)
+						{
+							executedOperations.Enqueue(operation);
+						}
 					}
 				}
 

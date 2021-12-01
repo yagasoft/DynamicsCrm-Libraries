@@ -3,7 +3,7 @@
 <package>
   <metadata>
     <id>Yagasoft.Libraries.EnhancedOrgService</id>
-    <version>6.1.4</version>
+    <version>6.1.6</version>
     <authors>Ahmed Elsawalhy</authors>
     <owners>Yagasoft</owners>
     <projectUrl>https://github.com/yagasoft/DynamicsCrm-Libraries</projectUrl>
@@ -18,11 +18,14 @@
     <dependencies>
       <group>
         <dependency id="Microsoft.CrmSdk.XrmTooling.CoreAssembly" version="9.1.0.26" />
-        <dependency id="Yagasoft.Libraries.Common" version="3.3.3" />
+        <dependency id="Yagasoft.Libraries.Common" version="4.1.1" />
       </group>
     </dependencies>
     <references />
     <releaseNotes>
+      * 6.1.6
+      Added: RetrieveMultiple FetchXML convenience method
+      Fixed: race condition
       * 6.1.4
       Improved: refactor
       * 6.1.3

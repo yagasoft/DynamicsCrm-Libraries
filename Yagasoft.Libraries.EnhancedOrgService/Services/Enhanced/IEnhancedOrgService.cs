@@ -79,6 +79,20 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 		/// <param name="limit">[OPTIONAL] How many entities to retrieve. </param>
 		/// <param name="executeParams">[OPTIONAL] Modify the execution behaviour for this operation or request only.</param>
 		/// <returns>A list of entities fitting the query conditions and cast to the type passed.</returns>
+		IEnumerable<TEntityType> RetrieveMultiple<TEntityType>(string query, int limit = -1,
+			ExecuteParams executeParams = null)
+			where TEntityType : Entity;
+
+		/// <summary>
+		///     This is a convenience method that takes a query, and retrieves records.<br />
+		///     The query is done in parallel if paging is required, with max concurrency as the max connections set in this
+		///     object.
+		/// </summary>
+		/// <typeparam name="TEntityType">The type of the entities returned (pass 'Entity' if not using early-bound).</typeparam>
+		/// <param name="query">The query.</param>
+		/// <param name="limit">[OPTIONAL] How many entities to retrieve. </param>
+		/// <param name="executeParams">[OPTIONAL] Modify the execution behaviour for this operation or request only.</param>
+		/// <returns>A list of entities fitting the query conditions and cast to the type passed.</returns>
 		IEnumerable<TEntityType> RetrieveMultiple<TEntityType>(QueryExpression query, int limit = -1,
 			ExecuteParams executeParams = null)
 			where TEntityType : Entity;

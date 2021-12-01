@@ -2,7 +2,7 @@
 
 [![Join the chat at https://gitter.im/yagasoft/DynamicsCrm-Libraries](https://badges.gitter.im/yagasoft/DynamicsCrm-Libraries.svg)](https://gitter.im/yagasoft/DynamicsCrm-Libraries?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-### Version: 8.1.1
+### Version: 8.1.2
 ---
 
 A collection of libraries for common and extended operations in Dynamics CRM development that gives power to the developer and saves time.
@@ -44,8 +44,11 @@ A collection of libraries for common and extended operations in Dynamics CRM dev
 
 ## Changes
 
-#### _v8.2.1 (2021-11-20)_
-+ [Common] Improved: reworked the CRM Logger to be leaner and only concerned with CRM Plugins. Use NLog for everything else.
+#### _v8.1.2 (2021-12-01)_
++ [EnhancedOrgService] Added: RetrieveMultiple FetchXML convenience method
++ [EnhancedOrgService] Fixed: race condition
+#### _v8.1.1 (2021-11-20)_
++ [Common] Improved: reworked the CRM Logger to be leaner and only concerned with CRM Plugins. Use NLog for everything else
 #### _v7.2.1 (2021-10-01)_
 + [Common] Added: features to the CRM Parser
 + [Common] Fixed: ReplaceGroups issue
