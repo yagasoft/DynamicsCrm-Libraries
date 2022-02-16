@@ -74,7 +74,11 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 			if (service is EnhancedOrgServiceBase enhancedOrgServiceBase)
 			{
 				var releasedService = enhancedOrgServiceBase.ClearConnection();
-				crmPool.ReleaseService(releasedService);
+
+				if (releasedService != null)
+				{
+					crmPool.ReleaseService(releasedService);
+				}
 			}
 
 			if (service is TService thisService)
