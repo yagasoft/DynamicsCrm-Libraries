@@ -668,6 +668,23 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 			Func<IOrganizationService, OrganizationRequest, OrganizationRequest> undoFunction)
 		{
 			ValidateState();
+			return ExecuteAsOperation(request, executeParams, undoFunction,
+				PrepOperation<OrganizationResponse>(request) as Operation<OrganizationResponse>);
+		}
+
+		public virtual Operation<TResponse> ExecuteAsOperation<TResponse>(OrganizationRequest request, ExecuteParams executeParams,
+			Func<IOrganizationService, OrganizationRequest, OrganizationRequest> undoFunction)
+			where TResponse : OrganizationResponse
+		{
+			ValidateState();
+			return ExecuteAsOperation(request, executeParams, undoFunction, PrepOperation<TResponse>(request) as Operation<TResponse>);
+		}
+
+		protected virtual Operation<TResponse> ExecuteAsOperation<TResponse>(OrganizationRequest request, ExecuteParams executeParams,
+			Func<IOrganizationService, OrganizationRequest, OrganizationRequest> undoFunction, Operation<TResponse> operation)
+			where TResponse : OrganizationResponse
+		{
+			ValidateState();
 
 			if (executeParams?.IsNotDeferred != true && isUseSdkDeferredOperations)
 			{
@@ -676,11 +693,9 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 				return null;
 			}
 
-			var operation = PrepOperation<OrganizationResponse>(request);
-
 			AddToTransaction(operation, executeParams);
 
-			operation.Response =
+			(operation as Operation).Response =
 				TryRunOperation(
 					service =>
 					{
@@ -817,7 +832,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 			ExecuteParams executeParams = null)
 			where TResponse : OrganizationResponse
 		{
-			return ExecuteAsOperation(request, executeParams, null) as Operation<TResponse>;
+			return ExecuteAsOperation<TResponse>(request, executeParams, null);
 		}
 
 		public virtual Operation<TResponse> ExecuteAsOperation<TResponse, TRequest>(OrganizationRequest request,
@@ -836,8 +851,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 		{
 			ValidateState();
 
-			batchSize.RequireAbove(0, "requests");
-			batchSize.RequireInRange(1, 1000, "bulkSize");
+			batchSize.RequireAbove(0, "batchSize");
+			batchSize.RequireInRange(1, 1000, "batchSize");
 
 			var bulkRequest =
 				new ExecuteMultipleRequest

@@ -3,7 +3,7 @@
 <package>
   <metadata>
     <id>Yagasoft.Libraries.EnhancedOrgService</id>
-    <version>6.1.6</version>
+    <version>6.1.7</version>
     <authors>Ahmed Elsawalhy</authors>
     <owners>Yagasoft</owners>
     <projectUrl>https://github.com/yagasoft/DynamicsCrm-Libraries</projectUrl>
@@ -23,6 +23,8 @@
     </dependencies>
     <references />
     <releaseNotes>
+      * 6.1.7
+      Fixed: ExecuteMultiple not returning a response when requested
       * 6.1.6
       Added: RetrieveMultiple FetchXML convenience method
       Fixed: race condition
