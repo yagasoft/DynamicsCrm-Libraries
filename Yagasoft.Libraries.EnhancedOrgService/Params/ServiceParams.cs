@@ -100,11 +100,11 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 
 		/// <summary>
 		///     Sets a limit on the number of operations to keep in <see cref="IOperationStats.ExecutedOperations" /><br />
-		///     Default: 10.
+		///     Default: 0 (disabled).
 		/// </summary>
 		public int? OperationHistoryLimit
 		{
-			get => operationHistoryLimit ?? 10;
+			get => operationHistoryLimit ?? 0;
 			set
 			{
 				ValidateLock();

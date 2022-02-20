@@ -104,7 +104,9 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 		{
 			Parameters = parameters;
 			pendingOperations = new List<Operation>();
-			executedOperations = new FixedSizeQueue<Operation>(parameters?.OperationHistoryLimit ?? int.MaxValue);
+
+			var limit = parameters?.OperationHistoryLimit ?? int.MaxValue;
+			executedOperations = new FixedSizeQueue<Operation>(limit == 0 ? 1 : limit);
 		}
 
 		public virtual void ValidateState(bool isValid = true)
@@ -1178,7 +1180,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 						pendingOperations.Remove(operation);
 					}
 
-					if (executeParams?.IsExcludeFromHistory != true)
+					if (executeParams?.IsExcludeFromHistory != true && Parameters?.OperationHistoryLimit != 0)
 					{
 						lock (executedOperations)
 						{

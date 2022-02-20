@@ -3,7 +3,7 @@
 <package>
   <metadata>
     <id>Yagasoft.Libraries.EnhancedOrgService</id>
-    <version>6.1.8</version>
+    <version>6.2.1</version>
     <authors>Ahmed Elsawalhy</authors>
     <owners>Yagasoft</owners>
     <projectUrl>https://github.com/yagasoft/DynamicsCrm-Libraries</projectUrl>
@@ -23,6 +23,8 @@
     </dependencies>
     <references />
     <releaseNotes>
+      * 6.2.1
+      Changed: operations history is disabled by default
       * 6.1.8
       Fixed: random null error
       * 6.1.7
