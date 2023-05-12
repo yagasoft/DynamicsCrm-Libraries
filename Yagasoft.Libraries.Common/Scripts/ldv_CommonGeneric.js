@@ -4,7 +4,7 @@
 /// <reference path="AnchoredExecutionContext.getFormContext().365.d.ts" />
 
 // Author: Ahmed Elsawalhy (yagasoft.com)
-// Version: 1.12.2
+// Version: 1.12.3
 
 var IsCommonGenericLibraryLoaded = true;
 var $ = window.$ || parent.$;
@@ -34,6 +34,59 @@ function BuildAnchoredExecutionContext(formContext)
     {
         parent.AnchoredExecutionContext = AnchoredExecutionContext;
     }
+}
+
+// credit: Bergi (https://www.py4u.net/discuss/280744)
+class AsyncBlockingQueue {
+	constructor()
+	{
+		this.resolvers = [];
+		this.promises = [];
+	}
+
+	_add()
+	{
+		this.promises.push(new Promise(resolve =>
+		{
+			this.resolvers.push(resolve);
+		}));
+	}
+
+	enqueue(t)
+	{
+		if (!this.resolvers.length)
+			this._add();
+		this.resolvers.shift()(t);
+	}
+
+	dequeue()
+	{
+		if (!this.promises.length)
+			this._add();
+		return this.promises.shift();
+	}
+
+	isEmpty()
+	{
+		return !this.promises.length;
+	}
+
+	isBlocked()
+	{
+		return !!this.resolvers.length;
+	}
+
+	get length()
+	{
+		return this.promises.length - this.resolvers.length;
+	}
+
+	[Symbol.asyncIterator]()
+	{
+		return {
+			next: () => this.dequeue().then(value => ({ done: false, value }))
+		};
+	}
 }
 
 /////////////////////////////////////////////////////
@@ -2462,6 +2515,11 @@ function IndexOfNonStrict(array, value)
 	return index;
 }
 
+function MergeArrays(array1, array2)
+{
+	return [...new Set([...array1, ...array2])];
+}
+
 //#endregion
 
 ///////////////////////////////////////////////
@@ -2608,7 +2666,7 @@ function RefreshOnNotDirty()
 			}
 			else
 			{
-				Xrm.Navigation.openForm(GetEntityName(), GetRecordId());
+				Xrm.Navigation.openForm({ entityName: GetEntityName(), entityId: GetRecordId() });
 			}
 		}, 100);
 }
@@ -2755,7 +2813,6 @@ function UserHasRoleId(roleId)
 	return false;
 }
 
-
 function CanUserEditRecord(ownerId, entitySetName, recordId, callback, errorCallback) {
 	/// <summary>
 	///     Author: Ahmed Elsawalhy
@@ -2835,6 +2892,31 @@ function LoadWebResourceCss(fileName, scopeWindow)
 {
 	// modified it to be generic -- Sawalhy
 	LoadCss(Xrm.Utility.getGlobalContext().getClientUrl() + '/WebResources/' + fileName, scopeWindow);
+}
+
+async function LoadWebResourcesAsync(resources, scopeWindow)
+{
+	/// <summary>
+	///     Takes an array of resource names and loads them into the current context using "LoadScript".<br />
+	///     The resources param accepts a string as well in case a single resource is needed instead.<br />
+	///     Author: Ahmed Elsawalhy
+	/// </summary>
+	/// <param name="resources" type="String[] | string" optional="false">The resource[s] to load.</param>
+
+	if (typeof resources === 'string')
+	{
+		resources = [resources];
+	}
+
+	const promises = [];
+
+	for (const resource of resources)
+	{
+		promises.push(
+			LoadScriptAsync(Xrm.Utility.getGlobalContext().getClientUrl() + '/WebResources/' + resource, scopeWindow));
+	}
+
+	await Promise.all(promises);
 }
 
 function IsValueUnique(entitySetName, primaryKey, fieldName, value, callback, errorCallback)
@@ -3678,6 +3760,29 @@ function LoadScript(url, callback, scopeWindow)
 	head.appendChild(script);
 }
 
+async function LoadScriptAsync(url, scopeWindow)
+{
+	/// <summary>
+	///     Takes a URL of a script file and loads it into the current context, and returns a promise to execute when script is loaded.<br />
+	///     Author: Ahmed Elsawalhy<br />
+	///     credit: http://stackoverflow.com/a/950146/1919456
+	/// </summary>
+	/// <param name="url" type="String" optional="false">The URL to the script file.</param>
+
+	scopeWindow = scopeWindow || window;
+
+	const head = scopeWindow.document.getElementsByTagName('head')[0];
+	const script = scopeWindow.document.createElement('script');
+	script.type = 'text/javascript';
+	script.src = url;
+
+	const promise = new Promise((r, e) => script.onload = () => r());
+
+	head.appendChild(script);
+
+	await promise;
+}
+
 function WaitForObjects(objects, callback)
 {
 	/// <summary>
@@ -3830,6 +3935,16 @@ function Repeat(str, count)
 	return new Array(count + 1).join(str);
 }
 
+function GetStoredJson(key)
+{
+	return JSON.parse(localStorage.getItem(key));
+}
+
+function StoreJson(key, value)
+{
+	localStorage.setItem(key, JSON.stringify(value));
+}
+
 //#region >>>>>>>>> Date helpers <<<<<<<<<<< //
 
 function GetDateStringFromJson(date)
@@ -3902,6 +4017,18 @@ function CompareDate(x, y)
 	return 0;
 }
 
+function MaxDate(dateArray)
+{
+	const dates = dateArray.filter(e => !!e);
+	
+	if (!dates.length)
+	{
+		return null;
+	}
+
+	return new Date(Math.max.apply(null, dates));
+}
+
 //#endregion
 
 function GetRequestObject()
@@ -3951,10 +4078,17 @@ function GetFunctionName()
 	/// credit: http://stackoverflow.com/a/1013370/1919456 <br />
 	/// Author: Ahmed Elsawalhy
     /// </summary>
-	var re = /function (.*?)\(/;
-	var s = GetFunctionName.caller.toString();
-	var m = re.exec(s);
-	return m[1];
+	try
+	{
+		var re = /function (.*?)\(/;
+		var s = GetFunctionName.caller.toString();
+		var m = re.exec(s);
+		return m[1];
+	}
+	catch (e)
+	{
+		return '';
+	} 
 }
 
 function GetElementDimensions(jqElement, maxWidth, jqScoped)

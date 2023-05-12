@@ -26,6 +26,8 @@
     </frameworkAssemblies>
     <references />
     <releaseNotes>
+      * 6.1.2
+      Improved: CRM Parser.
       * 6.1.1
       Improved: reworked the CRM Logger to be leaner and only concerned with CRM Plugins. Use NLog for everything else.
       * 5.4.1
