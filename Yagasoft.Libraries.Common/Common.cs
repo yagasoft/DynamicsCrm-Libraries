@@ -3005,12 +3005,26 @@ namespace Yagasoft.Libraries.Common
 
 		private static TimeSpan fallbackCacheDuration = TimeSpan.FromMinutes(1);
 
+		public static string Parse(string input, IOrganizationService service,
+			Guid? orgId = null, params Type[] constructTypes)
+		{
+			return Parse(input, service, null, orgId, constructTypes);
+		}
+
+		public static string Parse(string input, Entity context, IOrganizationService service,
+			Guid? orgId = null, params Type[] constructTypes)
+		{
+			return Parse(input, context, service, null, orgId, constructTypes);
+		}
+
 		public static string Parse(string input, IOrganizationService service, object contextObject = null,
 			Guid? orgId = null, params Type[] constructTypes)
 		{
 			service.Require(nameof(service));
+
 			var state = new GlobalState(service, constructTypes, contextObject, orgId);
 			input = Tokenise(input, state);
+
 			return Parse(input, state);
 		}
 
@@ -3018,6 +3032,7 @@ namespace Yagasoft.Libraries.Common
 			Guid? orgId = null, params Type[] constructTypes)
 		{
 			service.Require(nameof(service));
+
 			var state = new GlobalState(context, service, constructTypes, contextObject, orgId);
 
 			// convert all constructs into tokens to be able to get the parent/enclosing constructs first by detokenising
