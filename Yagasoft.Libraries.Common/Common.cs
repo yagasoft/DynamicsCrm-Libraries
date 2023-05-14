@@ -3807,6 +3807,8 @@ namespace Yagasoft.Libraries.Common
 
 			public int Lcid = 1033;
 
+			public readonly bool IsContextProvided = false;
+
 			public IDictionary<string, Type> ConstructTypes
 				=> CacheHelpers.GetFromMemCacheAdd("Yagasoft.CrmParser.GetTypes<ConstructAttribute>",
 					() => Yagasoft.Libraries.Common.TypeHelpers.GetTypes<ConstructAttribute>(ConstructTypesLookup)
@@ -3847,6 +3849,7 @@ namespace Yagasoft.Libraries.Common
 				: this(service, constructTypes, contextObject, orgId)
 			{
 				Context = context;
+				IsContextProvided = true;
 			}
 
 			public string GenerateToken(string str)
@@ -4629,6 +4632,7 @@ namespace Yagasoft.Libraries.Common
 
 					// get the entity record
 					context = fieldValue == null && context.LogicalName.IsFilled() && context.Id != Guid.Empty
+						&& !State.IsContextProvided
 						? context.IntegrateAttributes(Retrieve(State, context.LogicalName, context.Id,
 							IsCacheResult, IsCacheGlobal, fieldName))
 						: context;
