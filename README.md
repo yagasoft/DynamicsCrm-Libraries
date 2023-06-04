@@ -31,6 +31,13 @@ A collection of libraries for common and extended operations in Dynamics CRM dev
 
 ## Guide
 
+Add the following to the `.csproj` file to be able to compile.
+```xml
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+```
+
 ### Common library (either packages)
 
   + Assembly: [Yagasoft.Libraries.Common](https://www.nuget.org/packages/Yagasoft.Libraries.Common)
