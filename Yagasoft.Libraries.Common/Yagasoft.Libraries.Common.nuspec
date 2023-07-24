@@ -3,7 +3,7 @@
 <package>
   <metadata>
     <id>Yagasoft.Libraries.Common</id>
-    <version>5.1.1</version>
+    <version>5.1.3</version>
     <authors>Ahmed Elsawalhy</authors>
     <owners>Ahmed Elsawalhy</owners>
     <projectUrl>https://github.com/yagasoft/DynamicsCrm-Libraries</projectUrl>
@@ -26,7 +26,10 @@
     </frameworkAssemblies>
     <references />
     <releaseNotes>
-      * 5.1.1
+      * 5.1.3
+      Added: convenience to plugin template
+      Fixed: issues
+      * 5.1.2
       Improved: Faster and much more robust
       Improved: support for more language (parser-specific script language) features
       * 4.1.4

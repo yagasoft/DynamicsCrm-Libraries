@@ -10,7 +10,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Ahmed Elsawalhy (yagasoft.com)")]
 [assembly: AssemblyProduct("Yagasoft.Libraries.Common")]
-[assembly: AssemblyCopyright("Copyright © Ahmed Elsawalhy 2021")]
+[assembly: AssemblyCopyright("Copyright © Ahmed Elsawalhy 2023")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -32,5 +32,5 @@ using System.Runtime.InteropServices;
 // You can specify all the values or you can default the Build and Revision Numbers 
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
-[assembly: AssemblyVersion("3.3.3.0")]
-[assembly: AssemblyFileVersion("3.3.3.0")]
+[assembly: AssemblyVersion("5.1.3.0")]
+[assembly: AssemblyFileVersion("5.1.3.0")]
