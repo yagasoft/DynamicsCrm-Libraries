@@ -94,8 +94,29 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 				return service;
 			}
 
-			service = factory.CreateService();
-			CreatedServicesCount++;
+			lock (ServicesQueue)
+			{
+				if (CreatedServices < PoolParams.PoolSize)
+				{
+					service = factory.CreateService();
+					CreatedServicesCount++;
+					return service;
+				}
+			}
+
+			try
+			{
+				service = ServicesQueue.Dequeue(PoolParams.DequeueTimeout);
+			}
+			catch (TimeoutException)
+			{
+				service = factory.CreateService();
+
+				lock (ServicesQueue)
+				{
+					CreatedServicesCount++;
+				}
+			}
 
 			return service;
 		}

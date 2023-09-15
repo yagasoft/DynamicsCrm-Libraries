@@ -96,25 +96,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 		{
 			if (enhancedService == null)
 			{
-				lock (ServicesQueue)
-				{
-					if (CreatedServices < PoolParams.PoolSize)
-					{
-						enhancedService = GetEnhancedService();
-					}
-				}
-			}
-
-			try
-			{
-				enhancedService ??= ServicesQueue.Dequeue(PoolParams.DequeueTimeout);
-			}
-			catch (TimeoutException)
-			{
-				lock (ServicesQueue)
-				{
-					enhancedService = GetEnhancedService();
-				}
+				enhancedService = GetEnhancedService();
 			}
 
 			if (enhancedService is EnhancedOrgServiceBase enhancedOrgServiceBase)
