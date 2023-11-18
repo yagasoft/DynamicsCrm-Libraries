@@ -18,10 +18,21 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Cache
 			queryCache[serialisedQuery] = SerialiserHelpers.SerialiseStrictXml(queryExpression);
 		}
 
+		public void AddCachedQuery(string query, QueryExpression queryExpression)
+		{
+			queryCache[query] = SerialiserHelpers.SerialiseStrictXml(queryExpression);
+		}
+
 		public QueryExpression GetCachedQuery(QueryBase query)
 		{
 			var serialisedQuery = SerialiserHelpers.SerialiseStrictXml(query);
 			queryCache.TryGetValue(serialisedQuery, out var queryExpression);
+			return queryExpression == null ? null : SerialiserHelpers.DeserialiseStrictXml<QueryExpression>(queryExpression);
+		}
+
+		public QueryExpression GetCachedQuery(string query)
+		{
+			queryCache.TryGetValue(query, out var queryExpression);
 			return queryExpression == null ? null : SerialiserHelpers.DeserialiseStrictXml<QueryExpression>(queryExpression);
 		}
 

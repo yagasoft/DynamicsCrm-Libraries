@@ -94,8 +94,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 			return cookie;
 		}
 
-		internal static QueryExpression CloneQuery(IOrganizationService service, QueryBase query,
-			string fetchXml = null)
+		internal static QueryExpression CloneQuery(IOrganizationService service, QueryBase query)
 		{
 			var cachedQuery = queryCache.GetCachedQuery(query);
 
@@ -105,7 +104,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 			}
 
 			// get the FetchXML to create new queries for each page
-			fetchXml ??= ((QueryExpressionToFetchXmlResponse)
+			var fetchXml = ((QueryExpressionToFetchXmlResponse)
 				service.Execute(
 					new QueryExpressionToFetchXmlRequest
 					{
@@ -121,6 +120,28 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 					})).Query;
 
 			queryCache.AddCachedQuery(query, cachedQuery);
+
+			return cachedQuery;
+		}
+
+		internal static QueryExpression CloneQuery(IOrganizationService service, string fetchXml)
+		{
+			var cachedQuery = queryCache.GetCachedQuery(fetchXml);
+
+			if (cachedQuery != null)
+			{
+				return cachedQuery;
+			}
+
+			// create a new QueryExpression object
+			cachedQuery = ((FetchXmlToQueryExpressionResponse)
+				service.Execute(
+					new FetchXmlToQueryExpressionRequest
+					{
+						FetchXml = fetchXml
+					})).Query;
+
+			queryCache.AddCachedQuery(fetchXml, cachedQuery);
 
 			return cachedQuery;
 		}

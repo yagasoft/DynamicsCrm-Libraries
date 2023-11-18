@@ -984,7 +984,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 		{
 			ValidateState();
 			
-			return RetrieveMultiple<TEntityType>(RequestHelper.CloneQuery(this, null, query), limit, executeParams);
+			return RetrieveMultiple<TEntityType>(RequestHelper.CloneQuery(this, query), limit, executeParams);
 		}
 
 		public virtual IEnumerable<TEntityType> RetrieveMultiple<TEntityType>(QueryExpression query, int limit = -1,

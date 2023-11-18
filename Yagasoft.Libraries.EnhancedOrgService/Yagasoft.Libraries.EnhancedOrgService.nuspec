@@ -3,7 +3,7 @@
 <package>
   <metadata>
     <id>Yagasoft.Libraries.EnhancedOrgService</id>
-    <version>6.2.2</version>
+    <version>6.2.3</version>
     <authors>Ahmed Elsawalhy</authors>
     <owners>Yagasoft</owners>
     <projectUrl>https://github.com/yagasoft/DynamicsCrm-Libraries</projectUrl>
@@ -18,11 +18,13 @@
     <dependencies>
       <group>
         <dependency id="Microsoft.CrmSdk.XrmTooling.CoreAssembly" version="9.1.0.26" />
-        <dependency id="Yagasoft.Libraries.Common" version="4.1.1" />
+        <dependency id="Yagasoft.Libraries.Common" version="5.2.1" />
       </group>
     </dependencies>
     <references />
     <releaseNotes>
+      * 6.2.3
+      Fixed: RetrieveMultiple error
       * 6.2.2
       Fixed: service pool not respecting pool limit
       * 6.2.1
