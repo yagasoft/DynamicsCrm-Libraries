@@ -11241,9 +11241,9 @@ namespace Yagasoft.Libraries.Common
 	///     Basic logic for logging.<br />
 	///		Author: Ahmed Elsawalhy (Yagasoft.com)<br />
 	/// </summary>
-	[ExcludeFromCodeCoverage]
-	[DebuggerNonUserCode]
-	[GeneratedCode("This is not generated code, but this attribute is used for excluding the code from code analysis.", "0.0.0.0")]
+	//[ExcludeFromCodeCoverage]
+	//[DebuggerNonUserCode]
+	//[GeneratedCode("This is not generated code, but this attribute is used for excluding the code from code analysis.", "0.0.0.0")]
 	public abstract class LoggerBase : ILogger
 	{
 		/// <summary>
@@ -11355,6 +11355,7 @@ namespace Yagasoft.Libraries.Common
 				return;
 			}
 
+			finished = false;
 			WorkerQueue = new();
 
 			WorkerThread =
@@ -11365,6 +11366,9 @@ namespace Yagasoft.Libraries.Common
 						{
 							WorkerQueue.Dequeue()();
 						}
+
+						WorkerThread = null;
+						isWorker = false;
 					});
 			
 			WorkerThread.Start();
@@ -11429,7 +11433,7 @@ namespace Yagasoft.Libraries.Common
 			// push a zero-based timestamp
 			DurationsStack.Push(0);
 
-			Log(logEntry, true, null, callingFunction, callingLineNumber);
+			LogInner(logEntry, true, null, callingFunction, callingLineNumber);
 		}
 
 		public virtual void LogFunctionStart(string message, [CallerMemberName] string callingFunction = "", [CallerLineNumber] int callingLineNumber = 0)
@@ -11466,7 +11470,7 @@ namespace Yagasoft.Libraries.Common
 
 			logEntry.Level = LogLevel.Debug;
 
-			Log(logEntry, true, null, callingFunction, callingLineNumber);
+			LogInner(logEntry, true, null, callingFunction, callingLineNumber);
 
 			// start measuring function duration
 			FunctionTimersStack.Push(Stopwatch.StartNew());
@@ -11503,7 +11507,7 @@ namespace Yagasoft.Libraries.Common
 
 			var defaultMessage = "Finished: " + callingFunction;
 
-			logEntry = logEntry ?? new LogEntry(defaultMessage);
+			logEntry ??= new LogEntry(defaultMessage);
 
 			// log this at any level
 			logEntry.Level = LogLevel.None;
@@ -11523,7 +11527,7 @@ namespace Yagasoft.Libraries.Common
 
 			logEntry.Level = LogLevel.Debug;
 
-			Log(logEntry, true, elapsedTime, callingFunction, callingLineNumber);
+			LogInner(logEntry, true, elapsedTime, callingFunction, callingLineNumber);
 		}
 
 		public virtual void LogExecutionEnd(string message, ExecutionEndState state = ExecutionEndState.Success,
@@ -11536,13 +11540,12 @@ namespace Yagasoft.Libraries.Common
 			[CallerMemberName] string callingFunction = "", [CallerLineNumber] int callingLineNumber = 0)
 		{
 			ExecuteAction(() => LogExecutionEndInner(logEntry, state, callingFunction, callingLineNumber));
+				StopWorker();
 		}
 
 		protected virtual void LogExecutionEndInner(LogEntry logEntry = null, ExecutionEndState state = ExecutionEndState.Success,
 			[CallerMemberName] string callingFunction = "", [CallerLineNumber] int callingLineNumber = 0)
 		{
-			try
-			{
 				if (MaxLogLevel == LogLevel.None)
 				{
 					return;
@@ -11563,7 +11566,7 @@ namespace Yagasoft.Libraries.Common
 
 				var defaultMessage = "Finished execution: " + callingFunction;
 
-				logEntry = logEntry ?? new LogEntry(defaultMessage);
+				logEntry ??= new LogEntry(defaultMessage);
 
 				// log this at any level
 				logEntry.Level = LogLevel.None;
@@ -11579,18 +11582,19 @@ namespace Yagasoft.Libraries.Common
 					logEntry.Message = defaultMessage;
 				}
 
-				Log(logEntry, true, (int)ExecutionTimer.ElapsedMilliseconds, callingFunction, callingLineNumber);
+				LogInner(logEntry, true, (int)ExecutionTimer.ElapsedMilliseconds, callingFunction, callingLineNumber);
 
 				ExecutionStarted = false;
-			}
-			finally
-			{
-				finished = true;
+		}
 
-				if (isWorker && WorkerThread.IsAlive)
-				{
-					WorkerThread.Join();
-				}
+		private void StopWorker()
+		{
+			finished = true;
+			
+			if (isWorker && WorkerThread.IsAlive)
+			{
+				WorkerQueue.Enqueue(() => {});
+				WorkerThread.Join();
 			}
 		}
 
