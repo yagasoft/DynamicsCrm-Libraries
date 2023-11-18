@@ -11379,6 +11379,11 @@ namespace Yagasoft.Libraries.Common
 
 		protected virtual void ExecuteAction(Action action)
 		{
+			if (!ExecutionStarted)
+			{
+				return;
+			}
+			
 			if (isWorker)
 			{
 				WorkerQueue.Enqueue(action);
@@ -11404,14 +11409,14 @@ namespace Yagasoft.Libraries.Common
 				return;
 			}
 
+			ExecutionStarted = true;
+
 			ExecuteAction(() => LogExecutionStartInner(logEntry, callingFunction, callingLineNumber));
 		}
 
 		protected virtual void LogExecutionStartInner(LogEntry logEntry = null,
 			[CallerMemberName] string callingFunction = "", [CallerLineNumber] int callingLineNumber = 0)
 		{
-			ExecutionStarted = true;
-
 			var defaultMessage = "Started execution: " + callingFunction;
 
 			logEntry = logEntry ?? new LogEntry(defaultMessage);
@@ -11549,11 +11554,6 @@ namespace Yagasoft.Libraries.Common
 				if (MaxLogLevel == LogLevel.None)
 				{
 					return;
-				}
-
-				if (!ExecutionStarted)
-				{
-					LogExecutionStart((LogEntry)null, ParentLog.EntryFunction, 0);
 				}
 
 				// stop execution timer
