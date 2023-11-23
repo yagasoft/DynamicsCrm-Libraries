@@ -3,7 +3,7 @@
 <package>
   <metadata>
     <id>Yagasoft.Libraries.Common</id>
-    <version>5.2.4</version>
+    <version>5.3.1</version>
     <authors>Ahmed Elsawalhy</authors>
     <owners>Ahmed Elsawalhy</owners>
     <projectUrl>https://github.com/yagasoft/DynamicsCrm-Libraries</projectUrl>
@@ -26,6 +26,8 @@
     </frameworkAssemblies>
     <references />
     <releaseNotes>
+      * 5.3.1
+      Added: CRM parser code highlighter
       * 5.2.4
       Added: worker to the Logger to improve performance
       * 5.1.3
