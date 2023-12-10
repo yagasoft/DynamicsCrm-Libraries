@@ -3,7 +3,7 @@
 <package>
   <metadata>
     <id>Yagasoft.Libraries.Common.File</id>
-    <version>7.3.3</version>
+    <version>8.1.1</version>
     <authors>Ahmed Elsawalhy</authors>
     <owners>Ahmed Elsawalhy</owners>
     <projectUrl>https://github.com/yagasoft/DynamicsCrm-Libraries</projectUrl>
@@ -18,6 +18,7 @@
       <group>
         <dependency id="Microsoft.CrmSdk.CoreAssemblies" version="8.2.0.2" />
         <dependency id="Microsoft.CrmSdk.Workflow" version="8.2.0.2" />
+        <dependency id="System.ValueTuple" version="4.3.0" />
       </group>
     </dependencies>
     <frameworkAssemblies>
@@ -26,6 +27,8 @@
     </frameworkAssemblies>
     <references />
     <releaseNotes>
+      * 8.1.1
+      Added: reworked and simpler CRM Parser
       * 7.3.3
       Improved: CRM parser highlighter performance
       * 7.3.2
