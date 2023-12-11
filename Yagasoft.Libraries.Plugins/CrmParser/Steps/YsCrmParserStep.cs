@@ -21,13 +21,16 @@ using Yagasoft.Libraries.EnhancedOrgService.ExecutionPlan.Base;
 using Yagasoft.Libraries.EnhancedOrgService.ExecutionPlan.Planning;
 using Yagasoft.Libraries.EnhancedOrgService.ExecutionPlan.SerialiseWorkarounds;
 
+using static Microsoft.IdentityModel.Protocols.WSTrust.WSTrustServiceContractConstants;
+
+
 #endregion
 
 namespace Yagasoft.Libraries.Steps
 {
 	/// <summary>
 	///     Parse the constructs in the given text.<br />
-	///     Version: 1.0.1
+	///     Version: 2.1.1
 	/// </summary>
 	public class YsCrmParserStep : CodeActivity
 	{
@@ -68,10 +71,9 @@ namespace Yagasoft.Libraries.Steps
 			text.Require(nameof(codeActivity.Text));
 
 			var image = Context.PrimaryEntityName.IsFilled() ? GetPostImage<Entity>() : null;
-
 			var result = image == null
-				? CrmParser.Parse(text, Service, Context.OrganizationId)
-				: CrmParser.Parse(text, image, Service, Context.OrganizationId);
+				? CrmParser.Interpreter.Parse(text).Evaluate(Service)
+				: CrmParser.Interpreter.Parse(text).Evaluate(Service, image);
 
 			if (compressedText.IsFilled())
 			{

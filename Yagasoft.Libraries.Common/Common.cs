@@ -2959,14 +2959,24 @@ namespace Yagasoft.Libraries.Common
 		
 		public class Interpreter
 		{
-			public readonly Type[] ConstructTypesLookup;
+			private readonly Type[] expressionTypesLookup;
 
 			private readonly List<Expression> tokenParsers = [];
 			private Expression chosenParser;
 			private readonly StringBuilder parsedText = new();
 			private readonly List<Expression> expressions = [];
 
-			public RootExpression Interpret(string input)
+			public static RootExpression Parse(string input, IReadOnlyList<Type> expressionTypesLookup = null)
+			{
+				return new Interpreter(expressionTypesLookup).Interpret(input);
+			}
+
+			protected Interpreter(IReadOnlyList<Type> expressionTypesLookup = null)
+			{
+				this.expressionTypesLookup = (expressionTypesLookup ?? []).Union([GetType()]).ToArray();
+			}
+
+			protected RootExpression Interpret(string input)
 			{
 				var inputStack = new Stack<char>(input.Reverse());
 				var context = new ParserContext(expressions);
@@ -3040,7 +3050,7 @@ namespace Yagasoft.Libraries.Common
 					expression.SealToken();
 				}
 
-				var root = new RootExpression(context, null);
+				var root = new RootExpression(context);
 				root.SealToken();
 				root.Build(root, null, new Stack<Expression>(), new Stack<Expression>(expressions.AsQueryable().Reverse()));
 
@@ -3061,7 +3071,7 @@ namespace Yagasoft.Libraries.Common
 			{
 				tokenParsers
 					.AddRange(TypeHelpers
-						.GetTypes<ExpressionAttribute>(ConstructTypesLookup)
+						.GetTypes<ExpressionAttribute>(expressionTypesLookup)
 						.Select(t => Activator.CreateInstance(t, context)).Cast<Expression>());
 			}
 
@@ -3183,7 +3193,7 @@ namespace Yagasoft.Libraries.Common
 
 		#region Evaluation
 		
-		public class GlobalState(IOrganizationService service, Type[] constructTypes = null, object contextObject = null, Guid? orgId = null)
+		public class GlobalState(IOrganizationService service, object contextObject = null, Guid? orgId = null)
 		{
 			private static readonly TimeSpan fallbackCacheDuration = TimeSpan.FromMinutes(1);
 
@@ -3197,8 +3207,6 @@ namespace Yagasoft.Libraries.Common
 
 			public Expression FaultyNode;
 
-			public readonly Type[] ConstructTypesLookup = (constructTypes ?? Type.EmptyTypes).Union(new[] { typeof(CrmParser) }).ToArray();
-
 			public int Lcid = 1033;
 
 			internal bool IsDebug;
@@ -3207,14 +3215,14 @@ namespace Yagasoft.Libraries.Common
 			private readonly IDictionary<string, object> cache = new Dictionary<string, object>();
 			private readonly IDictionary<string, object> memory = new Dictionary<string, object>();
 
-			public GlobalState(EntityReference contextRef, IOrganizationService service, Type[] constructTypes = null, object contextObject = null, Guid? orgId = null)
-				: this(new Entity(contextRef.LogicalName, contextRef.Id), service, constructTypes, contextObject, orgId)
+			public GlobalState(EntityReference contextRef, IOrganizationService service, object contextObject = null, Guid? orgId = null)
+				: this(new Entity(contextRef.LogicalName, contextRef.Id), service, contextObject, orgId)
 			{
 				IsContextProvided = false;
 			}
 
-			public GlobalState(Entity context, IOrganizationService service, Type[] constructTypes = null, object contextObject = null, Guid? orgId = null)
-				: this(service, constructTypes, contextObject, orgId)
+			public GlobalState(Entity context, IOrganizationService service, object contextObject = null, Guid? orgId = null)
+				: this(service, contextObject, orgId)
 			{
 				Context = context;
 				IsContextProvided = true;
@@ -3420,10 +3428,9 @@ namespace Yagasoft.Libraries.Common
 					nodeOperation(this, traversalContext.ChildrenAggregateOperation?.Invoke(childResults, traversalContext), traversalContext));
 			}
 
-			public string Evaluate(IOrganizationService service = null, Entity record = null,
-				IReadOnlyList<Type> constructTypes = null, object contextObject = null)
+			public string Evaluate(IOrganizationService service = null, Entity record = null, object contextObject = null)
 			{
-				var state = new GlobalState(record, service, constructTypes?.ToArray(), contextObject);
+				var state = new GlobalState(record, service, contextObject);
 
 				object result = null;
 
@@ -3451,11 +3458,10 @@ namespace Yagasoft.Libraries.Common
 					return state.DebugStringBuilder.Length > 0 ? state.DebugStringBuilder.ToString() : result as string;
 			}
 
-			public string Debug(IOrganizationService service = null, Entity record = null,
-				IReadOnlyList<Type> constructTypes = null, object contextObject = null)
+			public string Debug(IOrganizationService service = null, Entity record = null, object contextObject = null)
 			{
 				var state = 
-					new GlobalState(record, service, constructTypes?.ToArray(), contextObject)
+					new GlobalState(record, service, contextObject)
 					{
 						IsDebug = true
 					};
@@ -3593,6 +3599,9 @@ namespace Yagasoft.Libraries.Common
 			protected override string RecognisePattern => 
 				$"^[{(OpeningBrace.IsFilled() ? @$"\{OpeningBrace}" : "")}{(ClosingBrace.IsFilled() ? @$"\{ClosingBrace}" : "")}]$";
 
+			protected override object InnerEvaluate(GlobalState state, object baseValue = null) =>
+				ChildExpressions.Aggregate(baseValue, (current, childExpression) => childExpression.HandledEvaluate(state, current));
+
 			protected override Stack<Expression> PreBuild(Stack<Expression> parentDoneExpressions, Stack<Expression> pendingExpressions)
 			{
 				return new Stack<Expression>();
@@ -3680,14 +3689,12 @@ namespace Yagasoft.Libraries.Common
 					processed.Add(op);
 				}
 			}
-
-			protected override object InnerEvaluate(GlobalState state, object baseValue = null) =>
-					ChildExpressions.Aggregate(baseValue, (current, childExpression) => childExpression.HandledEvaluate(state, current));
 		}
 
-		public class RootExpression(ParserContext context, GlobalState state) : ScopeExpression(context)
+		public class RootExpression(ParserContext context) : ScopeExpression(context)
 		{
-			protected GlobalState State { get; set; } = state;
+			protected override object InnerEvaluate(GlobalState state, object baseValue = null) =>
+				ChildExpressions.Select(c => c.HandledEvaluate(state, baseValue)).ToArray();
 
 			protected override void InnerBuild(Stack<Expression> parentDoneExpressions, Stack<Expression> pendingExpressions)
 			{
@@ -3801,7 +3808,7 @@ namespace Yagasoft.Libraries.Common
 		}
 
 		[Expression]
-		public class CollectionExpression(ParserContext context) : ScopeExpression(context)
+		public class CollectionExpression(ParserContext context) : InternalScopeExpression(context)
 		{
 			public override string OpeningBrace => "[";
 			public override string ClosingBrace => "]";
@@ -3955,7 +3962,7 @@ namespace Yagasoft.Libraries.Common
 		#region Functions
 		
 		[Expression]
-		public class FunctionExpression(ParserContext context) : Expression(context)
+		public class FunctionExpression : Expression
 		{
 			protected override char[] DelimiterChars => new[] { '$' };
 			protected override string FinalForm => "^[$][a-zA-Z0-9_]+$";
@@ -3965,21 +3972,26 @@ namespace Yagasoft.Libraries.Common
 			protected IReadOnlyList<object> Parameters;
 
 			protected RegexDefinition RegexParam;
+
+			protected GlobalState globalState;
+
+			private readonly FunctionLogic[] methods;
+
+			public FunctionExpression(ParserContext context) : base(context)
+			{
+				methods = GetType()
+					.GetMethods(BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.InvokeMethod)
+					.Select(
+						m =>
+						{
+							var attribute = m.GetCustomAttribute<FunctionLogicAttribute>();
+							return attribute == null
+								? null
+								: new FunctionLogic(attribute.Name, attribute.IsEvalParams, m);
+						}).FilterNull()
+					.ToArray();
+			}
 			
-			private GlobalState globalState;
-
-			private static readonly FunctionLogic[] methods = typeof(FunctionExpression)
-				.GetMethods(BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.InvokeMethod)
-				.Select(
-					m =>
-					{
-						var attribute = m.GetCustomAttribute<FunctionLogicAttribute>();
-						return attribute == null
-							? null
-							: new FunctionLogic(attribute.Name, attribute.IsEvalParams, m);
-					}).FilterNull()
-				.ToArray();
-
 			protected override object InnerEvaluate(GlobalState state, object baseValue = null)
 			{
 				globalState = state;
@@ -3998,15 +4010,15 @@ namespace Yagasoft.Libraries.Common
 
 			private IReadOnlyList<Expression> ExtractRegex(GlobalState state, object baseValue, Expression paramScope)
 			{
-				var paramExpressions = paramScope.ChildExpressions.SelectMany(e => e.ChildExpressions).ToArray();
-				var regexExpression = paramExpressions.OfType<RegexExpression>().ToArray();
-				regexExpression = regexExpression.Length <= 1 ? regexExpression : [];
-				RegexParam = regexExpression.FirstOrDefault()?.HandledEvaluate(state, baseValue) as RegexDefinition;
+				var paramExpressions = paramScope.ChildExpressions;
+				var regexParent = paramScope.ChildExpressions.FirstOrDefault(c => c.ChildExpressions.OfType<RegexExpression>().FirstOrDefault() != null);
+				var regexExpression = regexParent?.ChildExpressions.FirstOrDefault();
+				RegexParam = regexExpression?.HandledEvaluate(state, baseValue) as RegexDefinition;
 				
-				return paramExpressions.Except(regexExpression).ToArray();
+				return paramExpressions.Except([regexParent]).ToArray();
 			}
 
-			private IReadOnlyList<object> EvaluateParameters(object baseValue)
+			protected IReadOnlyList<object> EvaluateParameters(object baseValue)
 			{
 				return ParametersExpression.HandledEvaluate(globalState, baseValue) as object[];
 			}
@@ -4028,7 +4040,7 @@ namespace Yagasoft.Libraries.Common
 				return method.Method.Invoke(this, [baseValue]);
 			}
 
-			private T GetParam<T>(string paramName, int index, bool isRequired = false)
+			protected T GetParam<T>(string paramName, int index, bool isRequired = false)
 			{
 				Parameters.Require(nameof(Parameters), "Parameters must be evaluated first.");
 				
@@ -4052,17 +4064,17 @@ namespace Yagasoft.Libraries.Common
 				return param;
 			}
 			
-			private static object ValidateValueType<T>(object value)
+			protected static object ValidateValueType<T>(object value)
 			{
 				return value is T ? value : ThrowValueTypeError<T>();
 			}
 
-			private static T ThrowValueTypeError<T>()
+			protected static T ThrowValueTypeError<T>()
 			{
 throw new FormatException($"Provided value is not a {typeof(T).Name}.");
 			}
 
-			private static T GetTypeAs<T>(object value)
+			protected static T GetTypeAs<T>(object value)
 			{
 				if (value is null)
 				{
@@ -4146,17 +4158,17 @@ throw new FormatException($"Provided value is not a {typeof(T).Name}.");
 				return ThrowValueTypeError<T>();
 			}
 
-			private static T CastTypeAs<T>(object value)
+			protected static T CastTypeAs<T>(object value)
 			{
 				return value is T valT ? valT : default;
 			}
 
-			private static object ApplyOperation<T>(object baseValue, Func<T, object> op)
+			protected static object ApplyOperation<T>(object baseValue, Func<T, object> op)
 			{
 				return baseValue == null ? null : op(GetTypeAs<T>(baseValue));
 			}
 
-			private static object ApplyToCaptures(RegexDefinition regex, string str, Func<Capture, object> op)
+			protected static object ApplyToCaptures(RegexDefinition regex, string str, Func<Capture, object> op)
 			{
 				if (regex == null)
 				{
@@ -4176,7 +4188,7 @@ throw new FormatException($"Provided value is not a {typeof(T).Name}.");
 				return matches;
 			}
 
-			private static object[] Flatten(IReadOnlyList<object> array, int levels)
+			protected static object[] Flatten(IReadOnlyList<object> array, int levels)
 			{
 				while (levels-- > 0 && array.All(e => e is Array))
 				{
@@ -4187,7 +4199,7 @@ throw new FormatException($"Provided value is not a {typeof(T).Name}.");
 				return [.. array];
 			}
 
-			private static object ReplaceCaptures(string regex, string str, Func<string, string> op)
+			protected static object ReplaceCaptures(string regex, string str, Func<string, string> op)
 			{
 				if (regex.IsEmpty())
 				{
