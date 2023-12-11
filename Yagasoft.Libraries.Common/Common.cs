@@ -744,14 +744,15 @@ namespace Yagasoft.Libraries.Common
 		/// </summary>
 		public static string StringAggregate<TV>(this IEnumerable<TV> collection, string separator = ",")
 		{
-			var collectionArray = collection?.ToArray();
+			var collectionArray = collection?.FilterNull().ToArray();
 
 			if (collectionArray?.Any() != true)
 			{
 				return string.Empty;
 			}
 
-			return collectionArray?.Select(e => e is string eString ? eString : e.ToString()).Aggregate((e1, e2) => $"{e1}{separator}{e2}");
+			return collectionArray
+				.Select(e => e as string ?? e.ToString()).Aggregate((e1, e2) => $"{e1}{separator}{e2}");
 		}
 
 		/// <summary>
@@ -3012,7 +3013,9 @@ namespace Yagasoft.Libraries.Common
 					}
 
 					var consumers = tokenParsers.Count(parser => parser.Consume(character));
-					chosenParser = tokenParsers.FirstOrDefault(p => p.IsComplete);
+					var chosenParsers = tokenParsers.Where(p => p.IsComplete).ToArray();
+					chosenParser = chosenParsers.FirstOrDefault(p => p.GetAttribute<DefaultExpressionAttribute>() is null)
+						?? chosenParsers.FirstOrDefault();
 
 					if (chosenParser != null)
 					{
@@ -3319,6 +3322,9 @@ namespace Yagasoft.Libraries.Common
 		[AttributeUsage(AttributeTargets.Class, Inherited = false)]
 		public class ExpressionAttribute : Attribute;
 
+		[AttributeUsage(AttributeTargets.Class, Inherited = false)]
+		public class DefaultExpressionAttribute : Attribute;
+
 		[AttributeUsage(AttributeTargets.Method, Inherited = false)]
 		public class FunctionLogicAttribute(string name, bool isEvalParams = true) : Attribute
 		{
@@ -3437,7 +3443,8 @@ namespace Yagasoft.Libraries.Common
 				try
 				{
 					result = HandledEvaluate(state);
-					result = result as string ?? (result is ICollection collection ? collection.Cast<object>().StringAggregate(string.Empty) : result.ToString());
+					result = result as string
+						?? (result is ICollection collection ? collection.Cast<object>().StringAggregate(string.Empty) : result.ToString());
 				}
 				catch (Exception ex)
 				{
@@ -3691,7 +3698,7 @@ namespace Yagasoft.Libraries.Common
 			}
 		}
 
-		public class RootExpression(ParserContext context) : ScopeExpression(context)
+		public sealed class RootExpression(ParserContext context) : ScopeExpression(context)
 		{
 			protected override object InnerEvaluate(GlobalState state, object baseValue = null) =>
 				ChildExpressions.Select(c => c.HandledEvaluate(state, baseValue)).ToArray();
@@ -3735,7 +3742,7 @@ namespace Yagasoft.Libraries.Common
 		}
 
 		[Expression]
-		public class SeparatorExpression(ParserContext context) : ScopeExpression(context)
+		public sealed class SeparatorExpression(ParserContext context) : ScopeExpression(context)
 		{
 			public override string OpeningBrace => ",";
 			public override string ClosingBrace => "";
@@ -3773,7 +3780,7 @@ namespace Yagasoft.Libraries.Common
 		}
 
 		[Expression]
-		public class CodeExpression(ParserContext context) : ScopeExpression(context)
+		public sealed class CodeExpression(ParserContext context) : ScopeExpression(context)
 		{
 			public override string OpeningBrace => "{";
 			public override string ClosingBrace => "}";
@@ -3808,7 +3815,7 @@ namespace Yagasoft.Libraries.Common
 		}
 
 		[Expression]
-		public class CollectionExpression(ParserContext context) : InternalScopeExpression(context)
+		public sealed class CollectionExpression(ParserContext context) : InternalScopeExpression(context)
 		{
 			public override string OpeningBrace => "[";
 			public override string ClosingBrace => "]";
@@ -3822,6 +3829,7 @@ namespace Yagasoft.Libraries.Common
 		#region Objects
 
 		[Expression]
+		[DefaultExpression]
 		public class ObjectExpression(ParserContext context) : Expression(context)
 		{
 			protected override char[] DelimiterChars => new[] { '\0' };
@@ -3962,6 +3970,7 @@ namespace Yagasoft.Libraries.Common
 		#region Functions
 		
 		[Expression]
+		[DefaultExpression]
 		public class FunctionExpression : Expression
 		{
 			protected override char[] DelimiterChars => new[] { '$' };
@@ -5081,7 +5090,7 @@ throw new FormatException($"Provided value is not a {typeof(T).Name}.");
 		#region Operators
 
 		[Expression]
-		public class NegativeExpression(ParserContext context) : UnaryOperatorExpression(context)
+		public sealed class NegativeExpression(ParserContext context) : UnaryOperatorExpression(context)
 		{
 			public override int Precedence => 200;
 
@@ -5098,7 +5107,7 @@ throw new FormatException($"Provided value is not a {typeof(T).Name}.");
 		}
 
 		[Expression]
-		public class SubtractExpression(ParserContext context) : BinaryOperatorExpression(context)
+		public sealed class SubtractExpression(ParserContext context) : BinaryOperatorExpression(context)
 		{
 			public override int Precedence => 99;
 
@@ -5368,7 +5377,7 @@ throw new FormatException($"Provided value is not a {typeof(T).Name}.");
 		#region Memory
 		
 		[Expression]
-		public class MemoryExpression(ParserContext context) : Expression(context)
+		public sealed class MemoryExpression(ParserContext context) : Expression(context)
 		{
 			protected override char[] DelimiterChars => new[] { '~' };
 			protected override string FinalForm => "^~[a-zA-Z0-9_]+$";
@@ -5388,7 +5397,7 @@ throw new FormatException($"Provided value is not a {typeof(T).Name}.");
 		#region Literals
 
 		[Expression]
-		public class BooleanExpression(ParserContext context) : LiteralExpression(context)
+		public sealed class BooleanExpression(ParserContext context) : LiteralExpression(context)
 		{
 			protected override string FinalForm => "(?i)^(?:true|false)$";
 			protected override string RecognisePattern => "^(?:t(?:r(?:u(?:e)?)?)?|f(?:a(?:l(?:s(?:e)?)?)?)?)$";
@@ -5406,7 +5415,7 @@ throw new FormatException($"Provided value is not a {typeof(T).Name}.");
 		}
 
 		[Expression]
-		public class NullExpression(ParserContext context) : LiteralExpression(context)
+		public sealed class NullExpression(ParserContext context) : LiteralExpression(context)
 		{
 			protected override string FinalForm => "(?i)^null$";
 			protected override string RecognisePattern => "^n(?:u(?:l(?:l)?)?)?$";
@@ -5419,7 +5428,7 @@ throw new FormatException($"Provided value is not a {typeof(T).Name}.");
 		}
 
 		[Expression]
-		public class NumberExpression(ParserContext context) : LiteralExpression(context)
+		public sealed class NumberExpression(ParserContext context) : LiteralExpression(context)
 		{
 			protected override object InnerEvaluate(GlobalState state, object baseValue = null)
 			{
@@ -5439,7 +5448,7 @@ throw new FormatException($"Provided value is not a {typeof(T).Name}.");
 		}
 
 		[Expression]
-		public class TimeSpanExpression(ParserContext context) : TextExpression(context)
+		public sealed class TimeSpanExpression(ParserContext context) : TextExpression(context)
 		{
 			protected override string FinalForm => @"^`(?:\d+?[yMdhmsf])+?`$";
 			protected override string RecognisePattern => @"^`(?:\d+?[yMdhmsf]?)*`?$";
@@ -5461,7 +5470,7 @@ throw new FormatException($"Provided value is not a {typeof(T).Name}.");
 		}
 
 		[Expression]
-		public class RegexExpression(ParserContext context) : TextExpression(context)
+		public sealed class RegexExpression(ParserContext context) : TextExpression(context)
 		{
 			protected override string FinalForm => @"^`/[^/`]+/(?:f\d)?`$";
 			protected override string RecognisePattern => @"^`(?:/(?:[^/`]+(?:/(?:f?(?:\d)?(?:`)?)?)?)?)?$";
