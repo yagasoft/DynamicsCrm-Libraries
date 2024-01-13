@@ -1,15 +1,15 @@
 ﻿/// <reference path="Sdk.Soap.vsdoc.js" />
-/// <reference path="ldv_CommonGeneric.js" />
+/// <reference path="ys_CommonGeneric.js" />
 /// <reference path="../CrmSchemaJs.js" />
 
-var Ldv = window.Ldv || {};
+var Ys = window.Ys || {};
 
-Ldv.GenericConfigForm_OnLoad = function()
+Ys.GenericConfigForm_OnLoad = function()
 {
-    Ldv.SetupStageAutoComplete(function () { HideBusyIndicator(651841); });
+    Ys.SetupStageAutoComplete(function () { HideBusyIndicator(651841); });
 };
 
-Ldv.SetupStageAutoComplete = function(callback)
+Ys.SetupStageAutoComplete = function(callback)
 {
     var resultMap = [];
 

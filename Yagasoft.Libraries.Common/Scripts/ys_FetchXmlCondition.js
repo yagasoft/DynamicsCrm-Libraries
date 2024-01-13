@@ -4,7 +4,7 @@
 /// <reference path="Xrm.Page.js" />
 /// <reference path="SDK.Metadata.Query.vsdoc.js" />
 /// <reference path="../CrmSchemaJs.js" />
-/// <reference path="ldv_CommonGeneric.js" />
+/// <reference path="ys_CommonGeneric.js" />
 
 function FetchXmlCondition_OnLoad()
 {
@@ -23,7 +23,7 @@ function EntityLogicalName_OnChange()
 
 function SetEntityAdvancedFind()
 {
-	var entityLogicalName = GetFieldValue(Sdk.FetchXMLCondition.EntityLogicalName_ldv_EntityLogicalName);
+	var entityLogicalName = GetFieldValue(Sdk.FetchXMLCondition.EntityLogicalName_ys_EntityLogicalName);
 
 	if (entityLogicalName)
 	{
@@ -64,7 +64,7 @@ function SetupEntityNameAutoComplete()
 				resultNames.push(fieldName);
 			};
 
-			SetupAutoComplete(Sdk.FetchXMLCondition.EntityLogicalName_ldv_EntityLogicalName, result, resultNames, 10, true, true);
+			SetupAutoComplete(Sdk.FetchXMLCondition.EntityLogicalName_ys_EntityLogicalName, result, resultNames, 10, true, true);
 		},
 		function (xhr, text)
 		{

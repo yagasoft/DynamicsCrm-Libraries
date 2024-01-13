@@ -2411,7 +2411,7 @@ namespace Yagasoft.Libraries.Plugins
 		public const string DisplayName = "Custom Message";
 		public const string SchemaName = "ys_custommessage";
 		public const string EntityLogicalName = "ys_custommessage";
-		public const int EntityTypeCode = 10130;
+		public const int EntityTypeCode = 10175;
 		
 		public class RelationName : RelationNameBase
 		{

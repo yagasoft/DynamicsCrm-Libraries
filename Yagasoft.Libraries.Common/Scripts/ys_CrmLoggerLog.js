@@ -1,4 +1,4 @@
-﻿/// <reference path="ldv_CommonGeneric.js" />
+﻿/// <reference path="ys_CommonGeneric.js" />
 /// <reference path="AnchoredExecutionContext.getFormContext().365.d.ts" />
 var $ = parent.$ || window.$;
 
@@ -8,13 +8,13 @@ function OnLoad(executionContext)
 {
     SetAnchoredExecutionContext(executionContext);
 
-	var type = AnchoredExecutionContext.getFormContext().getAttribute('ldv_regardingtype').getValue();
-	var id = AnchoredExecutionContext.getFormContext().getAttribute('ldv_regardingid').getValue();
+	var type = AnchoredExecutionContext.getFormContext().getAttribute('ys_regardingtype').getValue();
+	var id = AnchoredExecutionContext.getFormContext().getAttribute('ys_regardingid').getValue();
 
 	if (type && id)
 	{
-		AnchoredExecutionContext.getFormContext().getAttribute('ldv_recordurl').setSubmitMode('never');
-        AnchoredExecutionContext.getFormContext().getAttribute('ldv_recordurl')
+		AnchoredExecutionContext.getFormContext().getAttribute('ys_recordurl').setSubmitMode('never');
+        AnchoredExecutionContext.getFormContext().getAttribute('ys_recordurl')
             .setValue(Xrm.Utility.getGlobalContext().getClientUrl() + '/main.aspx?' +
                 'etc=' + GetObjectTypeCode(type) + '&id=%7b' + id + '%7d' + '&newWindow=true&pagetype=entityrecord');
     }
@@ -295,7 +295,7 @@ function LogTree_OnStateChange(context)
 				section.find('#iFrame_clt').remove();
 				section.find('.ms-crm-Field-Data-Print:eq(0)').append('<iframe id="iFrame_clt"' +
 					'src="' + Xrm.Utility.getGlobalContext().getClientUrl() +
-					'/WebResources/ldv_/CrmLogger/html/Tree.html" frameborder="0" scrolling="yes" style="height:350px"></iframe>');
+					'/WebResources/ys_/CrmLogger/html/Tree.html" frameborder="0" scrolling="yes" style="height:350px"></iframe>');
 			}, 500);
 	}
 }

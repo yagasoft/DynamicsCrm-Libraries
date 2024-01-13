@@ -1,11 +1,11 @@
 <!-- Author: Ahmed Elsawalhy -->
 <html>
 <head>
-	<script src="../../../../WebResources/ldv_/Generic/js/jQuery.min.js"></script>
-	<link rel="stylesheet" href="../../../../WebResources/ldv_/Generic/css/jsTree.style.css"/>
-	<script src="../../../../WebResources/ldv_/Generic/js/jsTree.min.js"></script>
-	<script src="../../../../WebResources/ldv_/Generic/js/purl.min.js"></script>
-	<link rel="stylesheet" href="../../../../WebResources/ldv_/Generic/css/FontAwesome.min.css">
+	<script src="../../../../WebResources/ys_/Generic/js/jQuery.min.js"></script>
+	<link rel="stylesheet" href="../../../../WebResources/ys_/Generic/css/jsTree.style.css"/>
+	<script src="../../../../WebResources/ys_/Generic/js/jsTree.min.js"></script>
+	<script src="../../../../WebResources/ys_/Generic/js/purl.min.js"></script>
+	<link rel="stylesheet" href="../../../../WebResources/ys_/Generic/css/FontAwesome.min.css">
 
 	<style>
 		html
@@ -196,7 +196,7 @@
 		  });
 		}
 		
-		var typeCode = getObjectTypeCode('ldv_logentry');
+		var typeCode = getObjectTypeCode('ys_logentry');
         var baseUrl = parent.Xrm.Utility.getGlobalContext().getClientUrl();
         var id = parent.AnchoredExecutionContext.getFormContext().data.entity.getId().replace('{', '').replace('}', '');
 
@@ -206,13 +206,13 @@
 					type: "GET",
 					contentType: "application/json; charset=utf-8",
 					datatype: "json",
-					url: baseUrl + "/api/data/v8.1/ldv_logentries" +
-						"?$select=ldv_message,ldv_level,ldv_executionduration,ldv_linenumber,ldv_class," +
-						"ldv_exceptionthrown,ldv_exception,ldv_exceptionsource," +
-						"ldv_innerexception,ldv_innerexceptionmessage,ldv_innerexceptionsource,ldv_innerexceptionstacktrace" +
-						"&$filter=_ldv_parentlogid_value eq " + id +
-						" and  _ldv_parentlogentryid_value eq " + (node.id === "#" ? 'null' : node.id) +
-						"&$orderby=ldv_entryindex asc",
+					url: baseUrl + "/api/data/v8.1/ys_logentries" +
+						"?$select=ys_message,ys_level,ys_executionduration,ys_linenumber,ys_class," +
+						"ys_exceptionthrown,ys_exception,ys_exceptionsource," +
+						"ys_innerexception,ys_innerexceptionmessage,ys_innerexceptionsource,ys_innerexceptionstacktrace" +
+						"&$filter=_ys_parentlogid_value eq " + id +
+						" and  _ys_parentlogentryid_value eq " + (node.id === "#" ? 'null' : node.id) +
+						"&$orderby=ys_entryindex asc",
 					beforeSend: function(xmlHttpRequest)
 					{
 						xmlHttpRequest.setRequestHeader("OData-MaxVersion", "4.0");
@@ -241,21 +241,21 @@
 											return;
 										}
 										
-										var entryId = results.value[i]["ldv_logentryid"];
-										var message = results.value[i]["ldv_message"];
-										var level = results.value[i]["ldv_level"];
-										var executionduration = results.value[i]["ldv_executionduration"];
-										var linenumber = results.value[i]["ldv_linenumber"];
-										var codeClass = results.value[i]["ldv_class"];
+										var entryId = results.value[i]["ys_logentryid"];
+										var message = results.value[i]["ys_message"];
+										var level = results.value[i]["ys_level"];
+										var executionduration = results.value[i]["ys_executionduration"];
+										var linenumber = results.value[i]["ys_linenumber"];
+										var codeClass = results.value[i]["ys_class"];
 
-										var isExceptionThrown = results.value[i]["ldv_exceptionthrown"];
-										var exception = results.value[i]["ldv_exception"];
-										var exceptionSource = results.value[i]["ldv_exceptionsource"];
+										var isExceptionThrown = results.value[i]["ys_exceptionthrown"];
+										var exception = results.value[i]["ys_exception"];
+										var exceptionSource = results.value[i]["ys_exceptionsource"];
 
-										var innerException = results.value[i]["ldv_innerexception"];
-										var innerExceptionMessage = results.value[i]["ldv_innerexceptionmessage"];
-										var innerExceptionSource = results.value[i]["ldv_innerexceptionsource"];
-										var innerExceptionStackTrace = results.value[i]["ldv_innerexceptionstacktrace"];
+										var innerException = results.value[i]["ys_innerexception"];
+										var innerExceptionMessage = results.value[i]["ys_innerexceptionmessage"];
+										var innerExceptionSource = results.value[i]["ys_innerexceptionsource"];
+										var innerExceptionStackTrace = results.value[i]["ys_innerexceptionstacktrace"];
 
 										if (!message || message.indexOf('Finished: ') >= 0)
 										{
@@ -275,7 +275,7 @@
 
 										if (message.indexOf('Started: ') >= 0 && (i + 1) < results.value.length)
 										{
-											var duration = results.value[i + 1]["ldv_executionduration"] + 'ms';
+											var duration = results.value[i + 1]["ys_executionduration"] + 'ms';
 											text += ' (' + duration + ')';
 											tooltip += '<br /><b>Duration:</b> ' + duration;
 										}
@@ -303,7 +303,7 @@
 														type: "GET",
 														contentType: "application/json; charset=utf-8",
 														datatype: "json",
-														url: baseUrl + "/api/data/v8.1/ldv_logentries(" + entryId + ")?$select=ldv_information",
+														url: baseUrl + "/api/data/v8.1/ys_logentries(" + entryId + ")?$select=ys_information",
 														beforeSend: function(xmlHttpRequest)
 														{
 															xmlHttpRequest.setRequestHeader("OData-MaxVersion", "4.0");
@@ -316,7 +316,7 @@
 															try
 															{
 																var resultInnerParam = data;
-																var info = resultInnerParam["ldv_information"]
+																var info = resultInnerParam["ys_information"]
 																
 																if (info)
 																{
@@ -354,7 +354,7 @@
 																type: "GET",
 																contentType: "application/json; charset=utf-8",
 																datatype: "json",
-																url: baseUrl + "/api/data/v8.1/ldv_logentries(" + entryId + ")?$select=ldv_stacktrace",
+																url: baseUrl + "/api/data/v8.1/ys_logentries(" + entryId + ")?$select=ys_stacktrace",
 																beforeSend: function(xmlHttpRequest)
 																{
 																	xmlHttpRequest.setRequestHeader("OData-MaxVersion", "4.0");
@@ -371,7 +371,7 @@
 																		tooltip += '<br /><br /><b>Exception:</b> ' + escapeHtml(exception);
 																		tooltip += '<br /><b>Exception source:</b> ' + escapeHtml(exceptionSource);
 
-																		var stackTrace = resultInnerEx["ldv_stacktrace"];
+																		var stackTrace = resultInnerEx["ys_stacktrace"];
 
 																		if (stackTrace)
 																		{

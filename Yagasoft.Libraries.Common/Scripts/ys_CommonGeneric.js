@@ -271,7 +271,7 @@ function LoadAdvancedFind(fieldName, logicalName, height, entityNameFieldName)
                 parent.AdvancedFindMap = AdvancedFindMap;
             }
 
-            var iFrameUrl = Xrm.Utility.getGlobalContext().getClientUrl() + '/WebResources/ldv_AdvancedFindHtml#'
+            var iFrameUrl = Xrm.Utility.getGlobalContext().getClientUrl() + '/WebResources/ys_AdvancedFindHtml#'
                 + fieldName +
                 '#' + logicalName + '#' + 5;
 
@@ -461,7 +461,7 @@ function LoadMultiSelect(fieldName, options, title, height, callback, isSingleMo
             {
                 MultiSelectPool[fieldName] = options;
 
-                var iFrameUrl = Xrm.Utility.getGlobalContext().getClientUrl() + '/WebResources/ldv_MultiSelectHtml#'
+                var iFrameUrl = Xrm.Utility.getGlobalContext().getClientUrl() + '/WebResources/ys_MultiSelectHtml#'
                     + fieldName +
                     '#' + encodeURI(title) + '#' + (height || 200) + '#' + (isSingleMode === true) + '#'
                     + (isSkipSort === true) +
@@ -507,7 +507,7 @@ function LoadMultiSelect(fieldName, options, title, height, callback, isSingleMo
             {
                 if (typeof Sdk === "undefined")
                 {
-                    LoadWebResources('ldv_sdksoapjs', function()
+                    LoadWebResources('ys_sdksoapjs', function()
                     {
                         LoadMultiSelect(fieldName + controlSuffix, options, title, height, callback);
                     });

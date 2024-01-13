@@ -100,36 +100,34 @@
     <None Include="key.snk" />
     <None Include="LICENCE" />
     <None Include="packages.config" />
+    <None Include="UploaderMapping.config" />
     <None Include="Yagasoft.Libraries.Common.nuspec">
       <SubType>Designer</SubType>
     </None>
     <None Include="nuget\FileForm.nuspec" />
-    <None Include="WebResLink.dat">
-      <SubType>Designer</SubType>
-    </None>
   </ItemGroup>
   <ItemGroup>
     <None Include="Scripts\CrmLogger.js" />
-    <None Include="Scripts\ldv_CrmLoggerLog.js" />
+    <None Include="Scripts\ys_CrmLoggerLog.js" />
     <None Include="Scripts\jquery-1.11.1.js" />
-    <None Include="Scripts\ldv_CommonGeneric.js" />
-    <None Include="Scripts\ldv_AdvancedFind.html" />
+    <None Include="Scripts\ys_CommonGeneric.js" />
+    <None Include="Scripts\ys_AdvancedFind.html" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Scripts\ldv_LogRibbon.js" />
-    <None Include="Scripts\ldv_MultiSelect.html" />
+    <None Include="Scripts\ys_LogRibbon.js" />
+    <None Include="Scripts\ys_MultiSelect.html" />
     <None Include="Scripts\Sdk.Soap.vsdoc.js" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Scripts\ldv_RecurrenceRule.js" />
+    <None Include="Scripts\ys_RecurrenceRule.js" />
   </ItemGroup>
   <ItemGroup>
     <None Include="CrmSchemaJs.tt">
       <Generator>CrmCodeGenerator2011</Generator>
     </None>
-    <None Include="Scripts\ldv_CrmLoggerTree.html" />
-    <None Include="Scripts\ldv_FetchXmlCondition.js" />
-    <None Include="Scripts\ldv_RecurrenceRuleException.js" />
+    <None Include="Scripts\ys_CrmLoggerTree.html" />
+    <None Include="Scripts\ys_FetchXmlCondition.js" />
+    <None Include="Scripts\ys_RecurrenceRuleException.js" />
   </ItemGroup>
   <ItemGroup>
     <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
@@ -138,7 +136,7 @@
     <None Include="Scripts\Xrm.Page.365.d.ts" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Scripts\ldv_GenericConfig.js" />
+    <None Include="Scripts\ys_GenericConfig.js" />
   </ItemGroup>
   <ItemGroup>
     <None Include="nuget-access-key.txt" />

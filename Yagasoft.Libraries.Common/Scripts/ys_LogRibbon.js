@@ -1,4 +1,4 @@
-﻿/// <reference path="ldv_CommonGeneric.js" />
+﻿/// <reference path="ys_CommonGeneric.js" />
 /// <reference path="Sdk.Soap.vsdoc.js" />
 /// <reference path="jquery-1.11.1.js" />
 /// <reference path="Sdk.Soap.vsdoc.js" />
@@ -8,7 +8,7 @@ var LogPageNumber = '1';
 
 function HighlightRows()
 {
-	LoadWebResources('ldv_CommonGenericJs',
+	LoadWebResources('ys_CommonGenericJs',
 		function()
 		{
 			var documentObj = document;
