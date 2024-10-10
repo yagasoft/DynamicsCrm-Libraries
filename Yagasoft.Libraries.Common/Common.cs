@@ -2994,9 +2994,9 @@ namespace Yagasoft.Libraries.Common
 	/// <summary>
 	/// Author: Ahmed Elsawalhy (Yagasoft.com)
 	/// </summary>
-	[ExcludeFromCodeCoverage]
-	[DebuggerNonUserCode]
-	[GeneratedCode("This is not generated code, but this attribute is used for excluding the code from code analysis.", "0.0.0.0")]
+	//[ExcludeFromCodeCoverage]
+	//[DebuggerNonUserCode]
+	//[GeneratedCode("This is not generated code, but this attribute is used for excluding the code from code analysis.", "0.0.0.0")]
 	public static class CrmParser
 	{
 		#region Interpreter
@@ -3707,10 +3707,11 @@ namespace Yagasoft.Libraries.Common
 			protected void ProcessOperators(Stack<Expression> doneExpressions)
 			{
 				var operators = doneExpressions.OfType<OperatorExpression>().Where(e => e.Precedence > 0);
+				var opCount = operators.Count();
 				var processed = new List<OperatorExpression>();
 				
 				// ReSharper disable once PossibleMultipleEnumeration
-				while (processed.Count < operators.Count())
+				while (processed.Count < opCount)
 				{
 				// ReSharper disable once PossibleMultipleEnumeration
 					var op = operators.Reverse().Where(e => !processed.Contains(e)).OrderByDescending(e => e.Precedence).FirstOrDefault();
@@ -5168,21 +5169,34 @@ throw new FormatException($"Provided value is not a {typeof(T).Name}.");
 		[Expression]
 		public class BinaryOperatorExpression(ParserContext context) : OperatorExpression(context)
 		{
-			protected override string FinalForm => @"^(?:\*|\/|\+|-|>|<|>=|<=|!=|==|&&|\|\||\?\?|\?|:)$";
-			protected override string RecognisePattern => @"^(?:\*|\/|\+|-|>|<|>=?|<=?|!=?|==?|&&?|\|\|?|\?\??|\?|:)$";
+			protected override string FinalForm => @"^(?:\*|\/|\+|-|>|<|>=|<=|<>|==|&&|\|\||\?\?|\?|:)$";
+			protected override string RecognisePattern => @"^(?:\*|\/|\+|-|>|<|>=?|<=?|<>?|==?|&&?|\|\|?|\?\??|\?|:)$";
+
+			private class OpAccess(List<Expression> childExpressions, GlobalState state, object baseValue = null)
+
+			{
+				internal Expression Op1Exp => op1Exp ??= childExpressions.FirstOrDefault();
+				private Expression op1Exp;
+
+				internal object Op1 => op1 ??= Op1Exp?.HandledEvaluate(state, baseValue);
+				private object op1;
+
+				internal Expression Op2Exp => op2Exp ??= childExpressions.LastOrDefault();
+				private Expression op2Exp;
+
+				internal object Op2 => op2 ??= Op2Exp?.HandledEvaluate(state, baseValue);
+				private object op2;
+			}
 
 			protected override object InnerEvaluate(GlobalState state, object baseValue = null)
 			{
-				var op1Exp = ChildExpressions.FirstOrDefault();
-				var op1 = op1Exp?.HandledEvaluate(state, baseValue);
-				var op2Exp = ChildExpressions.LastOrDefault();
-				var op2 = op2Exp?.HandledEvaluate(state, baseValue);
+				var op = new OpAccess(ChildExpressions, state, baseValue);
 				
 				if (Regex.IsMatch(Value, @"^(?:[+\-*/])$"))
 				{
-					if (op1 is double op1Double)
+					if (op.Op1 is double op1Double)
 					{
-						switch (op2)
+						switch (op.Op2)
 						{
 							case double op2Double:
 								return Value switch{
@@ -5192,31 +5206,31 @@ throw new FormatException($"Provided value is not a {typeof(T).Name}.");
 									"/" => (op1Double / op2Double)
 									};
 							case null:
-								return op1;
+								return op.Op1;
 						}
 					}
-					else if (op2 is double && op1 is null)
+					else if (op.Op2 is double && op.Op1 is null)
 					{
-						return op2;
+						return op.Op2;
 					}
 				}
-				
+
 				switch (Value)
 				{
 					case "+":
 					case "-":
 					{
-						var isDate = op1 is DateTime || op2 is DateTime;
+						var isDate = op.Op1 is DateTime || op.Op2 is DateTime;
 
 						if (isDate)
 						{
-							var isTimeSpan = op1Exp is TimeSpanExpression || op2Exp is TimeSpanExpression;
+							var isTimeSpan = op.Op1Exp is TimeSpanExpression || op.Op2Exp is TimeSpanExpression;
 
 							if (isTimeSpan)
 							{
-								var date = (op1 is DateTime ? op1 as DateTime? : op2 as DateTime?).GetValueOrDefault();
-								var timeSpan = op1Exp is TimeSpanExpression ? op1 as string : op2 as string;
-								
+								var date = (op.Op1 is DateTime ? op.Op1 as DateTime? : op.Op2 as DateTime?).GetValueOrDefault();
+								var timeSpan = op.Op1Exp is TimeSpanExpression ? op.Op1 as string : op.Op2 as string;
+
 								if (timeSpan.IsEmpty())
 								{
 									return date;
@@ -5249,66 +5263,76 @@ throw new FormatException($"Provided value is not a {typeof(T).Name}.");
 
 						break;
 					}
-					
-							case "||":
-								{
-									if (op1 is bool t1 && op2 is bool t2)
-									{
-										return (t1 || t2).ToString();
-							}
 
-									break;
-								}
+					case "||":
+					{
+						if (op.Op1 is bool t1 && op.Op2 is bool t2)
+						{
+							return t1 || t2;
+						}
 
-							case "&&":
-								{
-									if (op1 is bool t1 && op2 is bool t2)
-									{
-										return (t1 && t2).ToString();
-							}
+						break;
+					}
 
-									break;
-								}
+					case "&&":
+					{
+						if (op.Op1 is bool t1 && op.Op2 is bool t2)
+						{
+							return t1 && t2;
+						}
 
-							case "??":
-								{
-									return op1 ?? op2;
-								}
+						break;
+					}
 
-							case "<":
-								{
-									return ((op1 as IComparable)?.CompareTo(op2 as IComparable) < 0).ToString();
-								}
+					case "??":
+					{
+						return op.Op1 ?? op.Op2;
+					}
 
-							case ">":
-								{
-									return ((op1 as IComparable)?.CompareTo(op2 as IComparable) > 0).ToString();
-								}
+					case "<":
+					{
+						return (op.Op1 as IComparable)?.CompareTo(op.Op2 as IComparable) < 0;
+					}
 
-							case ">=":
-								{
-									return ((op1 as IComparable)?.CompareTo(op2 as IComparable) >= 0).ToString();
-								}
+					case ">":
+					{
+						return (op.Op1 as IComparable)?.CompareTo(op.Op2 as IComparable) > 0;
+					}
 
-							case "<=":
-								{
-									return ((op1 as IComparable)?.CompareTo(op2 as IComparable) <= 0).ToString();
-								}
+					case ">=":
+					{
+						return (op.Op1 as IComparable)?.CompareTo(op.Op2 as IComparable) >= 0;
+					}
 
-							case "==":
-								{
-									return (op1 == null && op2 == null) || op1?.Equals(op2) == true || op2?.Equals(op1) == true;
-								}
+					case "<=":
+					{
+						return (op.Op1 as IComparable)?.CompareTo(op.Op2 as IComparable) <= 0;
+					}
 
-							case "!=":
-								{
-									return !((op1 == null && op2 == null) || op1?.Equals(op2) == true || op2?.Equals(op1) == true);
-								}
+					case "==":
+					{
+						return (op.Op1 == null && op.Op2 == null) || op.Op1?.Equals(op.Op2) == true || op.Op2?.Equals(op.Op1) == true;
+					}
+
+					case "<>":
+					{
+						return !((op.Op1 == null && op.Op2 == null) || op.Op1?.Equals(op.Op2) == true || op.Op2?.Equals(op.Op1) == true);
+					}
+
+					case "?":
+					{
+						return (op.Op1 as bool?) == true ? op.Op2 : ">>>|||SKIP|||<<<";
+					}
+
+					case ":":
+					{
+						return (op.Op1 as string) == ">>>|||SKIP|||<<<" ? op.Op2 : op.Op1;
+					}
 				}
 
 				if (Value == "+")
 				{
-					return Helpers.GetStringRepresentation(op1) + Helpers.GetStringRepresentation(op2);
+					return Helpers.GetStringRepresentation(op.Op1) + Helpers.GetStringRepresentation(op.Op2);
 				}
 
 				throw new InvalidOperationException("Operands unsupported for given operator.");
@@ -5397,13 +5421,13 @@ throw new FormatException($"Provided value is not a {typeof(T).Name}.");
 					{ "<", 75 },
 					{ ">=", 75 },
 					{ "<=", 75 },
-					{ "!=", 74 },
+					{ "<>", 74 },
 					{ "==", 74 },
 					{ "&&", 65 },
 					{ "||", 64 },
 					{ "??", 57 },
 					{ "?", 50 },
-					{ ":", 50 }
+					{ ":", 45 }
 				};
 
 			protected override object InnerEvaluate(GlobalState state, object baseValue = null)
