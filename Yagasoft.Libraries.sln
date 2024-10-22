@@ -1,12 +1,8 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.30413.136
+# Visual Studio Version 17
+VisualStudioVersion = 17.11.35327.3
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Yagasoft.Libraries.Common", "Yagasoft.Libraries.Common\Yagasoft.Libraries.Common.csproj", "{C0F9B3A7-0582-4E58-8C72-95C3D8B7C142}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Yagasoft.Libraries.EnhancedOrgService", "Yagasoft.Libraries.EnhancedOrgService\Yagasoft.Libraries.EnhancedOrgService.csproj", "{9A22C040-7EA8-4F23-94B5-6B222E6EE05B}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "lib", "lib", "{FE06650F-F420-4BF9-B5D0-C48FC643CBBA}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Yagasoft.Libraries.DynamicsCrmRules", "Yagasoft.Libraries.DynamicsCrmRules\Yagasoft.Libraries.DynamicsCrmRules.csproj", "{0E2D0109-918C-41D2-8784-8037B1EE92C0}"
@@ -20,37 +16,83 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Yagasoft.Libraries.Plugins"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleApp1", "ConsoleApp1\ConsoleApp1.csproj", "{8A782B0C-54B2-431E-89BA-1F07BBDE7163}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Yagasoft.Libraries.EnhancedOrgService", "Yagasoft.Libraries.EnhancedOrgService\Yagasoft.Libraries.EnhancedOrgService.csproj", "{431DB49F-E3C5-4F39-8821-0D988DE196C2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Yagasoft.Libraries.Common", "Yagasoft.Libraries.Common\Yagasoft.Libraries.Common.csproj", "{C0F9B3A7-0582-4E58-8C72-95C3D8B7C142}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Yagasoft.Libraries.Common.NetCore", "Yagasoft.Libraries.Common.NetCore\Yagasoft.Libraries.Common.NetCore.csproj", "{9C3ACB02-9DA9-4891-BC35-F8A6C844E9AF}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Yagasoft.Libraries.Common.Shared", "Yagasoft.Libraries.Common.Shared\Yagasoft.Libraries.Common.Shared.shproj", "{FF31C0F5-4C37-46E5-9A2D-89B5AD828243}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Yagasoft.Libraries.EnhancedOrgService.NetCore", "Yagasoft.Libraries.EnhancedOrgService.NetCore\Yagasoft.Libraries.EnhancedOrgService.NetCore.csproj", "{EA8B8778-2793-47FD-88C6-9CD8A975C0B8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleApp2", "ConsoleApp2\ConsoleApp2.csproj", "{DCD15381-9E5D-4C22-9E3D-3BA0C0EE5FAD}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		4.6.2|Any CPU = 4.6.2|Any CPU
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{C0F9B3A7-0582-4E58-8C72-95C3D8B7C142}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{C0F9B3A7-0582-4E58-8C72-95C3D8B7C142}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{C0F9B3A7-0582-4E58-8C72-95C3D8B7C142}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{C0F9B3A7-0582-4E58-8C72-95C3D8B7C142}.Release|Any CPU.Build.0 = Release|Any CPU
-		{9A22C040-7EA8-4F23-94B5-6B222E6EE05B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{9A22C040-7EA8-4F23-94B5-6B222E6EE05B}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{9A22C040-7EA8-4F23-94B5-6B222E6EE05B}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{9A22C040-7EA8-4F23-94B5-6B222E6EE05B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0E2D0109-918C-41D2-8784-8037B1EE92C0}.4.6.2|Any CPU.ActiveCfg = 4.6.2|Any CPU
+		{0E2D0109-918C-41D2-8784-8037B1EE92C0}.4.6.2|Any CPU.Build.0 = 4.6.2|Any CPU
 		{0E2D0109-918C-41D2-8784-8037B1EE92C0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{0E2D0109-918C-41D2-8784-8037B1EE92C0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0E2D0109-918C-41D2-8784-8037B1EE92C0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0E2D0109-918C-41D2-8784-8037B1EE92C0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1B980BD7-AAAA-41F3-B982-D4D3122DC754}.4.6.2|Any CPU.ActiveCfg = Release|Any CPU
+		{1B980BD7-AAAA-41F3-B982-D4D3122DC754}.4.6.2|Any CPU.Build.0 = Release|Any CPU
 		{1B980BD7-AAAA-41F3-B982-D4D3122DC754}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{1B980BD7-AAAA-41F3-B982-D4D3122DC754}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1B980BD7-AAAA-41F3-B982-D4D3122DC754}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1B980BD7-AAAA-41F3-B982-D4D3122DC754}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8A782B0C-54B2-431E-89BA-1F07BBDE7163}.4.6.2|Any CPU.ActiveCfg = Release|Any CPU
+		{8A782B0C-54B2-431E-89BA-1F07BBDE7163}.4.6.2|Any CPU.Build.0 = Release|Any CPU
 		{8A782B0C-54B2-431E-89BA-1F07BBDE7163}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{8A782B0C-54B2-431E-89BA-1F07BBDE7163}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8A782B0C-54B2-431E-89BA-1F07BBDE7163}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8A782B0C-54B2-431E-89BA-1F07BBDE7163}.Release|Any CPU.Build.0 = Release|Any CPU
+		{431DB49F-E3C5-4F39-8821-0D988DE196C2}.4.6.2|Any CPU.ActiveCfg = Debug|Any CPU
+		{431DB49F-E3C5-4F39-8821-0D988DE196C2}.4.6.2|Any CPU.Build.0 = Debug|Any CPU
+		{431DB49F-E3C5-4F39-8821-0D988DE196C2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{431DB49F-E3C5-4F39-8821-0D988DE196C2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{431DB49F-E3C5-4F39-8821-0D988DE196C2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{431DB49F-E3C5-4F39-8821-0D988DE196C2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C0F9B3A7-0582-4E58-8C72-95C3D8B7C142}.4.6.2|Any CPU.ActiveCfg = 4.6.2|Any CPU
+		{C0F9B3A7-0582-4E58-8C72-95C3D8B7C142}.4.6.2|Any CPU.Build.0 = 4.6.2|Any CPU
+		{C0F9B3A7-0582-4E58-8C72-95C3D8B7C142}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C0F9B3A7-0582-4E58-8C72-95C3D8B7C142}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C0F9B3A7-0582-4E58-8C72-95C3D8B7C142}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C0F9B3A7-0582-4E58-8C72-95C3D8B7C142}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9C3ACB02-9DA9-4891-BC35-F8A6C844E9AF}.4.6.2|Any CPU.ActiveCfg = Debug|Any CPU
+		{9C3ACB02-9DA9-4891-BC35-F8A6C844E9AF}.4.6.2|Any CPU.Build.0 = Debug|Any CPU
+		{9C3ACB02-9DA9-4891-BC35-F8A6C844E9AF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9C3ACB02-9DA9-4891-BC35-F8A6C844E9AF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9C3ACB02-9DA9-4891-BC35-F8A6C844E9AF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9C3ACB02-9DA9-4891-BC35-F8A6C844E9AF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EA8B8778-2793-47FD-88C6-9CD8A975C0B8}.4.6.2|Any CPU.ActiveCfg = Debug|Any CPU
+		{EA8B8778-2793-47FD-88C6-9CD8A975C0B8}.4.6.2|Any CPU.Build.0 = Debug|Any CPU
+		{EA8B8778-2793-47FD-88C6-9CD8A975C0B8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EA8B8778-2793-47FD-88C6-9CD8A975C0B8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EA8B8778-2793-47FD-88C6-9CD8A975C0B8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EA8B8778-2793-47FD-88C6-9CD8A975C0B8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DCD15381-9E5D-4C22-9E3D-3BA0C0EE5FAD}.4.6.2|Any CPU.ActiveCfg = Debug|Any CPU
+		{DCD15381-9E5D-4C22-9E3D-3BA0C0EE5FAD}.4.6.2|Any CPU.Build.0 = Debug|Any CPU
+		{DCD15381-9E5D-4C22-9E3D-3BA0C0EE5FAD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DCD15381-9E5D-4C22-9E3D-3BA0C0EE5FAD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DCD15381-9E5D-4C22-9E3D-3BA0C0EE5FAD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DCD15381-9E5D-4C22-9E3D-3BA0C0EE5FAD}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {46A80163-E8F5-4C2B-9A99-DB905442BB36}
+	EndGlobalSection
+	GlobalSection(SharedMSBuildProjectFiles) = preSolution
+		Yagasoft.Libraries.Common.Shared\Yagasoft.Libraries.Common.Shared.projitems*{9c3acb02-9da9-4891-bc35-f8a6c844e9af}*SharedItemsImports = 5
+		Yagasoft.Libraries.Common.Shared\Yagasoft.Libraries.Common.Shared.projitems*{c0f9b3a7-0582-4e58-8c72-95c3d8b7c142}*SharedItemsImports = 4
+		Yagasoft.Libraries.Common.Shared\Yagasoft.Libraries.Common.Shared.projitems*{ff31c0f5-4c37-46e5-9a2d-89b5ad828243}*SharedItemsImports = 13
 	EndGlobalSection
 EndGlobal

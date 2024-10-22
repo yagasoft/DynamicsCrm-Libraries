@@ -89,7 +89,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Common.cs" />
+    <Compile Include="Common.NetFramework.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -148,6 +148,7 @@
     <None Include="Scripts\ys_RichEditor_v5.html" />
   </ItemGroup>
   <ItemGroup />
+  <Import Project="..\Yagasoft.Libraries.Common.Shared\Yagasoft.Libraries.Common.Shared.projitems" Label="Shared" />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>IF "$(ConfigurationName)" == "Release" (

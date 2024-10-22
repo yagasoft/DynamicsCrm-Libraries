@@ -112,7 +112,8 @@
     </releaseNotes>
   </metadata>
   <files>
-    <file src="..\Common.cs" target="content\Common.cs" />
+    <file src="..\..\Yagasoft.Libraries.Common.Shared\Common.cs" target="content\Common.cs" />
+    <file src="..\Common.NetFramework.cs" target="content\Common.NetFramework.cs" />
     <file src="..\LICENCE" target="licence\LICENCE" />
   </files>
 </package>

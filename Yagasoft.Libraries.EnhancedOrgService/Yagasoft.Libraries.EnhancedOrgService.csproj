@@ -4,7 +4,7 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{9A22C040-7EA8-4F23-94B5-6B222E6EE05B}</ProjectGuid>
+    <ProjectGuid>{431DB49F-E3C5-4F39-8821-0D988DE196C2}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Yagasoft.Libraries.EnhancedOrgService</RootNamespace>
