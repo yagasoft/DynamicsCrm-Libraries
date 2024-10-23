@@ -137,12 +137,13 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 		public EnhancedServiceParams AutoSetMaxPerformanceParams()
 		{
 			ConnectionParams ??= new ConnectionParams();
-			ConnectionParams.DotNetDefaultConnectionLimit = 30000;
+			ConnectionParams.DotNetDefaultConnectionLimit = 65000;
 			ConnectionParams.IsDotNetDisableWaitForConnectConfirm = true;
 			ConnectionParams.IsDotNetDisableNagleAlgorithm = true;
+			ConnectionParams.IsMaxPerformance = true;
 
 			PoolParams ??= new PoolParams();
-			PoolParams.DotNetSetMinAppReservedThreads = 100;
+			PoolParams.IsMaxPerformance = true;
 
 			return this;
 		}

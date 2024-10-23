@@ -9,7 +9,7 @@
   <PropertyGroup>
     <PackageId>Yagasoft.Libraries.EnhancedOrgService.NetCore</PackageId>
     <Title>Power Platform Enhanced Service Client</Title>
-    <Version>1.1.1</Version>
+    <Version>1.2.1</Version>
     <Authors>os1983;Yagasoft</Authors>
     <Company>Yagasoft</Company>
     <Owners>Yagasoft</Owners>
@@ -23,7 +23,10 @@ It supports pooling, transactions, deferred execution, caching, load balancing, 
     <PackageProjectUrl>https://github.com/yagasoft/DynamicsCrm-Libraries</PackageProjectUrl>
     <RepositoryUrl>https://github.com/yagasoft/DynamicsCrm-Libraries.git</RepositoryUrl>
     <PackageTags>organization;service;IOrganizationService;CrmServiceClient;ServiceClient;CRM;Dynamics;365;performance;transaction;pool;bulk;cache;caching;load;balancing;deferred;retry;auto;netcore;net6.0</PackageTags>
-    <PackageReleaseNotes>      * 1.1.1
+    <PackageReleaseNotes>      * 1.2.1
+      Added: async methods
+      Fixed: issues
+      * 1.1.1
       Added: support for .NET 6.0
       * 6.2.5
       Fixed: RetrieveMultiple error
@@ -104,7 +107,12 @@ It supports pooling, transactions, deferred execution, caching, load balancing, 
     <PackageLicenseFile>LICENCE</PackageLicenseFile>
     <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
     <RunAnalyzersDuringBuild>False</RunAnalyzersDuringBuild>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Pools\WarmUp\WarmUp.cs" />
+  </ItemGroup>
 
 
   <ItemGroup>

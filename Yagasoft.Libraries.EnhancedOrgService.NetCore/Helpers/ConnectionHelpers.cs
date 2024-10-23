@@ -4,6 +4,7 @@ using System;
 using System.ServiceModel;
 using System.Text.RegularExpressions;
 using Microsoft.PowerPlatform.Dataverse.Client;
+using Microsoft.PowerPlatform.Dataverse.Client.Model;
 using Microsoft.Xrm.Sdk;
 using Yagasoft.Libraries.Common;
 

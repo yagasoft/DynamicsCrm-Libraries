@@ -2,6 +2,8 @@
 
 using System;
 using System.Collections.Generic;
+
+using Microsoft.PowerPlatform.Dataverse.Client;
 using Microsoft.Xrm.Sdk;
 using Yagasoft.Libraries.Common;
 using Yagasoft.Libraries.EnhancedOrgService.Response.Operations;
@@ -76,7 +78,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 		///     Define functions to retry failures. If one works, then the operation will be considered a success at its original
 		///     location.
 		/// </summary>
-		public readonly List<Func<Func<IOrganizationService, object>, Operation, ExecuteParams, Exception, object>>
+		public readonly List<Func<Func<IOrganizationServiceAsync2, Task<object>>, Operation, ExecuteParams, Exception, Task<object>>>
 			CustomRetryFunctions = new();
 
 		private int? maxRetryCount;

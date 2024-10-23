@@ -14,11 +14,11 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 	/// </summary>
 	public class DefaultServicePool : ServicePool<IOrganizationService>
 	{
-		public DefaultServicePool(string connectionString, int poolSize = 2, TimeSpan? tokenExpiryCheck = null)
+		public DefaultServicePool(string connectionString, int poolSize = -1, TimeSpan? tokenExpiryCheck = null)
 			: this(new ConnectionParams { ConnectionString = connectionString }, poolSize, tokenExpiryCheck)
 		{ }
 
-		public DefaultServicePool(ConnectionParams connectionParams, int poolSize = 2, TimeSpan? tokenExpiryCheck = null)
+		public DefaultServicePool(ConnectionParams connectionParams, int poolSize = -1, TimeSpan? tokenExpiryCheck = null)
 			: this(connectionParams, new PoolParams { PoolSize = poolSize, TokenExpiryCheck = tokenExpiryCheck })
 		{ }
 
@@ -33,7 +33,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 			: base(new ServiceFactory(connectionParams, poolParams?.TokenExpiryCheck), poolParams)
 		{ }
 
-		public DefaultServicePool(IServiceFactory<IOrganizationService> factory, int poolSize = 2, TimeSpan? tokenExpiryCheck = null)
+		public DefaultServicePool(IServiceFactory<IOrganizationService> factory, int poolSize = -1, TimeSpan? tokenExpiryCheck = null)
 			: this(factory, new PoolParams { PoolSize = poolSize, TokenExpiryCheck = tokenExpiryCheck })
 		{ }
 

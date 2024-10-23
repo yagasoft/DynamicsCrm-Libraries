@@ -59,8 +59,5 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools.WarmUp
         {
             isWarmUp = false;
         }
-
-
-
     }
 }

@@ -5,9 +5,14 @@ using System.Collections.Generic;
 using System.IdentityModel.Tokens;
 using System.Linq;
 using System.Runtime.Caching;
+using System.ServiceModel;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+
+using Microsoft.PowerPlatform.Dataverse.Client;
+using Microsoft.PowerPlatform.Dataverse.Client.Utils;
+using Microsoft.Rest;
 using Microsoft.Xrm.Client.Services;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Messages;
@@ -69,8 +74,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 
 		protected internal static int OperationIndex;
 
-		protected internal IOrganizationService CrmService;
-		protected internal IServicePool<IOrganizationService> ServicePool;
+		protected internal IOrganizationServiceAsync2 CrmService;
+		public IServicePool<IOrganizationService>? ServicePool;
 
 		protected internal Action ReleaseService;
 
@@ -94,7 +99,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 		private double RetryBackoffMultiplier => Parameters?.AutoRetryParams?.BackoffMultiplier ?? 1;
 		private TimeSpan? MaxmimumRetryInterval => Parameters?.AutoRetryParams?.MaxmimumRetryInterval;
 
-		private IEnumerable<Func<Func<IOrganizationService, object>, Operation, ExecuteParams, Exception, object>> CustomRetryFunctions
+		private IEnumerable<Func<Func<IOrganizationServiceAsync2, Task<object>>, Operation, ExecuteParams, Exception, Task<object>>> CustomRetryFunctions
 			=> Parameters?.AutoRetryParams?.CustomRetryFunctions;
 
 		protected internal EnhancedOrgServiceBase(ServiceParams parameters)
@@ -135,7 +140,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 		protected internal virtual void InitialiseConnection(IOrganizationService service)
 		{
 			service.Require(nameof(service));
-			CrmService = service;
+			CrmService = service as IOrganizationServiceAsync2;
 			IsReleased = false;
 		}
 
@@ -161,7 +166,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 
 			if (ServicePool != null)
 			{
-				service = ServicePool.GetService() ?? CrmService;
+				service = (ServicePool.GetService() ?? CrmService) as IOrganizationServiceAsync2;
 			}
 
 			if (service == null)
@@ -244,117 +249,242 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 
 		#endregion
 
-		protected virtual T InnerExecute<T>(OrganizationRequest request, Func<OrganizationResponse, T> selector, string selectorCacheKey)
+		protected virtual async Task<T> InnerExecute<T>(OrganizationRequest request, Func<OrganizationResponse, T> selector, string selectorCacheKey)
 		{
-			var execute = Cache == null
-				? null
-				: new Func
-					<OrganizationRequest, Func<OrganizationRequest, OrganizationResponse>, Func<OrganizationResponse, T>, string, T>
-					(Cache.Execute);
+			//var execute = Cache == null
+			//	? null
+			//	: new Func
+			//		<OrganizationRequest, Func<OrganizationRequest, Task<OrganizationResponse>>, Func<OrganizationResponse, T>, string, Task<T>>
+			//		(Cache.Execute);
 
-			return InnerExecute(request, execute, selector, selectorCacheKey);
+			return await InnerExecute(request, null, selector, selectorCacheKey);
 		}
 
-		protected virtual T InnerExecute<T>(OrganizationRequest request) where T : OrganizationResponse
+		protected virtual async Task<T> InnerExecute<T>(OrganizationRequest request) where T : OrganizationResponse
 		{
-			return InnerExecute(request, response => response as T, null);
+			return await InnerExecute(request, response => response as T, null);
 		}
 
-		protected virtual T InnerExecute<T>(OrganizationRequest request,
-			Func<OrganizationRequest, Func<OrganizationRequest, OrganizationResponse>, Func<OrganizationResponse, T>, string, T>
+		protected virtual async Task<T> InnerExecute<T>(OrganizationRequest request,
+			Func<OrganizationRequest, Func<OrganizationRequest, Task<OrganizationResponse>>, Func<OrganizationResponse, T>, string, Task<T>>
 				execute,
 			Func<OrganizationResponse, T> selector, string selectorCacheKey)
 		{
-			return execute == null ? selector(InnerExecute(request)) : execute(request, InnerExecute, selector, selectorCacheKey);
+			return execute == null ? selector(await InnerExecute(request)) : await execute(request, InnerExecute, selector, selectorCacheKey);
 		}
 
-		protected virtual OrganizationResponse InnerExecute(OrganizationRequest request)
+		protected virtual async Task<OrganizationResponse> InnerExecute(OrganizationRequest request)
 		{
 			// TODO dead-lock potential: second call in a row
 			using var service = GetService();
-			return service.Execute(request is KeyedRequest keyedRequest ? keyedRequest.Request : request);
+			return await service.ExecuteAsync(request is KeyedRequest keyedRequest ? keyedRequest.Request : request);
 		}
 
 		#region SDK Operations
 
 		public virtual Guid Create(Entity entity)
 		{
-			return CreateAsOperation(entity).Response?.id ?? Guid.Empty;
+			return CreateAsync(entity).Result;
 		}
 
 		public virtual void Update(Entity entity)
 		{
-			Update(entity, null);
+			UpdateAsync(entity).Wait();
 		}
 
 		public virtual void Delete(string entityName, Guid id)
 		{
-			Delete(entityName, id, null);
+			DeleteAsync(entityName, id).Wait();
 		}
 
 		public virtual void Associate(string entityName, Guid entityId, Relationship relationship,
 			EntityReferenceCollection relatedEntities)
 		{
-			Associate(entityName, entityId, relationship, relatedEntities, null);
+			AssociateAsync(entityName, entityId, relationship, relatedEntities).Wait();
 		}
 
 		public virtual void Disassociate(string entityName, Guid entityId, Relationship relationship,
 			EntityReferenceCollection relatedEntities)
 		{
-			Disassociate(entityName, entityId, relationship, relatedEntities, null);
+			DisassociateAsync(entityName, entityId, relationship, relatedEntities).Wait();
 		}
 
 		public virtual Entity Retrieve(string entityName, Guid id, ColumnSet columnSet)
 		{
-			return RetrieveAsOperation(entityName, id, columnSet).Response?.Entity
-				?? new Entity(entityName, id);
+			return RetrieveAsync(entityName, id, columnSet).Result;
 		}
 
 		public virtual EntityCollection RetrieveMultiple(QueryBase query)
 		{
-			return RetrieveMultipleAsOperation(query).Response?.EntityCollection
-				?? new EntityCollection();
+			return RetrieveMultipleAsync(query).Result;
 		}
 
 		public virtual OrganizationResponse Execute(OrganizationRequest request)
 		{
-			return Execute(request, null, null);
+			return ExecuteAsync(request).Result;
 		}
 
+		#endregion
+
+		#region Async
+		
+		public async Task<Guid> CreateAsync(Entity entity)
+		{
+			return await CreateAsync(entity, CancellationToken.None);
+		}
+
+		public async Task<Entity> RetrieveAsync(string entityName, Guid id, ColumnSet columnSet)
+		{
+			return await RetrieveAsync(entityName, id, columnSet, CancellationToken.None);
+		}
+
+		public async Task UpdateAsync(Entity entity)
+		{
+			await UpdateAsync(entity, CancellationToken.None);
+		}
+
+		public async Task DeleteAsync(string entityName, Guid id)
+		{
+			await DeleteAsync(entityName, id, CancellationToken.None);
+		}
+
+		public async Task<OrganizationResponse> ExecuteAsync(OrganizationRequest request)
+		{
+			return await ExecuteAsync(request, null, null, CancellationToken.None);
+		}
+
+		public async Task AssociateAsync(string entityName, Guid entityId, Relationship relationship, EntityReferenceCollection relatedEntities)
+		{
+			await AssociateAsync(entityName, entityId, relationship, relatedEntities, CancellationToken.None);
+		}
+
+		public async Task DisassociateAsync(string entityName, Guid entityId, Relationship relationship, EntityReferenceCollection relatedEntities)
+		{
+			await DisassociateAsync(entityName, entityId, relationship, relatedEntities, CancellationToken.None);
+		}
+
+		public async Task<EntityCollection> RetrieveMultipleAsync(QueryBase query)
+		{
+			return await RetrieveMultipleAsync(query, CancellationToken.None);
+		}
+
+		public async Task AssociateAsync(string entityName, Guid entityId, Relationship relationship, EntityReferenceCollection relatedEntities,
+			CancellationToken cancellationToken)
+		{
+			await AssociateAsync(entityName, entityId, relationship, relatedEntities, null, cancellationToken);
+		}
+
+		public async Task<Guid> CreateAsync(Entity entity, CancellationToken cancellationToken)
+		{
+			return await CreateAsync(entity, null, cancellationToken);
+		}
+
+		public async Task<Entity> CreateAndReturnAsync(Entity entity, CancellationToken cancellationToken)
+		{
+			throw new NotImplementedException();
+		}
+
+		public async Task DeleteAsync(string entityName, Guid id, CancellationToken cancellationToken)
+		{
+			await DeleteAsync(entityName, id, null, cancellationToken);
+		}
+
+		public async Task DisassociateAsync(string entityName, Guid entityId, Relationship relationship, EntityReferenceCollection relatedEntities,
+			CancellationToken cancellationToken)
+		{
+			await DisassociateAsync(entityName, entityId, relationship, relatedEntities, null, cancellationToken);
+		}
+
+		public async Task<OrganizationResponse> ExecuteAsync(OrganizationRequest request, CancellationToken cancellationToken)
+		{
+			return await ExecuteAsync(request, null, null, cancellationToken);
+		}
+
+		public async Task<Entity> RetrieveAsync(string entityName, Guid id, ColumnSet columnSet, CancellationToken cancellationToken)
+		{
+			return await RetrieveAsync<Entity>(entityName, id, columnSet, null, cancellationToken);
+		}
+
+		public async Task<EntityCollection> RetrieveMultipleAsync(QueryBase query, CancellationToken cancellationToken)
+		{
+			return await RetrieveMultipleAsync(query, null, cancellationToken);
+		}
+
+		public async Task UpdateAsync(Entity entity, CancellationToken cancellationToken)
+		{
+			await UpdateAsync(entity, null, cancellationToken);
+		}
+		
 		#endregion
 
 		#region Enhanced Operations
 
 		public virtual Guid Create(Entity entity, ExecuteParams executeParams)
 		{
-			return CreateAsOperation(entity, executeParams).Response?.id ?? Guid.Empty;
+			return CreateAsync(entity, executeParams, CancellationToken.None).Result;
+		}
+
+		public virtual async Task<Guid> CreateAsync(Entity entity, ExecuteParams executeParams, CancellationToken cancellationToken = default)
+		{
+			return (await CreateAsOperationAsync(entity, executeParams, cancellationToken)).Response?.id ?? Guid.Empty;
 		}
 
 		public virtual Operation<UpdateResponse> Update(Entity entity, ExecuteParams executeParams)
 		{
-			return UpdateAsOperation(entity, executeParams);
+			return UpdateAsync(entity, executeParams, CancellationToken.None).Result;
+		}
+
+		public virtual async Task<Operation<UpdateResponse>> UpdateAsync(Entity entity, ExecuteParams executeParams,
+			CancellationToken cancellationToken = default)
+		{
+			return await UpdateAsOperationAsync(entity, executeParams, cancellationToken);
 		}
 
 		public virtual Operation<DeleteResponse> Delete(string entityName, Guid id, ExecuteParams executeParams)
 		{
-			return DeleteAsOperation(entityName, id, executeParams);
+			return DeleteAsync(entityName, id, executeParams, CancellationToken.None).Result;
+		}
+
+		public virtual async Task<Operation<DeleteResponse>> DeleteAsync(string entityName, Guid id, ExecuteParams executeParams,
+			CancellationToken cancellationToken = default)
+		{
+			return await DeleteAsOperationAsync(entityName, id, executeParams, cancellationToken);
 		}
 
 		public virtual Operation<AssociateResponse> Associate(string entityName, Guid entityId, Relationship relationship,
 			EntityReferenceCollection relatedEntities, ExecuteParams executeParams)
 		{
-			return AssociateAsOperation(entityName, entityId, relationship, relatedEntities, executeParams);
+			return AssociateAsync(entityName, entityId, relationship, relatedEntities, executeParams, CancellationToken.None).Result;
+		}
+
+		public virtual async Task<Operation<AssociateResponse>> AssociateAsync(string entityName, Guid entityId,
+			Relationship relationship,
+			EntityReferenceCollection relatedEntities, ExecuteParams executeParams, CancellationToken cancellationToken = default)
+		{
+			return await AssociateAsOperationAsync(entityName, entityId, relationship, relatedEntities, executeParams, cancellationToken);
 		}
 
 		public virtual Operation<DisassociateResponse> Disassociate(string entityName, Guid entityId, Relationship relationship,
 			EntityReferenceCollection relatedEntities, ExecuteParams executeParams)
 		{
-			return DisassociateAsOperation(entityName, entityId, relationship, relatedEntities, executeParams);
+			return DisassociateAsync(entityName, entityId, relationship, relatedEntities, executeParams, CancellationToken.None).Result;
+		}
+
+		public virtual async Task<Operation<DisassociateResponse>> DisassociateAsync(string entityName, Guid entityId,
+			Relationship relationship,
+			EntityReferenceCollection relatedEntities, ExecuteParams executeParams, CancellationToken cancellationToken = default)
+		{
+			return await DisassociateAsOperationAsync(entityName, entityId, relationship, relatedEntities, executeParams, cancellationToken);
 		}
 
 		public virtual Entity Retrieve(string entityName, Guid id, ColumnSet columnSet, ExecuteParams executeParams)
 		{
-			return RetrieveAsOperation(entityName, id, columnSet, executeParams).Response?.Entity
+			return RetrieveAsync(entityName, id, columnSet, executeParams, CancellationToken.None).Result;
+		}
+
+		public virtual async Task<Entity> RetrieveAsync(string entityName, Guid id, ColumnSet columnSet, ExecuteParams executeParams, CancellationToken cancellationToken = default)
+		{
+			return (await RetrieveAsOperationAsync(entityName, id, columnSet, executeParams, cancellationToken)).Response?.Entity
 				?? new Entity(entityName, id);
 		}
 
@@ -362,27 +492,56 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 			ExecuteParams executeParams = null)
 			where TEntity : Entity
 		{
-			return Retrieve(entityName, id, columnSet, executeParams).ToEntity<TEntity>();
+			return RetrieveAsync<TEntity>(entityName, id, columnSet, executeParams, CancellationToken.None).Result;
+		}
+
+		public virtual async Task<TEntity> RetrieveAsync<TEntity>(string entityName, Guid id, ColumnSet columnSet,
+			ExecuteParams executeParams = null, CancellationToken cancellationToken = default)
+			where TEntity : Entity
+		{
+			return (await RetrieveAsync(entityName, id, columnSet, executeParams, cancellationToken)).ToEntity<TEntity>();
 		}
 
 		public virtual EntityCollection RetrieveMultiple(QueryBase query, ExecuteParams executeParams)
 		{
-			return RetrieveMultipleAsOperation(query, executeParams).Response?.EntityCollection
+			return RetrieveMultipleAsync(query, executeParams, CancellationToken.None).Result;
+		}
+
+		public virtual async Task<EntityCollection> RetrieveMultipleAsync(QueryBase query, ExecuteParams executeParams, CancellationToken cancellationToken = default)
+		{
+			return (await RetrieveMultipleAsOperationAsync(query, executeParams, cancellationToken)).Response?.EntityCollection
 				?? new EntityCollection();
 		}
 
 		public virtual OrganizationResponse Execute(OrganizationRequest request, ExecuteParams executeParams)
 		{
-			return Execute(request, executeParams, null);
+			return ExecuteAsync(request, executeParams, CancellationToken.None).Result;
+		}
+
+		public virtual async Task<OrganizationResponse> ExecuteAsync(OrganizationRequest request, ExecuteParams executeParams, CancellationToken cancellationToken = default)
+		{
+			return await ExecuteAsync(request, executeParams, null, cancellationToken);
 		}
 
 		public virtual OrganizationResponse Execute(OrganizationRequest request, ExecuteParams executeParams,
 			Func<IOrganizationService, OrganizationRequest, OrganizationRequest> undoFunction)
 		{
-			return ExecuteAsOperation(request, executeParams, undoFunction).Response;
+			return ExecuteAsync(request, executeParams, undoFunction, CancellationToken.None).Result;
 		}
 
-		public virtual Operation<CreateResponse> CreateAsOperation(Entity entity, ExecuteParams executeParams = null)
+		public virtual async Task<OrganizationResponse> ExecuteAsync(OrganizationRequest request, ExecuteParams executeParams,
+			Func<IOrganizationService, OrganizationRequest, OrganizationRequest> undoFunction, CancellationToken cancellationToken = default)
+		{
+			return (await ExecuteAsOperationAsync(request, executeParams, undoFunction, cancellationToken)).Response;
+		}
+
+		public Operation<CreateResponse> CreateAsOperation(Entity entity, ExecuteParams executeParams = null)
+		{
+			return CreateAsOperationAsync(entity, executeParams).Result;
+		}
+
+		public virtual async Task<Operation<CreateResponse>> CreateAsOperationAsync(Entity entity, ExecuteParams executeParams = null,
+			CancellationToken cancellationToken = default)
 		{
 			ValidateState();
 
@@ -402,10 +561,11 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 
 			AddToTransaction(operation, executeParams);
 
-			TryRunOperation(
-				service =>
+			await TryRunOperation(
+				async service =>
 				{
-					var result = service.Create(entity);
+					var result = await service.CreateAsync(entity,
+						cancellationToken == default ? CancellationToken.None : cancellationToken);
 					operation.Response =
 						new CreateResponse
 						{
@@ -425,6 +585,12 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 
 		public virtual Operation<UpdateResponse> UpdateAsOperation(Entity entity, ExecuteParams executeParams = null)
 		{
+			return UpdateAsOperationAsync(entity, executeParams).Result;
+		}
+
+		public virtual async Task<Operation<UpdateResponse>> UpdateAsOperationAsync(Entity entity, ExecuteParams executeParams = null,
+			CancellationToken cancellationToken = default)
+		{
 			ValidateState();
 
 			var request =
@@ -443,10 +609,11 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 
 			AddToTransaction(operation, executeParams);
 
-			TryRunOperation(
-				service =>
+			await TryRunOperation(
+				async service =>
 				{
-					service.Update(entity);
+					await service.UpdateAsync(entity,
+						cancellationToken == default ? CancellationToken.None : cancellationToken);
 					return 0;
 				},
 				operation, executeParams);
@@ -461,7 +628,14 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 			return operation as Operation<UpdateResponse>;
 		}
 
-		public virtual Operation<DeleteResponse> DeleteAsOperation(string entityName, Guid id, ExecuteParams executeParams = null)
+		public virtual Operation<DeleteResponse> DeleteAsOperation(string entityName, Guid id,
+			ExecuteParams executeParams = null)
+		{
+			return DeleteAsOperationAsync(entityName, id, executeParams, CancellationToken.None).Result;
+		}
+
+		public virtual async Task<Operation<DeleteResponse>> DeleteAsOperationAsync(string entityName, Guid id,
+			ExecuteParams executeParams = null, CancellationToken cancellationToken = default)
 		{
 			ValidateState();
 
@@ -481,10 +655,11 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 
 			AddToTransaction(operation, executeParams);
 
-			TryRunOperation(
-				service =>
+			await TryRunOperation(
+				async service =>
 				{
-					service.Delete(entityName, id);
+					await service.DeleteAsync(entityName, id,
+						cancellationToken == default ? CancellationToken.None : cancellationToken);
 					return 0;
 				},
 				operation, executeParams);
@@ -501,6 +676,13 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 
 		public virtual Operation<AssociateResponse> AssociateAsOperation(string entityName, Guid entityId, Relationship relationship,
 			EntityReferenceCollection relatedEntities, ExecuteParams executeParams = null)
+		{
+			return AssociateAsOperationAsync(entityName, entityId, relationship, relatedEntities, executeParams, CancellationToken.None).Result;
+		}
+
+		public virtual async Task<Operation<AssociateResponse>> AssociateAsOperationAsync(string entityName, Guid entityId,
+			Relationship relationship,
+			EntityReferenceCollection relatedEntities, ExecuteParams executeParams = null, CancellationToken cancellationToken = default)
 		{
 			ValidateState();
 
@@ -520,10 +702,11 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 				return operation as Operation<AssociateResponse>;
 			}
 
-			TryRunOperation(
-				service =>
+			await TryRunOperation(
+				async service =>
 				{
-					service.Associate(entityName, entityId, relationship, relatedEntities);
+					await service.AssociateAsync(entityName, entityId, relationship, relatedEntities,
+						cancellationToken == default ? CancellationToken.None : cancellationToken);
 					return 0;
 				},
 				operation, executeParams);
@@ -538,6 +721,13 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 		public virtual Operation<DisassociateResponse> DisassociateAsOperation(string entityName, Guid entityId,
 			Relationship relationship,
 			EntityReferenceCollection relatedEntities, ExecuteParams executeParams = null)
+		{
+			return DisassociateAsOperationAsync(entityName, entityId, relationship, relatedEntities, executeParams, CancellationToken.None).Result;
+		}
+
+		public virtual async Task<Operation<DisassociateResponse>> DisassociateAsOperationAsync(string entityName, Guid entityId,
+			Relationship relationship,
+			EntityReferenceCollection relatedEntities, ExecuteParams executeParams = null, CancellationToken cancellationToken = default)
 		{
 			ValidateState();
 
@@ -557,10 +747,11 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 				return operation as Operation<DisassociateResponse>;
 			}
 
-			TryRunOperation(
-				service =>
+			await TryRunOperation(
+				async service =>
 				{
-					service.Disassociate(entityName, entityId, relationship, relatedEntities);
+					await service.DisassociateAsync(entityName, entityId, relationship, relatedEntities,
+						cancellationToken == default ? CancellationToken.None : cancellationToken);
 					return 0;
 				},
 				operation, executeParams);
@@ -574,6 +765,12 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 
 		public virtual Operation<RetrieveResponse> RetrieveAsOperation(string entityName, Guid id, ColumnSet columnSet,
 			ExecuteParams executeParams = null)
+		{
+			return RetrieveAsOperationAsync(entityName, id, columnSet, executeParams, CancellationToken.None).Result;
+		}
+
+		public virtual async Task<Operation<RetrieveResponse>> RetrieveAsOperationAsync(string entityName, Guid id, ColumnSet columnSet,
+			ExecuteParams executeParams = null, CancellationToken cancellationToken = default)
 		{
 			ValidateState();
 
@@ -591,18 +788,19 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 			var operation = PrepOperation<RetrieveResponse>(request);
 
 			var result =
-				TryRunOperation(
-					service =>
+				await TryRunOperation(
+					async service =>
 					{
 						Entity resultInner;
 
 						if (IsCacheEnabled && executeParams?.IsCachingEnabled != false)
 						{
-							resultInner = InnerExecute<RetrieveResponse>(request)?.Entity;
+							resultInner = (await InnerExecute<RetrieveResponse>(request)).Entity;
 						}
 						else
 						{
-							resultInner = service.Retrieve(entityName, id, columnSet);
+							resultInner = await service.RetrieveAsync(entityName, id, columnSet,
+								cancellationToken == default ? CancellationToken.None : cancellationToken);
 						}
 
 						return resultInner;
@@ -621,6 +819,12 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 		public virtual Operation<RetrieveMultipleResponse> RetrieveMultipleAsOperation(QueryBase query,
 			ExecuteParams executeParams = null)
 		{
+			return RetrieveMultipleAsOperationAsync(query, executeParams, CancellationToken.None).Result;
+		}
+
+		public virtual async Task<Operation<RetrieveMultipleResponse>> RetrieveMultipleAsOperationAsync(QueryBase query,
+			ExecuteParams executeParams = null, CancellationToken cancellationToken = default)
+		{
 			ValidateState();
 
 			var request =
@@ -631,18 +835,19 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 			var operation = PrepOperation<RetrieveMultipleResponse>(request);
 
 			var result =
-				TryRunOperation(
-					service =>
+				await TryRunOperation(
+					async service =>
 					{
 						EntityCollection resultInner;
 
 						if (IsCacheEnabled && executeParams?.IsCachingEnabled != false)
 						{
-							resultInner = InnerExecute<RetrieveMultipleResponse>(request)?.EntityCollection;
+							resultInner = (await InnerExecute<RetrieveMultipleResponse>(request)).EntityCollection;
 						}
 						else
 						{
-							resultInner = service.RetrieveMultiple(query);
+							resultInner = await service.RetrieveMultipleAsync(query,
+								cancellationToken == default ? CancellationToken.None : cancellationToken);
 						}
 
 						return resultInner;
@@ -660,27 +865,53 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 
 		public virtual Operation ExecuteAsOperation(OrganizationRequest request, ExecuteParams executeParams = null)
 		{
-			return ExecuteAsOperation(request, executeParams, null);
+			return ExecuteAsOperationAsync(request, executeParams, CancellationToken.None).Result;
+		}
+
+		public virtual async Task<Operation> ExecuteAsOperationAsync(OrganizationRequest request, ExecuteParams executeParams = null, CancellationToken cancellationToken = default)
+		{
+			return await ExecuteAsOperationAsync(request, executeParams, null, cancellationToken);
 		}
 
 		public virtual Operation ExecuteAsOperation(OrganizationRequest request, ExecuteParams executeParams,
 			Func<IOrganizationService, OrganizationRequest, OrganizationRequest> undoFunction)
 		{
+			return ExecuteAsOperationAsync(request, executeParams, undoFunction, CancellationToken.None).Result;
+		}
+
+		public virtual async Task<Operation> ExecuteAsOperationAsync(OrganizationRequest request, ExecuteParams executeParams,
+			Func<IOrganizationService, OrganizationRequest, OrganizationRequest> undoFunction, CancellationToken cancellationToken = default)
+		{
 			ValidateState();
-			return ExecuteAsOperation(request, executeParams, undoFunction,
-				PrepOperation<OrganizationResponse>(request) as Operation<OrganizationResponse>);
+			return await ExecuteAsOperationAsync(request, executeParams, undoFunction,
+				PrepOperation<OrganizationResponse>(request) as Operation<OrganizationResponse>, cancellationToken);
 		}
 
 		public virtual Operation<TResponse> ExecuteAsOperation<TResponse>(OrganizationRequest request, ExecuteParams executeParams,
 			Func<IOrganizationService, OrganizationRequest, OrganizationRequest> undoFunction)
 			where TResponse : OrganizationResponse
 		{
-			ValidateState();
-			return ExecuteAsOperation(request, executeParams, undoFunction, PrepOperation<TResponse>(request) as Operation<TResponse>);
+			return ExecuteAsOperationAsync<TResponse>(request, executeParams, undoFunction, CancellationToken.None).Result;
 		}
 
-		protected virtual Operation<TResponse> ExecuteAsOperation<TResponse>(OrganizationRequest request, ExecuteParams executeParams,
+		public virtual async Task<Operation<TResponse>> ExecuteAsOperationAsync<TResponse>(OrganizationRequest request, ExecuteParams executeParams,
+			Func<IOrganizationService, OrganizationRequest, OrganizationRequest> undoFunction, CancellationToken cancellationToken = default)
+			where TResponse : OrganizationResponse
+		{
+			ValidateState();
+			return await ExecuteAsOperationAsync(request, executeParams, undoFunction, PrepOperation<TResponse>(request) as Operation<TResponse>, cancellationToken);
+		}
+
+		protected virtual async Task<Operation<TResponse>> ExecuteAsOperation<TResponse>(OrganizationRequest request,
+			ExecuteParams executeParams,
 			Func<IOrganizationService, OrganizationRequest, OrganizationRequest> undoFunction, Operation<TResponse> operation)
+			where TResponse : OrganizationResponse
+		{
+			return ExecuteAsOperationAsync(request, executeParams, undoFunction, operation, CancellationToken.None).Result;
+		}
+
+		protected virtual async Task<Operation<TResponse>> ExecuteAsOperationAsync<TResponse>(OrganizationRequest request, ExecuteParams executeParams,
+			Func<IOrganizationService, OrganizationRequest, OrganizationRequest> undoFunction, Operation<TResponse> operation, CancellationToken cancellationToken = default)
 			where TResponse : OrganizationResponse
 		{
 			ValidateState();
@@ -695,18 +926,19 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 			AddToTransaction(operation, executeParams);
 
 			(operation as Operation).Response =
-				TryRunOperation(
-					service =>
+				await TryRunOperation(
+					async service =>
 					{
 						OrganizationResponse resultInner;
 
 						if (IsCacheEnabled && executeParams?.IsCachingEnabled != false)
 						{
-							resultInner = InnerExecute<OrganizationResponse>(request);
+							resultInner = await InnerExecute<OrganizationResponse>(request);
 						}
 						else
 						{
-							resultInner = service.Execute(request);
+							resultInner = await service.ExecuteAsync(request,
+								cancellationToken == default ? CancellationToken.None : cancellationToken);
 						}
 
 						return resultInner;
@@ -757,6 +989,12 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 		public virtual IDictionary<OrganizationRequest, OrganisationRequestToken<OrganizationResponse>> ExecuteDeferredRequests(
 			int bulkSize = 1000)
 		{
+			return ExecuteDeferredRequestsAsync(bulkSize).Result;
+		}
+
+		public virtual async Task<IDictionary<OrganizationRequest, OrganisationRequestToken<OrganizationResponse>>> ExecuteDeferredRequestsAsync(
+			int bulkSize = 1000)
+		{
 			ValidateDeferredQueueState();
 			return deferredOrgService?.ExecuteDeferredRequests(bulkSize);
 		}
@@ -772,7 +1010,12 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 
 		public virtual UpsertResponse Upsert(Entity entity, ExecuteParams executeParams = null)
 		{
-			return Execute<UpsertResponse>(
+			return UpsertAsync(entity, executeParams).Result;
+		}
+
+		public virtual async Task<UpsertResponse> UpsertAsync(Entity entity, ExecuteParams executeParams = null)
+		{
+			return await ExecuteAsync<UpsertResponse>(
 				new UpsertRequest
 				{
 					Target = entity
@@ -782,7 +1025,13 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 		public virtual TResponse Execute<TResponse>(OrganizationRequest request, ExecuteParams executeParams = null)
 			where TResponse : OrganizationResponse
 		{
-			return (TResponse)Execute(request, executeParams, null);
+			return ExecuteAsync<TResponse>(request, executeParams, CancellationToken.None).Result;
+		}
+
+		public virtual async Task<TResponse> ExecuteAsync<TResponse>(OrganizationRequest request, ExecuteParams executeParams = null, CancellationToken cancellationToken = default)
+			where TResponse : OrganizationResponse
+		{
+			return (TResponse) await ExecuteAsync(request, executeParams, null, cancellationToken);
 		}
 
 		public virtual TResponse Execute<TResponse, TRequest>(OrganizationRequest request, ExecuteParams executeParams = null,
@@ -790,15 +1039,30 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 			where TResponse : OrganizationResponse
 			where TRequest : OrganizationRequest
 		{
-			return (TResponse)Execute(request, executeParams,
-				(Func<IOrganizationService, OrganizationRequest, OrganizationRequest>)undoFunction);
+			return ExecuteAsync<TResponse, TRequest>(request, executeParams, undoFunction, CancellationToken.None).Result;
+		}
+
+		public virtual async Task<TResponse> ExecuteAsync<TResponse, TRequest>(OrganizationRequest request, ExecuteParams executeParams = null,
+			Func<IOrganizationService, TRequest, OrganizationRequest> undoFunction = null, CancellationToken cancellationToken = default)
+			where TResponse : OrganizationResponse
+			where TRequest : OrganizationRequest
+		{
+			return (TResponse) await ExecuteAsync(request, executeParams,
+				(Func<IOrganizationService, OrganizationRequest, OrganizationRequest>)undoFunction, cancellationToken);
 		}
 
 		public virtual Operation<TResponse> ExecuteAsOperation<TResponse>(OrganizationRequest request,
 			ExecuteParams executeParams = null)
 			where TResponse : OrganizationResponse
 		{
-			return ExecuteAsOperation<TResponse>(request, executeParams, null);
+			return ExecuteAsOperationAsync<TResponse>(request, executeParams, CancellationToken.None).Result;
+		}
+
+		public virtual async Task<Operation<TResponse>> ExecuteAsOperationAsync<TResponse>(OrganizationRequest request,
+			ExecuteParams executeParams = null, CancellationToken cancellationToken = default)
+			where TResponse : OrganizationResponse
+		{
+			return await ExecuteAsOperationAsync<TResponse>(request, executeParams, null, cancellationToken);
 		}
 
 		public virtual Operation<TResponse> ExecuteAsOperation<TResponse, TRequest>(OrganizationRequest request,
@@ -806,11 +1070,27 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 			where TRequest : OrganizationRequest
 			where TResponse : OrganizationResponse
 		{
-			return ExecuteAsOperation(request, executeParams,
-				(Func<IOrganizationService, OrganizationRequest, OrganizationRequest>)undoFunction) as Operation<TResponse>;
+			return ExecuteAsOperationAsync<TResponse, TRequest>(request, executeParams, undoFunction, CancellationToken.None).Result;
+		}
+
+		public virtual async Task<Operation<TResponse>> ExecuteAsOperationAsync<TResponse, TRequest>(OrganizationRequest request,
+			ExecuteParams executeParams = null, Func<IOrganizationService, TRequest, OrganizationRequest> undoFunction = null, CancellationToken cancellationToken = default)
+			where TRequest : OrganizationRequest
+			where TResponse : OrganizationResponse
+		{
+			return await ExecuteAsOperationAsync(request, executeParams,
+				(Func<IOrganizationService, OrganizationRequest, OrganizationRequest>)undoFunction, cancellationToken) as Operation<TResponse>;
 		}
 
 		public virtual IDictionary<OrganizationRequest, ExecuteBulkResponse> ExecuteBulk(List<OrganizationRequest> requests,
+			bool isReturnResponses = false, int batchSize = 1000, bool isContinueOnError = true,
+			Action<int, int, IDictionary<OrganizationRequest, ExecuteBulkResponse>> bulkFinishHandler = null,
+			ExecuteParams executeParams = null)
+		{
+			return ExecuteBulkAsync(requests, isReturnResponses, batchSize, isContinueOnError, bulkFinishHandler, executeParams).Result;
+		}
+
+		public virtual async Task<IDictionary<OrganizationRequest, ExecuteBulkResponse>> ExecuteBulkAsync(List<OrganizationRequest> requests,
 			bool isReturnResponses = false, int batchSize = 1000, bool isContinueOnError = true,
 			Action<int, int, IDictionary<OrganizationRequest, ExecuteBulkResponse>> bulkFinishHandler = null,
 			ExecuteParams executeParams = null)
@@ -847,7 +1127,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 				// take batches
 				bulkRequest.Requests.AddRange(requests.Skip(i * batchSize).Take(batchSize));
 
-				var operation = ExecuteAsOperation<ExecuteMultipleResponse>(bulkRequest, executeParams);
+				var operation = await ExecuteAsOperationAsync<ExecuteMultipleResponse>(bulkRequest, executeParams);
 				var bulkResponses = operation?.Response;
 
 				if (bulkResponses == null)
@@ -946,23 +1226,44 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 			ExecuteParams executeParams = null)
 			where TEntityType : Entity
 		{
+			return RetrieveMultipleAsync<TEntityType>(query, limit, executeParams).Result;
+		}
+
+		public virtual async Task<IEnumerable<TEntityType>> RetrieveMultipleAsync<TEntityType>(string query, int limit = -1,
+			ExecuteParams executeParams = null)
+			where TEntityType : Entity
+		{
 			ValidateState();
 			
-			return RetrieveMultiple<TEntityType>(RequestHelper.CloneQuery(this, query), limit, executeParams);
+			return await RetrieveMultipleAsync<TEntityType>(await RequestHelper.CloneQueryAsync(this, query), limit, executeParams);
 		}
 
 		public virtual IEnumerable<TEntityType> RetrieveMultiple<TEntityType>(QueryExpression query, int limit = -1,
 			ExecuteParams executeParams = null)
 			where TEntityType : Entity
 		{
+			return RetrieveMultipleAsync<TEntityType>(query, limit, executeParams).Result;
+		}
+
+		public virtual async Task<IEnumerable<TEntityType>> RetrieveMultipleAsync<TEntityType>(QueryExpression query, int limit = -1,
+			ExecuteParams executeParams = null)
+			where TEntityType : Entity
+		{
 			ValidateState();
 
-			return RetrieveMultipleRangePaged<TEntityType>(query, 1,
+			return await RetrieveMultipleRangePagedAsync<TEntityType>(query, 1,
 				limit <= 0 ? int.MaxValue : (int)Math.Ceiling(limit / 5000d),
 				limit <= 0 ? int.MaxValue : limit, executeParams);
 		}
 
 		public virtual IEnumerable<TEntityType> RetrieveMultipleRangePaged<TEntityType>(QueryExpression query,
+			int pageStart = 1, int pageEnd = 1, int pageSize = 5000, ExecuteParams executeParams = null)
+			where TEntityType : Entity
+		{
+			return RetrieveMultipleRangePagedAsync<TEntityType>(query, pageStart, pageEnd, pageSize, executeParams).Result;
+		}
+
+		public virtual async Task<IEnumerable<TEntityType>> RetrieveMultipleRangePagedAsync<TEntityType>(QueryExpression query,
 			int pageStart = 1, int pageEnd = 1, int pageSize = 5000, ExecuteParams executeParams = null)
 			where TEntityType : Entity
 		{
@@ -975,7 +1276,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 
 			for (var i = pageStart; i <= pageEnd; i++)
 			{
-				var result = RetrieveMultiplePage<TEntityType>(query, pageSize, i, executeParams)
+				var result = (await RetrieveMultiplePageAsync<TEntityType>(query, pageSize, i, executeParams))
 					.ToArray();
 				entities.AddRange(result);
 
@@ -989,6 +1290,14 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 		}
 
 		public virtual IEnumerable<TEntityType> RetrieveMultiplePage<TEntityType>(QueryExpression query, int pageSize = 5000,
+			int page = 1,
+			ExecuteParams executeParams = null)
+			where TEntityType : Entity
+		{
+			return RetrieveMultiplePageAsync<TEntityType>(query, pageSize, page, executeParams).Result;
+		}
+
+		public virtual async Task<IEnumerable<TEntityType>> RetrieveMultiplePageAsync<TEntityType>(QueryExpression query, int pageSize = 5000,
 			int page = 1,
 			ExecuteParams executeParams = null)
 			where TEntityType : Entity
@@ -1008,10 +1317,10 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 				&& (currentCookie == null
 					|| page - 1 != int.Parse(Regex.Match(currentCookie, @"page=""(.*?)""").Groups[1].ToString())))
 			{
-				query.PageInfo.PagingCookie = RequestHelper.GetCookie(this, query, pageSize, page);
+				query.PageInfo.PagingCookie = await RequestHelper.GetCookieAsync(this, query, pageSize, page);
 			}
 
-			var result = RetrieveMultipleAsOperation(query, executeParams)?.Response?.EntityCollection;
+			var result = (await RetrieveMultipleAsOperationAsync(query, executeParams)).Response?.EntityCollection;
 
 			if (result == null)
 			{
@@ -1031,28 +1340,43 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 
 		public virtual int GetRecordsCount(QueryBase query)
 		{
+			return GetRecordsCountAsync(query).Result;
+		}
+
+		public virtual async Task<int> GetRecordsCountAsync(QueryBase query)
+		{
 			ValidateState();
-			return RequestHelper.GetTotalRecordsCount(this, query);
+			return await RequestHelper.GetTotalRecordsCountAsync(this, query);
 		}
 
 		public virtual int GetPagesCount(QueryBase query, int pageSize = 5000)
 		{
+			return GetPagesCountAsync(query, pageSize).Result;
+		}
+
+		public virtual async Task<int> GetPagesCountAsync(QueryBase query, int pageSize = 5000)
+		{
 			ValidateState();
 			pageSize.RequireInRange(1, 5000, nameof(pageSize));
-			return RequestHelper.GetTotalPagesCount(this, query, pageSize);
+			return await RequestHelper.GetTotalPagesCountAsync(this, query, pageSize);
 		}
 
 		public virtual QueryExpression CloneQuery(QueryBase query)
 		{
+			return CloneQueryAsync(query).Result;
+		}
+
+		public virtual async Task<QueryExpression> CloneQueryAsync(QueryBase query)
+		{
 			ValidateState();
-			return RequestHelper.CloneQuery(this, query);
+			return await RequestHelper.CloneQueryAsync(this, query);
 		}
 
 		#endregion
 
 		#region Operation Handling
 
-		protected internal virtual TResult TryRunOperation<TResult>(Func<IOrganizationService, TResult> action,
+		protected internal virtual async Task<TResult> TryRunOperation<TResult>(Func<IOrganizationServiceAsync2, Task<TResult>> action,
 			Operation operation, ExecuteParams executeParams, bool isDelegated = false)
 		{
 			var isRetryEnabled = executeParams?.IsAutoRetryEnabled ?? IsRetryEnabled;
@@ -1082,12 +1406,36 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 
 						using (var service = GetService())
 						{
-							return action(service);
+							var result = await action(service);
+							ServicePool?.AutoSizeIncrement();
+
+							return result;
 						}
 					}
 					catch (Exception ex)
 					{
-						if (!isRetryEnabled || currentRetry >= maxRetryCount || nextInterval > maxmimumRetryInterval)
+						var isForceRetry = false;
+						
+						if (ex is FaultException<OrganizationServiceFault> svcFault)
+						{
+							switch (svcFault.Detail.ErrorCode)
+							{
+								case -2147015902:
+								case -2147015903:
+									isForceRetry = true;
+									break;
+									
+								case -2147015898:
+									// 0x80072326: too many connections
+									// decrease the limit
+									ServicePool?.AutoSizeDecrement();
+									isForceRetry = true;
+									
+									break;
+							}
+						}
+						
+						if (!isForceRetry && (!isRetryEnabled || currentRetry >= maxRetryCount || nextInterval > maxmimumRetryInterval))
 						{
 							if (!isDelegated)
 							{
@@ -1101,7 +1449,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 									{
 										try
 										{
-											var customRetryResult = function(s => action(s), operation, executeParams, ex);
+											var customRetryResult = await function(async s => await action(s), operation, executeParams, ex);
 
 											if (customRetryResult is TResult result && operation.OperationStatus == Status.Success)
 											{

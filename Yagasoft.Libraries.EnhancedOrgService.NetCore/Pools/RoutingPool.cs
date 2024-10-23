@@ -1,7 +1,5 @@
 ﻿#region Imports
 
-using System;
-using System.Linq;
 using Microsoft.Xrm.Sdk;
 using Yagasoft.Libraries.EnhancedOrgService.Factories;
 using Yagasoft.Libraries.EnhancedOrgService.Router;
@@ -16,6 +14,30 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 		public int CreatedServices => routingService.Nodes.Sum(n => n.Pool.CreatedServices);
 
 		public int CurrentPoolSize => routingService.Nodes.Sum(n => n.Pool.CurrentPoolSize);
+
+		public virtual bool IsAutoPoolSize
+		{
+			get => routingService.Nodes.Any(n => n.Pool.IsAutoPoolSize);
+			set
+			{
+				foreach (var node in routingService.Nodes)
+				{
+					node.Pool.IsAutoPoolSize = value;
+				}
+			}
+		}
+
+		public virtual int MaxPoolSize
+		{
+			get => routingService.Nodes.Sum(n => n.Pool.MaxPoolSize);
+			set
+			{
+				foreach (var node in routingService.Nodes)
+				{
+					node.Pool.MaxPoolSize = value;
+				}
+			}
+		}
 
 		public IServiceFactory<TService> Factory =>
 			throw new NotSupportedException("This pool does not require a factory to run.");
@@ -47,6 +69,22 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 			if (service is Services.Enhanced.EnhancedOrgService{IsReleased: false } enhancedService)
 			{
 				enhancedService.Dispose();
+			}
+		}
+
+		public void AutoSizeIncrement()
+		{
+			foreach (var node in routingService.Nodes)
+			{
+				node.Pool.AutoSizeIncrement();
+			}
+		}
+
+		public void AutoSizeDecrement()
+		{
+			foreach (var node in routingService.Nodes)
+			{
+				node.Pool.AutoSizeDecrement();
 			}
 		}
 	}

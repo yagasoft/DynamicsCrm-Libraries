@@ -70,6 +70,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 			}
 		}
 
+		internal bool IsMaxPerformance;
+		
 		private TimeSpan? timeout;
 		private int? dotNetDefaultConnectionLimit;
 		private bool? isDotNetDisableWaitForConnectConfirm;

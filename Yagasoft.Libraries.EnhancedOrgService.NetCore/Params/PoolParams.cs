@@ -11,15 +11,35 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 	public class PoolParams : ParamsBase
 	{
 		/// <summary>
-		///     Default value: 2 connections.
+		///     Default value: false.
 		/// </summary>
-		public int? PoolSize
+		public bool IsAutoPoolSize
 		{
-			get => poolSize ?? 2;
+			get => isAutoPoolSize;
 			set
 			{
 				ValidateLock();
-				value?.RequireAtLeast(1, nameof(PoolSize));
+				isAutoPoolSize = value;
+			}
+		}
+
+		/// <summary>
+		///     Default value: <see cref="int.MaxValue"/> connections, which sets <see cref="IsAutoPoolSize"/> to true.
+		/// </summary>
+		public int? PoolSize
+		{
+			get => poolSize ?? int.MaxValue;
+			set
+			{
+				ValidateLock();
+
+				if (value < 1)
+				{
+					IsAutoPoolSize = true;
+					poolSize = null;
+					return;
+				}
+				
 				poolSize = value;
 			}
 		}
@@ -70,6 +90,9 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 			}
 		}
 
+		internal bool IsMaxPerformance;
+		
+		private bool isAutoPoolSize;
 		private int? poolSize;
 		private TimeSpan? tokenExpiryCheck;
 		private TimeSpan? dequeueTimeout;

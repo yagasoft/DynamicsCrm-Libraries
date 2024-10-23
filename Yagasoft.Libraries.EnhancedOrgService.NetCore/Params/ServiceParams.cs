@@ -44,7 +44,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 			}
 		}
 
-		public ConnectionParams ConnectionParams
+		public ConnectionParams? ConnectionParams
 		{
 			get => connectionParams ??= new ConnectionParams();
 			set
@@ -55,7 +55,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 			}
 		}
 
-		public CachingParams CachingParams
+		public CachingParams? CachingParams
 		{
 			get => cachingParams;
 			set
@@ -66,7 +66,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 			}
 		}
 
-		public TransactionParams TransactionParams
+		public TransactionParams? TransactionParams
 		{
 			get => transactionParams;
 			set
@@ -77,7 +77,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 			}
 		}
 
-		public AutoRetryParams AutoRetryParams
+		public AutoRetryParams? AutoRetryParams
 		{
 			get => autoRetryParams;
 			set
@@ -88,7 +88,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 			}
 		}
 
-		public PoolParams PoolParams
+		public PoolParams? PoolParams
 		{
 			get => poolParams;
 			set
@@ -114,11 +114,11 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 		}
 
 		private bool isLocked;
-		private ConnectionParams connectionParams;
-		private CachingParams cachingParams;
-		private TransactionParams transactionParams;
-		private AutoRetryParams autoRetryParams;
-		private PoolParams poolParams;
+		private ConnectionParams? connectionParams;
+		private CachingParams? cachingParams;
+		private TransactionParams? transactionParams;
+		private AutoRetryParams? autoRetryParams;
+		private PoolParams? poolParams;
 		private int? operationHistoryLimit;
 
 		public ServiceParams()
@@ -126,6 +126,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 
 		public ServiceParams(string connectionString)
 		{
+			ConnectionParams ??= new ConnectionParams();
 			ConnectionParams.ConnectionString = connectionString;
 		}
 
@@ -137,13 +138,14 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 		public ServiceParams AutoSetMaxPerformanceParams()
 		{
 			ConnectionParams ??= new ConnectionParams();
-			ConnectionParams.DotNetDefaultConnectionLimit = 30000;
+			ConnectionParams.DotNetDefaultConnectionLimit = 65000;
 			ConnectionParams.IsDotNetDisableWaitForConnectConfirm = true;
 			ConnectionParams.IsDotNetDisableNagleAlgorithm = true;
+			ConnectionParams.IsMaxPerformance = true;
 
 			PoolParams ??= new PoolParams();
-			PoolParams.DotNetSetMinAppReservedThreads = 100;
-
+			PoolParams.IsMaxPerformance = true;
+			
 			return this;
 		}
 	}

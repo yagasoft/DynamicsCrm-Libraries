@@ -29,24 +29,29 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 		/// </summary>
 		public static bool AutoSetMaxPerformanceParams { get; set; }
 
-		public static IEnhancedServicePool<IEnhancedOrgService> GetPool(string connectionString, int poolSize = 2)
+		public static IEnhancedServicePool<IEnhancedOrgService> GetPool(string connectionString, int poolSize = -1)
+		{
+			return GetPool(connectionString, poolSize < 1, poolSize);
+		}
+
+		public static IEnhancedServicePool<IEnhancedOrgService> GetPool(string connectionString, bool isAutoSize, int maxPoolSize = -1)
 		{
 			connectionString.RequireFilled(nameof(connectionString));
-			return GetPool(BuildBaseParams(connectionString, poolSize));
+			return GetPool(BuildBaseParams(connectionString, isAutoSize, maxPoolSize));
 		}
 
 		public static IEnhancedServicePool<IEnhancedOrgService> GetPool(string connectionString, PoolParams poolParams)
 		{
 			connectionString.RequireFilled(nameof(connectionString));
 			poolParams.Require(nameof(poolParams));
-			return GetPool(BuildBaseParams(connectionString, null, poolParams));
+			return GetPool(BuildBaseParams(connectionString, false, null, poolParams));
 		}
 
 		public static IEnhancedServicePool<IEnhancedOrgService> GetPool(ConnectionParams connectionParams, PoolParams poolParams)
 		{
 			connectionParams.Require(nameof(connectionParams));
 			poolParams.Require(nameof(poolParams));
-			return GetPool(BuildBaseParams(null, null, poolParams, connectionParams));
+			return GetPool(BuildBaseParams(null, false, null, poolParams, connectionParams));
 		}
 
 		public static IEnhancedServicePool<IEnhancedOrgService> GetPool(ServiceParams serviceParams)
@@ -62,11 +67,17 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 			return new EnhancedServicePool<IEnhancedOrgService, Services.Enhanced.EnhancedOrgService>(factory, serviceParams.PoolParams);
 		}
 
-		public static IEnhancedServicePool<ICachingOrgService> GetCachingPool(string connectionString, int poolSize = 2,
+		public static IEnhancedServicePool<ICachingOrgService> GetCachingPool(string connectionString, int poolSize = -1,
+			CachingParams cachingParams = null)
+		{
+			return GetCachingPool(connectionString, poolSize < 1, poolSize, cachingParams);
+		}
+
+		public static IEnhancedServicePool<ICachingOrgService> GetCachingPool(string connectionString, bool isAutoSize, int maxPoolSize = -1,
 			CachingParams cachingParams = null)
 		{
 			connectionString.RequireFilled(nameof(connectionString));
-			return GetCachingPool(BuildBaseParams(connectionString, poolSize, null,
+			return GetCachingPool(BuildBaseParams(connectionString, isAutoSize, maxPoolSize, null,
 				cachingParams: cachingParams ?? new CachingParams()));
 		}
 
@@ -75,7 +86,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 		{
 			connectionString.RequireFilled(nameof(connectionString));
 			poolParams.Require(nameof(poolParams));
-			return GetCachingPool(BuildBaseParams(connectionString, null, poolParams,
+			return GetCachingPool(BuildBaseParams(connectionString, false, null, poolParams,
 				cachingParams: cachingParams ?? new CachingParams()));
 		}
 
@@ -84,7 +95,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 		{
 			connectionParams.Require(nameof(connectionParams));
 			poolParams.Require(nameof(poolParams));
-			return GetCachingPool(BuildBaseParams(null, null, poolParams, connectionParams,
+			return GetCachingPool(BuildBaseParams(null, false, null, poolParams, connectionParams,
 				cachingParams ?? new CachingParams()));
 		}
 
@@ -101,10 +112,15 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 			return new EnhancedServicePool<ICachingOrgService, CachingOrgService>(factory, serviceParams.PoolParams);
 		}
 
-		public static IEnhancedOrgService GetPoolingService(string connectionString, int poolSize = 2)
+		public static IEnhancedOrgService GetPoolingService(string connectionString, int poolSize = -1)
+		{
+			return GetPoolingService(connectionString, poolSize < 1, poolSize);
+		}
+
+		public static IEnhancedOrgService GetPoolingService(string connectionString, bool isAutoSize, int? maxPoolSize = -1)
 		{
 			connectionString.RequireFilled(nameof(connectionString));
-			return GetPoolingService(BuildBaseParams(connectionString, poolSize));
+			return GetPoolingService(BuildBaseParams(connectionString, isAutoSize, maxPoolSize));
 		}
 
 		public static IEnhancedOrgService GetPoolingService(ServiceParams serviceParams)
@@ -121,11 +137,17 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 			return factory.CreateService(pool);
 		}
 
-		public static ICachingOrgService GetPoolingCachingService(string connectionString, int poolSize = 2,
+		public static ICachingOrgService GetPoolingCachingService(string connectionString, int poolSize = -1,
+			CachingParams cachingParams = null)
+		{
+			return GetPoolingCachingService(connectionString, poolSize < 1, poolSize, cachingParams);
+		}
+
+		public static ICachingOrgService GetPoolingCachingService(string connectionString, bool isAutoSize, int maxPoolSize = -1,
 			CachingParams cachingParams = null)
 		{
 			connectionString.RequireFilled(nameof(connectionString));
-			return GetCachingPoolingService(BuildBaseParams(connectionString, poolSize, null,
+			return GetCachingPoolingService(BuildBaseParams(connectionString, isAutoSize, maxPoolSize, null,
 				cachingParams: cachingParams ?? new CachingParams()));
 		}
 
@@ -186,15 +208,15 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 				.CreateService(routingPool);
 		}
 
-		private static ServiceParams BuildBaseParams(string connectionString, int? poolSize = null,
-			PoolParams poolParams = null, ConnectionParams connectionParams = null,
-			CachingParams cachingParams = null)
+		private static ServiceParams BuildBaseParams(string connectionString, bool isAutoSize = false, int? maxPoolSize = null,
+			PoolParams? poolParams = null, ConnectionParams? connectionParams = null,
+			CachingParams? cachingParams = null)
 		{
 			var parameters =
 				new ServiceParams
 				{
 					ConnectionParams = connectionParams ?? new ConnectionParams { ConnectionString = connectionString },
-					PoolParams = poolParams ?? (poolSize == null ? null : new PoolParams { PoolSize = poolSize })
+					PoolParams = poolParams ?? new PoolParams { IsAutoPoolSize = isAutoSize, PoolSize = maxPoolSize }
 				};
 
 			if (cachingParams != null)

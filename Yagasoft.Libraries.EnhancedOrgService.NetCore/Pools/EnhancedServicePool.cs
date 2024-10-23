@@ -29,7 +29,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 
 		private readonly HashSet<IOperationStats> statServices = new();
 
-		public EnhancedServicePool(EnhancedServiceFactory<TService, TEnhancedOrgService> factory, int poolSize = 2)
+		public EnhancedServicePool(EnhancedServiceFactory<TService, TEnhancedOrgService> factory, int poolSize = -1)
 			: this(factory, new PoolParams { PoolSize = poolSize })
 		{ }
 

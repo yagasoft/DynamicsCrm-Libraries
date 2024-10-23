@@ -6,6 +6,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+
+using Microsoft.PowerPlatform.Dataverse.Client;
 using Microsoft.Xrm.Sdk;
 using Yagasoft.Libraries.Common;
 using Yagasoft.Libraries.EnhancedOrgService.Events;
@@ -437,7 +439,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 			return (TService)service;
 		}
 
-		protected internal virtual object CustomRetry(Func<IOrganizationService, object> action, Operation operation,
+		protected internal virtual Task<object> CustomRetry(Func<IOrganizationServiceAsync2, Task<object>> action, Operation operation,
 			ExecuteParams executeParams, Exception ex)
 		{
 			FallbackNodes.Require(nameof(FallbackNodes));

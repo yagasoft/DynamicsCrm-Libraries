@@ -2,6 +2,7 @@
 
 using System;
 using Microsoft.Crm.Sdk.Messages;
+using Microsoft.PowerPlatform.Dataverse.Client;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
 using Yagasoft.Libraries.EnhancedOrgService.Cache;
@@ -14,14 +15,20 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 	{
 		private static readonly QueryCacheControl queryCache = new();
 
-		internal static int GetTotalRecordsCount<TQuery>(IOrganizationService service, TQuery query)
+		internal static int GetTotalRecordsCount<TQuery>(IOrganizationServiceAsync2 service, TQuery query)
+			where TQuery : QueryBase
+		{
+			return GetTotalRecordsCountAsync(service, query).Result;
+		}
+
+		internal static async Task<int> GetTotalRecordsCountAsync<TQuery>(IOrganizationServiceAsync2 service, TQuery query)
 			where TQuery : QueryBase
 		{
 			var queryTemp = query as QueryExpression;
 
 			var pageInfoBackup = queryTemp?.PageInfo;
 			var columnsBackup = queryTemp?.ColumnSet;
-			queryTemp = queryTemp == null ? CloneQuery(service, query) : CloneQueryRefsOnly(queryTemp);
+			queryTemp = queryTemp == null ? await CloneQueryAsync(service, query) : CloneQueryRefsOnly(queryTemp);
 
 			var totalRecordCount = 0;
 
@@ -37,7 +44,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 
 			do
 			{
-				queryResult = service.RetrieveMultiple(queryTemp);
+				queryResult = await service.RetrieveMultipleAsync(queryTemp);
 				totalRecordCount += queryResult.Entities.Count;
 				queryTemp.PageInfo.PagingCookie = queryResult.PagingCookie;
 				queryTemp.PageInfo.PageNumber++;
@@ -50,14 +57,27 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 			return totalRecordCount;
 		}
 
-		internal static int GetTotalPagesCount(IOrganizationService service, QueryBase query, int pageSize = 5000,
+		internal static int GetTotalPagesCount(IOrganizationServiceAsync2 service, QueryBase query, int pageSize = 5000,
+			int? totalRecordsCount = null)
+		{
+			return GetTotalPagesCountAsync(service, query, pageSize, totalRecordsCount).Result;
+		}
+
+		internal static async Task<int> GetTotalPagesCountAsync(IOrganizationServiceAsync2 service, QueryBase query, int pageSize = 5000,
 			int? totalRecordsCount = null)
 		{
 			return (int)Math.Ceiling((totalRecordsCount
-				?? GetTotalRecordsCount(service, query)) / (double)pageSize);
+				?? await GetTotalRecordsCountAsync(service, query)) / (double)pageSize);
 		}
 
-		internal static string GetCookie<TQuery>(IOrganizationService service, TQuery query,
+		internal static string GetCookie<TQuery>(IOrganizationServiceAsync2 service, TQuery query,
+			int? pageSize = null, int? page = null)
+			where TQuery : QueryBase
+		{
+			return GetCookieAsync(service, query, pageSize, page).Result;
+		}
+
+		internal static async Task<string> GetCookieAsync<TQuery>(IOrganizationServiceAsync2 service, TQuery query,
 			int? pageSize = null, int? page = null)
 			where TQuery : QueryBase
 		{
@@ -65,7 +85,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 
 			var pageInfoBackup = queryTemp?.PageInfo;
 			var columnsBackup = queryTemp?.ColumnSet;
-			queryTemp = queryTemp == null ? CloneQuery(service, query) : CloneQueryRefsOnly(queryTemp);
+			queryTemp = queryTemp == null ? await CloneQueryAsync(service, query) : CloneQueryRefsOnly(queryTemp);
 
 			EntityCollection queryResult;
 
@@ -82,7 +102,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 
 			do
 			{
-				queryResult = service.RetrieveMultiple(queryTemp);
+				queryResult = await service.RetrieveMultipleAsync(queryTemp);
 				cookie = queryTemp.PageInfo.PagingCookie = queryResult.PagingCookie;
 				queryTemp.PageInfo.PageNumber++;
 			}
@@ -94,7 +114,12 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 			return cookie;
 		}
 
-		internal static QueryExpression CloneQuery(IOrganizationService service, QueryBase query)
+		internal static QueryExpression CloneQuery(IOrganizationServiceAsync2 service, QueryBase query)
+		{
+			return CloneQueryAsync(service, query).Result;
+		}
+		
+		internal static async Task<QueryExpression> CloneQueryAsync(IOrganizationServiceAsync2 service, QueryBase query)
 		{
 			var cachedQuery = queryCache.GetCachedQuery(query);
 
@@ -105,7 +130,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 
 			// get the FetchXML to create new queries for each page
 			var fetchXml = ((QueryExpressionToFetchXmlResponse)
-				service.Execute(
+				await service.ExecuteAsync(
 					new QueryExpressionToFetchXmlRequest
 					{
 						Query = query
@@ -113,7 +138,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 
 			// create a new QueryExpression object
 			cachedQuery = ((FetchXmlToQueryExpressionResponse)
-				service.Execute(
+				await service.ExecuteAsync(
 					new FetchXmlToQueryExpressionRequest
 					{
 						FetchXml = fetchXml
@@ -124,7 +149,12 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 			return cachedQuery;
 		}
 
-		internal static QueryExpression CloneQuery(IOrganizationService service, string fetchXml)
+		internal static QueryExpression CloneQuery(IOrganizationServiceAsync2 service, string fetchXml)
+		{
+			return CloneQueryAsync(service, fetchXml).Result;
+		}
+
+		internal static async Task<QueryExpression> CloneQueryAsync(IOrganizationServiceAsync2 service, string fetchXml)
 		{
 			var cachedQuery = queryCache.GetCachedQuery(fetchXml);
 
@@ -135,7 +165,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 
 			// create a new QueryExpression object
 			cachedQuery = ((FetchXmlToQueryExpressionResponse)
-				service.Execute(
+				await service.ExecuteAsync(
 					new FetchXmlToQueryExpressionRequest
 					{
 						FetchXml = fetchXml

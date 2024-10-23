@@ -1,6 +1,8 @@
 ﻿#region Imports
 
 using System;
+using Microsoft.PowerPlatform.Dataverse.Client;
+using Microsoft.PowerPlatform.Dataverse.Client.Utils;
 using Microsoft.Xrm.Sdk;
 using Yagasoft.Libraries.Common;
 using Yagasoft.Libraries.EnhancedOrgService.Factories;
@@ -21,24 +23,56 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 		}
 
 		public virtual int CurrentPoolSize => ServicesQueue.Count;
+		
+		public virtual bool IsAutoPoolSize
+		{
+			get => isAutoPoolSize;
+			set => isAutoPoolSize = value;
+		}
+		
+
+		public virtual int MaxPoolSize
+		{
+			get => maxPoolSize;
+			set
+			{
+				maxPoolSize = value;
+				
+				if (PoolParams.IsMaxPerformance)
+				{
+					var maxThreads = MaxPoolSize + 5;
+
+					if (minThreadPool is null)
+					{
+						ThreadPool.GetMinThreads(out var minThreadPoolThreads, out var completionPortThreads);
+						minThreadPool = Math.Max(minThreadPoolThreads, completionPortThreads);
+					}
+
+					ThreadPool.SetMinThreads((minThreadPool ?? 1) + maxThreads, (minThreadPool ?? 1) + maxThreads);
+				}
+			}
+		}
 
 		public virtual IServiceFactory<TService> Factory => factory;
 
-		protected readonly PoolParams PoolParams;
+		internal readonly PoolParams PoolParams;
 
 		protected readonly BlockingQueue<TService> ServicesQueue = new();
+		protected readonly BlockingQueue<object> PreemptiveServicesQueue = new();
 
 		protected int CreatedServicesCount;
 
 		private readonly IServiceFactory<TService> factory;
 
-		private WarmUp.WarmUp warmUp;
+		private bool isAutoPoolSize;
+		private int maxPoolSize;
+		private int? minThreadPool;
 
-		public ServicePool(IServiceFactory<TService> factory, int poolSize = 2)
+		public ServicePool(IServiceFactory<TService> factory, int poolSize = -1)
 			: this(factory, new PoolParams { PoolSize = poolSize })
 		{ }
 
-		public ServicePool(IServiceFactory<TService> factory, PoolParams poolParams = null)
+		public ServicePool(IServiceFactory<TService> factory, PoolParams? poolParams = null)
 		{
 			factory.Require(nameof(factory));
 
@@ -51,40 +85,76 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 
 			PoolParams = poolParams ?? new PoolParams();
 
-			ParamHelpers.SetPerformanceParams(poolParams);
+			isAutoPoolSize = PoolParams.IsAutoPoolSize;
+			maxPoolSize = PoolParams.PoolSize ?? int.MaxValue;
+
+			ParamHelpers.SetPerformanceParams(PoolParams);
+
+			new Thread(
+				() =>
+				{
+					while (true)
+					{
+						try
+						{
+							var isCreate = false;
+
+							PreemptiveServicesQueue.Dequeue();
+
+							lock (ServicesQueue)
+							{
+								if (CreatedServices < MaxPoolSize && ServicesQueue.Count <= 5)
+								{
+									CreatedServicesCount++;
+									isCreate = true;
+								}
+							}
+
+							if (!isCreate)
+							{
+								continue;
+							}
+							
+							var service = factory.CreateService();
+
+							if (service is ServiceClient serviceClient)
+							{
+								serviceClient.DisableCrossThreadSafeties = true;
+							}
+
+							ServicesQueue.Enqueue(service);
+						}
+						catch (DataverseConnectionException)
+						{
+							AutoSizeDecrement();
+							PreemptiveServicesQueue.Enqueue(this);
+						}
+						catch
+						{
+							// ignored
+						}
+					}
+				}) { IsBackground = true }.Start();
 		}
 
 		public virtual void WarmUp()
 		{
-			lock (this)
+			foreach (var _ in Enumerable.Range(1, IsAutoPoolSize ? 2 : (PoolParams.PoolSize ?? 2)))
 			{
-				warmUp ??= new WarmUp.WarmUp(
-					() =>
-					{
-						if (CreatedServicesCount < PoolParams.PoolSize)
-						{
-							ServicesQueue.Enqueue(GetNewService());
-						}
-						else
-						{
-							EndWarmup();
-						}
-					});
+				PreemptiveServicesQueue.Enqueue(this);
 			}
-
-			warmUp.Start();
 		}
 
 		public virtual void EndWarmup()
 		{
-			warmUp.End();
+			PreemptiveServicesQueue.Clear();
 		}
 
 		public virtual TService GetService()
 		{
 			ServicesQueue.TryTake(out var service);
 
-			if (service.EnsureTokenValid((int)(PoolParams.TokenExpiryCheck ?? TimeSpan.FromMinutes(5)).TotalSeconds) == false)
+			if (service?.EnsureTokenValid((int)(PoolParams.TokenExpiryCheck ?? TimeSpan.FromMinutes(5)).TotalSeconds) == false)
 			{
 				service = default;
 			}
@@ -94,15 +164,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 				return service;
 			}
 
-			lock (ServicesQueue)
-			{
-				if (CreatedServices < PoolParams.PoolSize)
-				{
-					service = factory.CreateService();
-					CreatedServicesCount++;
-					return service;
-				}
-			}
+			PreemptiveServicesQueue.Enqueue(this);
 
 			try
 			{
@@ -127,12 +189,35 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 
 			if (service is TService thisService)
 			{
+				lock (ServicesQueue)
+				{
+					if (CreatedServices > MaxPoolSize)
+					{
+						CreatedServicesCount--;
+						return;
+					}
+				}
+				
 				ServicesQueue.Enqueue(thisService);
 			}
 			else
 			{
 				throw new NotSupportedException("Given service is not supported by this pool.");
 			}
+		}
+
+		public void AutoSizeIncrement()
+		{
+			if (IsAutoPoolSize && MaxPoolSize < PoolParams.PoolSize)
+			{
+				MaxPoolSize += 5;
+			}
+		}
+
+		public void AutoSizeDecrement()
+		{
+			IsAutoPoolSize = false;
+			MaxPoolSize = Math.Max(Math.Min(MaxPoolSize, CreatedServices) - 5, 2);
 		}
 
 		protected TService GetNewService()

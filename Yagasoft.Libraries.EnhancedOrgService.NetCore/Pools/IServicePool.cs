@@ -13,13 +13,16 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 	{
 		int CreatedServices { get; }
 		int CurrentPoolSize { get; }
+		bool IsAutoPoolSize { get; set; }
+		int MaxPoolSize { get; set; }
+
 		IServiceFactory<TService> Factory { get; }
 
 		/// <summary>
 		///     If the pool is empty, creates a new Enhanced Service.<br />
 		///     Blocks if the pool exceeds capacity until a service is released.<br />
 		///     If a timeout is specified, a new service is forcibly created after the timeout regardless of the limit.
-		/// This is ensures protection against deadlocks.
+		///     This is ensures protection against deadlocks.
 		/// </summary>
 		TService GetService();
 
@@ -29,5 +32,16 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 		/// </summary>
 		/// <param name="service">Service to release.</param>
 		void ReleaseService(IOrganizationService service);
+
+		/// <summary>
+		///     Increments the <see cref="MaxPoolSize" /> after a successful request.
+		///     Does not exceed the max size set in the parameters.
+		/// </summary>
+		void AutoSizeIncrement();
+
+		/// <summary>
+		///     Decrements the <see cref="MaxPoolSize" /> after a failed request.
+		/// </summary>
+		void AutoSizeDecrement();
 	}
 }

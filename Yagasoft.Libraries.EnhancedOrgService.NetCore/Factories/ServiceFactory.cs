@@ -9,6 +9,7 @@ using Microsoft.Xrm.Sdk.WebServiceClient;
 using Yagasoft.Libraries.Common;
 using Yagasoft.Libraries.EnhancedOrgService.Helpers;
 using Yagasoft.Libraries.EnhancedOrgService.Params;
+using AuthenticationType = Microsoft.PowerPlatform.Dataverse.Client.AuthenticationType;
 
 #endregion
 
@@ -30,9 +31,9 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 			this.connectionParams = connectionParams;
 			this.tokenExpiryCheck = tokenExpiryCheck;
 
-			customServiceFactory = connectionParams?.CustomIOrgSvcFactory ?? customServiceFactory;
+			customServiceFactory = connectionParams.CustomIOrgSvcFactory ?? customServiceFactory;
 
-			ParamHelpers.SetPerformanceParams(connectionParams!);
+			ParamHelpers.SetPerformanceParams(connectionParams);
 		}
 
 		public virtual IOrganizationService CreateService()
@@ -53,8 +54,18 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 
 			if (serviceCloneBase == null)
 			{
-				service = customServiceFactory(connectionParams.ConnectionString);
-				serviceCloneBase = service as ServiceClient;
+				service = customServiceFactory(connectionParams.ConnectionString ?? string.Empty);
+				var serviceClient = service as ServiceClient;
+
+				if (serviceClient is not null && connectionParams.IsMaxPerformance)
+				{
+					serviceClient.EnableAffinityCookie = false;
+				}
+
+				if (serviceClient?.ActiveAuthenticationType == AuthenticationType.OAuth)
+				{
+					serviceCloneBase = service as ServiceClient;
+				}
 			}
 
 			if (serviceCloneBase != null)
@@ -67,19 +78,21 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 				service = null;
 			}
 
-			service ??= customServiceFactory(connectionParams.ConnectionString);
+			service ??= customServiceFactory(connectionParams.ConnectionString ?? string.Empty);
 
-			if (timeout != null)
+			if (timeout == null)
 			{
-				if (service is OrganizationServiceProxy proxyService)
-				{
-					proxyService.Timeout = timeout.Value;
-				}
+				return service;
+			}
+			
+			if (service is OrganizationServiceProxy proxyService)
+			{
+				proxyService.Timeout = timeout.Value;
+			}
 
-				if (service is OrganizationWebProxyClient webProxyService)
-				{
-					webProxyService.InnerChannel.OperationTimeout = timeout.Value;
-				}
+			if (service is OrganizationWebProxyClient webProxyService)
+			{
+				webProxyService.InnerChannel.OperationTimeout = timeout.Value;
 			}
 
 			return service;
