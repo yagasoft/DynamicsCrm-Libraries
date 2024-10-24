@@ -74,7 +74,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 
 		protected internal static int OperationIndex;
 
-		protected internal IOrganizationServiceAsync2 CrmService;
+		protected internal IOrganizationService CrmService;
 		public IServicePool<IOrganizationService>? ServicePool;
 
 		protected internal Action ReleaseService;
@@ -140,7 +140,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 		protected internal virtual void InitialiseConnection(IOrganizationService service)
 		{
 			service.Require(nameof(service));
-			CrmService = service as IOrganizationServiceAsync2;
+			CrmService = service as IOrganizationService;
 			IsReleased = false;
 		}
 
@@ -158,7 +158,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 			return service;
 		}
 
-		protected internal virtual IDisposableService GetService()
+		protected internal virtual async Task<IDisposableService> GetService()
 		{
 			ValidateState();
 
@@ -166,17 +166,12 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 
 			if (ServicePool != null)
 			{
-				service = (ServicePool.GetService() ?? CrmService) as IOrganizationServiceAsync2;
+				service = ((await ServicePool.GetService()) ?? CrmService) as IOrganizationServiceAsync2;
 			}
 
 			if (service == null)
 			{
 				throw new StateException("Failed to find an internal CRM service.");
-			}
-
-			if (service.EnsureTokenValid() == false)
-			{
-				throw new SecurityTokenException("Service token has expired.");
 			}
 
 			return ServicePool == null
@@ -196,12 +191,12 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 			return TransactionManager.BeginTransaction(transactionId);
 		}
 
-		public virtual void UndoTransaction(Transaction transaction = null)
+		public virtual async Task UndoTransaction(Transaction transaction = null)
 		{
 			ValidateTransactionSupport();
 			ValidateState();
 
-			using var service = GetService();
+			using var service = await GetService();
 			TransactionManager.UndoTransaction(service, transaction);
 		}
 
@@ -238,11 +233,11 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 			}
 		}
 
-		protected virtual void AddToTransaction(Operation operation, ExecuteParams executeParams)
+		protected virtual async Task AddToTransaction(Operation operation, ExecuteParams executeParams)
 		{
 			if (executeParams?.IsTransactionsEnabled != false && TransactionManager?.IsTransactionInEffect() == true)
 			{
-				using var service = GetService();
+				using var service = await GetService();
 				TransactionManager.ProcessRequest(service, operation);
 			}
 		}
@@ -276,7 +271,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 		protected virtual async Task<OrganizationResponse> InnerExecute(OrganizationRequest request)
 		{
 			// TODO dead-lock potential: second call in a row
-			using var service = GetService();
+			using var service = await GetService();
 			return await service.ExecuteAsync(request is KeyedRequest keyedRequest ? keyedRequest.Request : request);
 		}
 
@@ -928,7 +923,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 			(operation as Operation).Response =
 				await TryRunOperation(
 					async service =>
-					{
+						  {
 						OrganizationResponse resultInner;
 
 						if (IsCacheEnabled && executeParams?.IsCachingEnabled != false)
@@ -944,7 +939,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 						return resultInner;
 					},
 					operation, executeParams);
-
+			
 			return operation;
 		}
 
@@ -996,7 +991,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 			int bulkSize = 1000)
 		{
 			ValidateDeferredQueueState();
-			return deferredOrgService?.ExecuteDeferredRequests(bulkSize);
+			return await deferredOrgService?.ExecuteDeferredRequests(bulkSize);
 		}
 
 		public virtual void CancelDeferredRequests()
@@ -1404,7 +1399,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 					{
 						operation.OperationStatus = Status.InProgress;
 
-						using (var service = GetService())
+						using (var service = await GetService())
 						{
 							var result = await action(service);
 							ServicePool?.AutoSizeIncrement();

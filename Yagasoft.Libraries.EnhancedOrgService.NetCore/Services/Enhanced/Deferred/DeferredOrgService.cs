@@ -44,14 +44,14 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Deferred
 			}
 		}
 
-		public virtual IDictionary<OrganizationRequest, OrganisationRequestToken<OrganizationResponse>>
+		public virtual async Task<IDictionary<OrganizationRequest, OrganisationRequestToken<OrganizationResponse>>>
 			ExecuteDeferredRequests(int bulkSize = 1000)
 		{
 			ValidateDeferredQueueState();
 
 		    IDictionary<OrganizationRequest, ExecuteBulkResponse> bulkResponse;
 
-		    using (var service = enhancedOrgServiceBase.GetService())
+		    using (var service = await enhancedOrgServiceBase.GetService())
 		    {
 		        bulkResponse = deferredRequests
 		            .Cast<OrganisationRequestToken<OrganizationResponse>>()

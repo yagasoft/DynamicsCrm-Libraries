@@ -59,9 +59,9 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 			routingService.EndWarmup();
 		}
 
-		public TService GetService()
+		public async Task<TService> GetService()
 		{
-			return routingService.GetService();
+			return await routingService.GetService();
 		}
 
 		public void ReleaseService(IOrganizationService service)

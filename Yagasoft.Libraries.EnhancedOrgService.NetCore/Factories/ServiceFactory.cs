@@ -59,7 +59,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 
 				if (serviceClient is not null && connectionParams.IsMaxPerformance)
 				{
-					serviceClient.EnableAffinityCookie = false;
+					serviceClient.EnableAffinityCookie = true;
 				}
 
 				if (serviceClient?.ActiveAuthenticationType == AuthenticationType.OAuth)
@@ -71,11 +71,6 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 			if (serviceCloneBase != null)
 			{
 				service = serviceCloneBase.Clone();
-			}
-
-			if (service?.EnsureTokenValid((int)(tokenExpiryCheck ?? TimeSpan.Zero).TotalSeconds) == false)
-			{
-				service = null;
 			}
 
 			service ??= customServiceFactory(connectionParams.ConnectionString ?? string.Empty);

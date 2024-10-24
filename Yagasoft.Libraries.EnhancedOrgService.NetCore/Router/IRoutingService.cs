@@ -87,6 +87,6 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 		/// <summary>
 		///     Returns the next node to use, as per the rules defined.
 		/// </summary>
-		TService GetService();
+		Task<TService> GetService();
 	}
 }

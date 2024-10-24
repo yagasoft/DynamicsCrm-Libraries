@@ -314,7 +314,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 			}
 		}
 
-		public virtual TService GetService()
+		public virtual async Task<TService> GetService()
 		{
 			for (var i = 0; i < (60 * 1000 / 100) && Status == Status.Starting; i++)
 			{
@@ -428,7 +428,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 				throw new NodeSelectException("Cannot find a valid node.");
 			}
 
-			var service = node.Pool.GetService();
+			var service = await node.Pool.GetService();
 
 			if (Rules.IsFallbackEnabled == true && service is IEnhancedOrgService enhancedService
 				&& enhancedService.Parameters.AutoRetryParams?.CustomRetryFunctions.Contains(CustomRetry) == false)
@@ -439,7 +439,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 			return (TService)service;
 		}
 
-		protected internal virtual Task<object> CustomRetry(Func<IOrganizationServiceAsync2, Task<object>> action, Operation operation,
+		protected internal virtual async Task<object> CustomRetry(Func<IOrganizationServiceAsync2, Task<object>> action, Operation operation,
 			ExecuteParams executeParams, Exception ex)
 		{
 			FallbackNodes.Require(nameof(FallbackNodes));
@@ -448,7 +448,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 			{
 				try
 				{
-					using var service  = fallbackNode.Pool.GetService() as EnhancedOrgServiceBase;
+					using var service  = await fallbackNode.Pool.GetService() as EnhancedOrgServiceBase;
 
 					if (service == null)
 					{

@@ -37,24 +37,37 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 		public static IEnhancedServicePool<IEnhancedOrgService> GetPool(string connectionString, bool isAutoSize, int maxPoolSize = -1)
 		{
 			connectionString.RequireFilled(nameof(connectionString));
-			return GetPool(BuildBaseParams(connectionString, isAutoSize, maxPoolSize));
+			return GetEnhancedPool(BuildBaseParams(connectionString, isAutoSize, maxPoolSize));
 		}
 
 		public static IEnhancedServicePool<IEnhancedOrgService> GetPool(string connectionString, PoolParams poolParams)
 		{
 			connectionString.RequireFilled(nameof(connectionString));
 			poolParams.Require(nameof(poolParams));
-			return GetPool(BuildBaseParams(connectionString, false, null, poolParams));
+			return GetEnhancedPool(BuildBaseParams(connectionString, false, null, poolParams));
 		}
 
 		public static IEnhancedServicePool<IEnhancedOrgService> GetPool(ConnectionParams connectionParams, PoolParams poolParams)
 		{
 			connectionParams.Require(nameof(connectionParams));
 			poolParams.Require(nameof(poolParams));
-			return GetPool(BuildBaseParams(null, false, null, poolParams, connectionParams));
+			return GetEnhancedPool(BuildBaseParams(null, false, null, poolParams, connectionParams));
 		}
 
-		public static IEnhancedServicePool<IEnhancedOrgService> GetPool(ServiceParams serviceParams)
+		public static IServicePool<IOrganizationService> GetPool(ServiceParams serviceParams)
+		{
+			serviceParams.Require(nameof(serviceParams));
+
+			if (AutoSetMaxPerformanceParams)
+			{
+				serviceParams.AutoSetMaxPerformanceParams();
+			}
+
+			var factory = new ServiceFactory(serviceParams?.ConnectionParams, serviceParams?.ConnectionParams?.Timeout);
+			return new ServicePool<IOrganizationService>(factory, serviceParams.PoolParams);
+		}
+
+		public static IEnhancedServicePool<IEnhancedOrgService> GetEnhancedPool(ServiceParams serviceParams)
 		{
 			serviceParams.Require(nameof(serviceParams));
 

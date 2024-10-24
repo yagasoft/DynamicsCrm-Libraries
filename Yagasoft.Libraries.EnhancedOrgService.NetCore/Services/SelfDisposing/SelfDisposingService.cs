@@ -12,10 +12,10 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.SelfDisposing
 {
 	public class SelfDisposingService : IDisposableService
 	{
-		private readonly IOrganizationServiceAsync2 service;
+		private readonly IOrganizationService service;
 		private readonly Action disposer;
 
-		internal SelfDisposingService(IOrganizationServiceAsync2 service, Action disposer)
+		internal SelfDisposingService(IOrganizationService service, Action disposer)
 		{
 			service.Require(nameof(service));
 			disposer.Require(nameof(disposer));
@@ -71,89 +71,89 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.SelfDisposing
 
 		public async Task<Guid> CreateAsync(Entity entity)
 		{
-			return await service.CreateAsync(entity);
+			return await (service as IOrganizationServiceAsync2)?.CreateAsync(entity);
 		}
 
 		public async Task<Entity> RetrieveAsync(string entityName, Guid id, ColumnSet columnSet)
 		{
-			return await service.RetrieveAsync(entityName, id, columnSet);
+			return await (service as IOrganizationServiceAsync2)?.RetrieveAsync(entityName, id, columnSet);
 		}
 
 		public async Task UpdateAsync(Entity entity)
 		{
-			await service.UpdateAsync(entity);
+			await (service as IOrganizationServiceAsync2)?.UpdateAsync(entity);
 		}
 
 		public async Task DeleteAsync(string entityName, Guid id)
 		{
-			await service.DeleteAsync(entityName, id);
+			await (service as IOrganizationServiceAsync2)?.DeleteAsync(entityName, id);
 		}
 
 		public async Task<OrganizationResponse> ExecuteAsync(OrganizationRequest request)
 		{
-			return await service.ExecuteAsync(request);
+			return await (service as IOrganizationServiceAsync2)?.ExecuteAsync(request);
 		}
 
 		public async Task AssociateAsync(string entityName, Guid entityId, Relationship relationship, EntityReferenceCollection relatedEntities)
 		{
-			await service.AssociateAsync(entityName, entityId, relationship, relatedEntities);
+			await (service as IOrganizationServiceAsync2)?.AssociateAsync(entityName, entityId, relationship, relatedEntities);
 		}
 
 		public async Task DisassociateAsync(string entityName, Guid entityId, Relationship relationship, EntityReferenceCollection relatedEntities)
 		{
-			await service.DisassociateAsync(entityName, entityId, relationship, relatedEntities);
+			await (service as IOrganizationServiceAsync2)?.DisassociateAsync(entityName, entityId, relationship, relatedEntities);
 		}
 
 		public async Task<EntityCollection> RetrieveMultipleAsync(QueryBase query)
 		{
-			return await service.RetrieveMultipleAsync(query);
+			return await (service as IOrganizationServiceAsync2)?.RetrieveMultipleAsync(query);
 		}
 
 		public async Task AssociateAsync(string entityName, Guid entityId, Relationship relationship, EntityReferenceCollection relatedEntities,
 			CancellationToken cancellationToken)
 		{
-			await service.AssociateAsync(entityName, entityId, relationship, relatedEntities, cancellationToken);
+			await (service as IOrganizationServiceAsync2)?.AssociateAsync(entityName, entityId, relationship, relatedEntities, cancellationToken);
 		}
 
 		public async Task<Guid> CreateAsync(Entity entity, CancellationToken cancellationToken)
 		{
-			return await service.CreateAsync(entity, cancellationToken);
+			return await (service as IOrganizationServiceAsync2)?.CreateAsync(entity, cancellationToken);
 		}
 
 		public async Task<Entity> CreateAndReturnAsync(Entity entity, CancellationToken cancellationToken)
 		{
-			return await service.CreateAndReturnAsync(entity, cancellationToken);
+			return await (service as IOrganizationServiceAsync2)?.CreateAndReturnAsync(entity, cancellationToken);
 		}
 
 		public async Task DeleteAsync(string entityName, Guid id, CancellationToken cancellationToken)
 		{
-			await service.DeleteAsync(entityName, id, cancellationToken);
+			await (service as IOrganizationServiceAsync2)?.DeleteAsync(entityName, id, cancellationToken);
 		}
 
 		public async Task DisassociateAsync(string entityName, Guid entityId, Relationship relationship, EntityReferenceCollection relatedEntities,
 			CancellationToken cancellationToken)
 		{
-			await service.DisassociateAsync(entityName, entityId, relationship, relatedEntities, cancellationToken);
+			await (service as IOrganizationServiceAsync2)?.DisassociateAsync(entityName, entityId, relationship, relatedEntities, cancellationToken);
 		}
 
 		public async Task<OrganizationResponse> ExecuteAsync(OrganizationRequest request, CancellationToken cancellationToken)
 		{
-			return await service.ExecuteAsync(request, cancellationToken);
+			return await (service as IOrganizationServiceAsync2)?.ExecuteAsync(request, cancellationToken);
 		}
 
 		public async Task<Entity> RetrieveAsync(string entityName, Guid id, ColumnSet columnSet, CancellationToken cancellationToken)
 		{
-			return await service.RetrieveAsync(entityName, id, columnSet, cancellationToken);
+			return await (service as IOrganizationServiceAsync2)?.RetrieveAsync(entityName, id, columnSet, cancellationToken);
 		}
 
 		public async Task<EntityCollection> RetrieveMultipleAsync(QueryBase query, CancellationToken cancellationToken)
 		{
-			return await service.RetrieveMultipleAsync(query, cancellationToken);
+			return await (service as IOrganizationServiceAsync2)?.RetrieveMultipleAsync(query, cancellationToken);
 		}
 
 		public async Task UpdateAsync(Entity entity, CancellationToken cancellationToken)
 		{
-			await service.UpdateAsync(entity, cancellationToken);
+			await (service as IOrganizationServiceAsync2)?.UpdateAsync(entity, cancellationToken);
 		}
 	}
 }

@@ -8,7 +8,7 @@ using Yagasoft.Libraries.EnhancedOrgService.Pools.WarmUp;
 
 namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 {
-	public interface IServicePool<out TService> : IWarmUp
+	public interface IServicePool<TService> : IWarmUp
 		where TService : IOrganizationService
 	{
 		int CreatedServices { get; }
@@ -24,7 +24,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 		///     If a timeout is specified, a new service is forcibly created after the timeout regardless of the limit.
 		///     This is ensures protection against deadlocks.
 		/// </summary>
-		TService GetService();
+		Task<TService> GetService();
 
 		/// <summary>
 		///     Puts the service back into the pool for re-use.<br />

@@ -29,7 +29,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Transactions
 		///     If no transaction is given, it reverts ALL transactions.
 		/// </summary>
 		/// <param name="transaction">[OPTIONAL] The transaction to revert.</param>
-		void UndoTransaction(Transaction transaction = null);
+		Task UndoTransaction(Transaction transaction = null);
 
 		/// <summary>
 		///     Adds undo logic for the request type given to the cache.

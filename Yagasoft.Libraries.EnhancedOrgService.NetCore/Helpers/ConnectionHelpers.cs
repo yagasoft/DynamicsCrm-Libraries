@@ -3,6 +3,7 @@
 using System;
 using System.ServiceModel;
 using System.Text.RegularExpressions;
+using Microsoft.Crm.Sdk.Messages;
 using Microsoft.PowerPlatform.Dataverse.Client;
 using Microsoft.PowerPlatform.Dataverse.Client.Model;
 using Microsoft.Xrm.Sdk;
@@ -30,6 +31,14 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 
 			var errorMessage = string.Empty;
 
+			// warm up
+			try
+			{
+				service.Execute(new WhoAmIRequest());
+			}
+			catch
+			{ }
+			
 			if (!service.IsReady)
 			{
 				if (service.LastException != null)
@@ -54,59 +63,6 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 			}
 
 			return service;
-		}
-
-		public static bool? EnsureTokenValid(this IOrganizationService crmService, int tokenExpiryCheckSecs = 600)
-		{
-			if (crmService is not ServiceClient clientService)
-			{
-				return null;
-			}
-
-			if (!clientService.IsReady)
-			{
-				return false;
-			}
-
-			bool? isValidToken = null;
-
-			// TODO are token expiry checks required in the new CrmSdk? Proxy is internal now!
-			//var proxy = clientService.OrganizationServiceProxy;
-
-			//if (proxy != null)
-			//{
-			//	// token is about to expire based on the configured threshold time from actual expiry
-			//	var isTokenExpires = proxy.SecurityTokenResponse?.Response?.Lifetime?.Expires
-			//		< DateTime.UtcNow.AddSeconds(tokenExpiryCheckSecs);
-
-			//	if (!proxy.IsAuthenticated || isTokenExpires)
-			//	{
-			//		try
-			//		{
-			//			proxy.Authenticate();
-			//		}
-			//		catch
-			//		{
-			//			// ignored
-			//		}
-			//	}
-
-			//	isValidToken = proxy.IsAuthenticated;
-			//}
-			//else
-			//{
-			//	var webProxy = clientService.OrganizationWebProxyClient;
-
-			//	if (webProxy != null)
-			//	{ }
-			//}
-
-			if (isValidToken == null)
-			{
-				return null;
-			}
-
-			return isValidToken.Value && clientService.IsReady;
 		}
 	}
 }

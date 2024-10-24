@@ -61,10 +61,9 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 			base.EndWarmup();
 		}
 
-		public override TService GetService()
+		public override async Task<TService> GetService()
 		{
-			ServicesQueue.TryTake(out var service);
-			return GetInitialisedService(service);
+			return await GetInitialisedService(await base.GetService());
 		}
 
 		public override void ReleaseService(IOrganizationService service)
@@ -83,7 +82,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 
 			if (service is TService thisService)
 			{
-				ServicesQueue.Enqueue(thisService);
+				base.ReleaseService(thisService);
 			}
 		}
 
@@ -92,7 +91,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 			(Factory as IEnhancedServiceFactory<TService>)?.ClearCache();
 		}
 
-		private TService GetInitialisedService(TService enhancedService = default)
+		private async Task<TService> GetInitialisedService(TService enhancedService = default)
 		{
 			if (enhancedService == null)
 			{
@@ -105,7 +104,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 
 				try
 				{
-					enhancedOrgServiceBase.InitialiseConnection(crmPool.GetService());
+					enhancedOrgServiceBase.InitialiseConnection(await crmPool.GetService());
 				}
 				catch
 				{

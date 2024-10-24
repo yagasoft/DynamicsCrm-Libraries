@@ -20,7 +20,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Deferred
 		/// </summary>
 		/// <param name="bulkSize">[Optional] The number of requests to execute at once every internal iteration.</param>
 		/// <returns>A map of the deferred organisation requests and their response tokens.</returns>
-		IDictionary<OrganizationRequest, OrganisationRequestToken<OrganizationResponse>> ExecuteDeferredRequests(int bulkSize = 1000);
+		Task<IDictionary<OrganizationRequest, OrganisationRequestToken<OrganizationResponse>>> ExecuteDeferredRequests(
+			int bulkSize = 1000);
 
 		/// <summary>
 		///     Cancels all deferred requests and clears the queue.
