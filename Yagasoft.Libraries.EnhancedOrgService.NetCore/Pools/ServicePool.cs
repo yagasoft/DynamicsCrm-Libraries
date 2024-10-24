@@ -7,7 +7,6 @@ using Microsoft.Xrm.Sdk;
 using Yagasoft.Libraries.Common;
 using Yagasoft.Libraries.EnhancedOrgService.Factories;
 using Yagasoft.Libraries.EnhancedOrgService.Helpers;
-using Yagasoft.Libraries.EnhancedOrgService.NetCore.Helpers;
 using Yagasoft.Libraries.EnhancedOrgService.Params;
 
 #endregion
