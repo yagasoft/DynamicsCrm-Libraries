@@ -82,7 +82,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router.Node
 
 			LatencyEvaluator =
 				new Thread(
-					() =>
+					async () =>
 					{
 						var downtime = new Stopwatch();
 
@@ -101,38 +101,61 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router.Node
 								downtime.Reset();
 								downtime.Start();
 
-								var thread =
-									new Thread(
-										() =>
+								var cancellationToken = new CancellationTokenSource();
+								
+								var task = Task.Factory.StartNew(
+									_ =>
+									{
+										try
 										{
-											try
+											using (cancellationToken.Token.Register(
+												() => throw new TaskCanceledException("Service latency evaluator was cancelled.")))
 											{
 												LatencyEvaluatorService.Execute(new WhoAmIRequest());
 											}
-											catch (ThreadAbortException)
-											{ }
-										}) { IsBackground = true };
-								thread.Start();
+										}
+										catch (TaskCanceledException)
+										{ }
+									}, cancellationToken, TaskCreationOptions.LongRunning);
 
-								if (!thread.Join(TimeSpan.FromSeconds(10)))
+								if (task.Wait(TimeSpan.FromSeconds(10)))
 								{
-									thread.Abort();
-									LatencyHistory.Enqueue(TimeSpan.MaxValue);
-									Status = NodeStatus.Unknown;
-									LatencyEvaluatorService.Execute(new WhoAmIRequest());
+									stopwatch.Stop();
+
+									LatencyHistory.Enqueue(stopwatch.Elapsed);
+									LatestConnectionError = null;
+
+									if (Status != NodeStatus.Offline)
+									{
+										Status = NodeStatus.Online;
+									}
 								}
-
-								stopwatch.Stop();
-
-								LatencyHistory.Enqueue(stopwatch.Elapsed);
-								LatestConnectionError = null;
-								Status = NodeStatus.Online;
+								else
+								{
+									try
+									{
+										cancellationToken.Cancel();
+									}
+									catch
+									{ }
+									
+									LatencyHistory.Enqueue(TimeSpan.MaxValue);
+									
+									if (Status != NodeStatus.Offline)
+									{
+										Status = NodeStatus.Unknown;
+									}
+								}
 							}
 							catch (Exception ex)
 							{
 								LatencyHistory.Enqueue(TimeSpan.MaxValue);
 								LatestConnectionError = ex;
-								Status = NodeStatus.Faulty;
+								
+								if (Status != NodeStatus.Offline)
+								{
+									Status = NodeStatus.Faulty;
+								}
 							}
 							finally
 							{
@@ -145,14 +168,14 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router.Node
 					}) { IsBackground = true };
 		}
 
-		protected internal virtual void StartNode()
+		protected internal virtual async Task StartNode()
 		{
 			try
 			{
 				Status = NodeStatus.Starting;
 				LatestConnectionError = null;
 				(Stats as OperationStats)?.Propagate();
-				LatencyEvaluatorService = Pool.Factory.CreateService();
+				LatencyEvaluatorService = await Pool.Factory.CreateService();
 				LatencyEvaluator.Start();
 				Started = DateTime.Now;
 				Downtime = TimeSpan.Zero;

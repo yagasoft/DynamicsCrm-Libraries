@@ -15,35 +15,56 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 {
 	public static class ConnectionHelpers
 	{
-		private static readonly object lockObject = new();
+		private static readonly SemaphoreSlim createSemaphore = new(20);
 
-		public static IOrganizationService CreateCrmService(string connectionString)
+		public static async Task<IOrganizationService> CreateCrmService(string connectionString)
 		{
-			ServiceClient service;
-
-			lock (lockObject)
+			ServiceClient service = null;
+			
+			var errorMessage = string.Empty;
+			Exception? exception = null;
+			
+			try
 			{
-				service = new ServiceClient(connectionString);
+				await createSemaphore.WaitAsync();
+				
+				service = await Task.Factory.StartNew(() => new ServiceClient(connectionString), TaskCreationOptions.LongRunning);
+				// warm up
+				await service.ExecuteAsync(new WhoAmIRequest());
+			}
+			catch (Exception ex)
+			{
+				exception = ex;
+				errorMessage = ex.Message;
+			}
+			finally
+			{
+				createSemaphore.Release();
 			}
 
+			if (service is not null && exception is null)
+			{
+				try
+				{
+					// warm up
+					await service.ExecuteAsync(new WhoAmIRequest());
+				}
+				catch (Exception ex)
+				{
+					exception = ex;
+					errorMessage = ex.Message;
+				}
+			}
+			
 			var escapedString = Regex.Replace(connectionString, @"Password\s*?=.*?(?:;{0,1}$|;)",
 				"Password=********;");
 
-			var errorMessage = string.Empty;
-
-			// warm up
-			try
-			{
-				service.Execute(new WhoAmIRequest());
-			}
-			catch
-			{ }
-			
-			if (!service.IsReady)
+			if (service?.IsReady is false)
 			{
 				if (service.LastException != null)
 				{
 					errorMessage += service.LastException.BuildExceptionMessage();
+					exception = service.LastException;
 				}
 
 				if (service.LastError.IsFilled())
@@ -59,7 +80,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 
 			if (errorMessage.IsFilled())
 			{
-				throw new ServiceActivationException($"Can't create connection to: \"{escapedString}\" due to\r\n{errorMessage}");
+				throw new ServiceActivationException($"Can't create connection to: \"{escapedString}\" due to\r\n{errorMessage}", exception);
 			}
 
 			return service;

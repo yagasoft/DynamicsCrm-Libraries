@@ -34,7 +34,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 			return GetPool(connectionString, poolSize < 1, poolSize);
 		}
 
-		public static IEnhancedServicePool<IEnhancedOrgService> GetPool(string connectionString, bool isAutoSize, int maxPoolSize = -1)
+		public static IEnhancedServicePool<IEnhancedOrgService> GetPool(string connectionString, bool isAutoSize = true, int maxPoolSize = -1)
 		{
 			connectionString.RequireFilled(nameof(connectionString));
 			return GetEnhancedPool(BuildBaseParams(connectionString, isAutoSize, maxPoolSize));
@@ -54,7 +54,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 			return GetEnhancedPool(BuildBaseParams(null, false, null, poolParams, connectionParams));
 		}
 
-		public static IServicePool<IOrganizationService> GetPool(ServiceParams serviceParams)
+		public static IServicePool<IOrganizationService> GetPool(SelfBalancingParams serviceParams)
 		{
 			serviceParams.Require(nameof(serviceParams));
 
@@ -63,13 +63,20 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 				serviceParams.AutoSetMaxPerformanceParams();
 			}
 
-			var factory = new ServiceFactory(serviceParams?.ConnectionParams, serviceParams?.ConnectionParams?.Timeout);
+			var factory =
+				new ServiceFactory(
+					new ServiceParams
+					{
+						ConnectionParams = serviceParams.ConnectionParams,
+						PoolParams = serviceParams.PoolParams
+					});
 			return new ServicePool<IOrganizationService>(factory, serviceParams.PoolParams);
 		}
 
 		public static IEnhancedServicePool<IEnhancedOrgService> GetEnhancedPool(ServiceParams serviceParams)
 		{
 			serviceParams.Require(nameof(serviceParams));
+			serviceParams.PoolParams.Require(nameof(serviceParams.PoolParams));
 
 			if (AutoSetMaxPerformanceParams)
 			{
@@ -77,7 +84,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 			}
 
 			var factory = new EnhancedServiceFactory<IEnhancedOrgService, Services.Enhanced.EnhancedOrgService>(serviceParams);
-			return new EnhancedServicePool<IEnhancedOrgService, Services.Enhanced.EnhancedOrgService>(factory, serviceParams.PoolParams);
+			return new EnhancedServicePool<IEnhancedOrgService, Services.Enhanced.EnhancedOrgService>(factory, serviceParams.PoolParams!);
 		}
 
 		public static IEnhancedServicePool<ICachingOrgService> GetCachingPool(string connectionString, int poolSize = -1,
@@ -86,7 +93,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 			return GetCachingPool(connectionString, poolSize < 1, poolSize, cachingParams);
 		}
 
-		public static IEnhancedServicePool<ICachingOrgService> GetCachingPool(string connectionString, bool isAutoSize, int maxPoolSize = -1,
+		public static IEnhancedServicePool<ICachingOrgService> GetCachingPool(string connectionString, bool isAutoSize = true, int maxPoolSize = -1,
 			CachingParams cachingParams = null)
 		{
 			connectionString.RequireFilled(nameof(connectionString));
@@ -115,6 +122,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 		public static IEnhancedServicePool<ICachingOrgService> GetCachingPool(ServiceParams serviceParams)
 		{
 			serviceParams.Require(nameof(serviceParams));
+			serviceParams.PoolParams.Require(nameof(serviceParams.PoolParams));
 
 			if (AutoSetMaxPerformanceParams)
 			{
@@ -122,15 +130,15 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 			}
 
 			var factory = new EnhancedServiceFactory<ICachingOrgService, CachingOrgService>(serviceParams);
-			return new EnhancedServicePool<ICachingOrgService, CachingOrgService>(factory, serviceParams.PoolParams);
+			return new EnhancedServicePool<ICachingOrgService, CachingOrgService>(factory, serviceParams.PoolParams!);
 		}
 
-		public static IEnhancedOrgService GetPoolingService(string connectionString, int poolSize = -1)
+		public static IEnhancedOrgService GetPoolingService(string connectionString, int poolSize)
 		{
 			return GetPoolingService(connectionString, poolSize < 1, poolSize);
 		}
 
-		public static IEnhancedOrgService GetPoolingService(string connectionString, bool isAutoSize, int? maxPoolSize = -1)
+		public static IEnhancedOrgService GetPoolingService(string connectionString, bool isAutoSize = true, int? maxPoolSize = -1)
 		{
 			connectionString.RequireFilled(nameof(connectionString));
 			return GetPoolingService(BuildBaseParams(connectionString, isAutoSize, maxPoolSize));
@@ -147,7 +155,10 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 
 			var pool = new DefaultServicePool(serviceParams);
 			var factory = new DefaultEnhancedFactory(serviceParams);
-			return factory.CreateService(pool);
+			var service = factory.CreateService(pool);
+			service.OperationStatusChanged += pool.OperationsEventHandler;
+			
+			return service;
 		}
 
 		public static ICachingOrgService GetPoolingCachingService(string connectionString, int poolSize = -1,
@@ -156,7 +167,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 			return GetPoolingCachingService(connectionString, poolSize < 1, poolSize, cachingParams);
 		}
 
-		public static ICachingOrgService GetPoolingCachingService(string connectionString, bool isAutoSize, int maxPoolSize = -1,
+		public static ICachingOrgService GetPoolingCachingService(string connectionString, bool isAutoSize = true, int maxPoolSize = -1,
 			CachingParams cachingParams = null)
 		{
 			connectionString.RequireFilled(nameof(connectionString));
@@ -175,30 +186,88 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 
 			var pool = new DefaultServicePool(serviceParams);
 			var factory = new EnhancedServiceFactory<ICachingOrgService, CachingOrgService>(serviceParams);
-			return factory.CreateService(pool);
+			var service = factory.CreateService(pool);
+			service.OperationStatusChanged += pool.OperationsEventHandler;
+			
+			return service;
 		}
 
 		public static async Task<IEnhancedOrgService> GetSelfBalancingService(ServiceParams serviceParameters,
-			IReadOnlyCollection<ServiceParams> poolParameters, RouterRules rules = null)
+			SelfBalancingParams poolParameters, int repeatPools, RouterRules? rules = null)
 		{
-			return await GetSelfBalancingService(serviceParameters, poolParameters.Select(GetPool).ToArray(), rules);
+			return await GetSelfBalancingService(serviceParameters,
+				rules,
+				Enumerable.Range(0, repeatPools).Select(_ => poolParameters.Copy()).ToArray());
+		}
+
+		public static async Task<IEnhancedOrgService> GetSelfBalancingService(ServiceParams serviceParameters,
+			params (SelfBalancingParams PoolParameters, int RepeatPools)[] poolParametersRepeated)
+		{
+			return await GetSelfBalancingService(serviceParameters, null, poolParametersRepeated);
+		}
+
+		public static async Task<IEnhancedOrgService> GetSelfBalancingService(ServiceParams serviceParameters,
+			RouterRules? rules, params (SelfBalancingParams PoolParameters, int RepeatPools)[] poolParametersRepeated)
+		{
+			return await GetSelfBalancingService(serviceParameters,
+				rules,
+				poolParametersRepeated
+					.SelectMany(t => Enumerable.Range(0, t.RepeatPools)
+						.Select(_ => t.PoolParameters.Copy()))
+					.ToArray());
+		}
+
+		public static async Task<IEnhancedOrgService> GetSelfBalancingService(ServiceParams serviceParameters,
+			params SelfBalancingParams[] poolParameters)
+		{
+			return await GetSelfBalancingService(serviceParameters, null, poolParameters);
+		}
+
+		public static async Task<IEnhancedOrgService> GetSelfBalancingService(ServiceParams serviceParameters,
+			RouterRules? rules, params SelfBalancingParams[] poolParameters)
+		{
+			return await GetSelfBalancingService(serviceParameters, rules, poolParameters.Select(GetPool).ToArray());
+		}
+
+		public static async Task<IEnhancedOrgService> GetSelfBalancingService(params SelfBalancingParams[] poolParameters)
+		{
+			return await GetSelfBalancingService((RouterRules?)null, poolParameters);
+		}
+
+		public static async Task<IEnhancedOrgService> GetSelfBalancingService(RouterRules? rules,
+			params SelfBalancingParams[] poolParameters)
+		{
+			return await GetSelfBalancingService(rules, poolParameters.Select(GetPool).ToArray());
+		}
+
+		public static async Task<IEnhancedOrgService> GetSelfBalancingService(params IServicePool<IOrganizationService>[] pools)
+		{
+			return await GetSelfBalancingService((RouterRules?)null, pools);
 		}
 
 		public static async Task<IEnhancedOrgService> GetSelfBalancingService(
-			IReadOnlyCollection<IServicePool<IOrganizationService>> pools, RouterRules rules = null)
+			RouterRules? rules, params IServicePool<IOrganizationService>[] pools)
 		{
-			return await GetSelfBalancingService(BuildBaseParams(Guid.NewGuid().ToString()), pools, rules);
+			return await GetSelfBalancingService(BuildBaseParams(Guid.NewGuid().ToString()), rules, pools);
 		}
 
-		public static async Task<IEnhancedOrgService> GetSelfBalancingService(ServiceParams parameters,
-			IReadOnlyCollection<IServicePool<IOrganizationService>> pools, RouterRules rules = null)
+		public static async Task<IEnhancedOrgService> GetSelfBalancingService(ServiceParams? serviceParameters,
+			params IServicePool<IOrganizationService>[] pools)
 		{
-			parameters.Require(nameof(parameters));
+			return await GetSelfBalancingService(serviceParameters, null, pools);
+		}
+
+		public static async Task<IEnhancedOrgService> GetSelfBalancingService(ServiceParams? serviceParameters,
+			RouterRules? rules, params IServicePool<IOrganizationService>[] pools)
+		{
+			pools.Require(nameof(pools));
 			pools.Require(nameof(pools));
 
+			serviceParameters ??= new ServiceParams();
+			
 			if (AutoSetMaxPerformanceParams)
 			{
-				parameters.AutoSetMaxPerformanceParams();
+				serviceParameters.AutoSetMaxPerformanceParams();
 			}
 
 			var routingService = new RoutingService<IOrganizationService>();
@@ -216,9 +285,11 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 			await routingService.StartRouter();
 
 			var routingPool = new RoutingPool<IOrganizationService>(routingService);
-
-			return new EnhancedServiceFactory<IEnhancedOrgService, Services.Enhanced.EnhancedOrgService>(parameters)
+			var service = new EnhancedServiceFactory<IEnhancedOrgService, Services.Enhanced.EnhancedOrgService>(serviceParameters)
 				.CreateService(routingPool);
+			service.OperationStatusChanged += routingPool.OperationsEventHandler;
+			
+			return service;
 		}
 
 		private static ServiceParams BuildBaseParams(string connectionString, bool isAutoSize = false, int? maxPoolSize = null,

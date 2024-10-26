@@ -5,6 +5,8 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using Microsoft.Xrm.Sdk;
 using Yagasoft.Libraries.Common;
+using Yagasoft.Libraries.EnhancedOrgService.Events;
+using Yagasoft.Libraries.EnhancedOrgService.Events.EventArgs;
 using Yagasoft.Libraries.EnhancedOrgService.Exceptions;
 using Yagasoft.Libraries.EnhancedOrgService.Factories;
 using Yagasoft.Libraries.EnhancedOrgService.Helpers;
@@ -33,32 +35,16 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 			: this(factory, new PoolParams { PoolSize = poolSize })
 		{ }
 
-		public EnhancedServicePool(EnhancedServiceFactory<TService, TEnhancedOrgService> factory, PoolParams poolParams = null)
+		public EnhancedServicePool(EnhancedServiceFactory<TService, TEnhancedOrgService> factory, PoolParams poolParams)
 			: base(factory, poolParams)
 		{
 			factory.Require(nameof(factory));
 
 			Stats = new OperationStats(this);
 
-			if (poolParams != null)
-			{
-				ParamHelpers.SetPerformanceParams(poolParams);
-			}
+			ParamHelpers.SetPerformanceParams(poolParams);
 
-			crmPool = new ServicePool<IOrganizationService>(
-				new ServiceFactory(factory.Parameters.ConnectionParams, factory.Parameters.PoolParams?.TokenExpiryCheck), poolParams);
-		}
-
-		public override void WarmUp()
-		{
-			crmPool.WarmUp();
-			base.WarmUp();
-		}
-
-		public override void EndWarmup()
-		{
-			crmPool.EndWarmup();
-			base.EndWarmup();
+			crmPool = new ServicePool<IOrganizationService>(new ServiceFactory(factory.ServiceParams), poolParams);
 		}
 
 		public override async Task<TService> GetService()
@@ -129,9 +115,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 				throw new StateException("Unable to create a service due to type mismatch on factory result.");
 			}
 
-			var enhancedService = enhancedFactory.CreateEnhancedService();
-			CreatedServices++;
-			return enhancedService;
+			return enhancedFactory.CreateEnhancedService();
 		}
 	}
 }

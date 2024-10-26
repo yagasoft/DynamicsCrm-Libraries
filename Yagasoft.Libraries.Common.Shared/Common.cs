@@ -9721,72 +9721,149 @@ else if (Context.CodeScopeCount <= 0)
 	///  		// code ...
 	///   	}
 	///     </code>
-	///     After exiting the 'using' block, <see cref="ReleasePermit" /> is called automatically.<br />
+	///     After exiting the 'using' block, <see cref="Release" /> is called automatically.<br />
 	///		Author: Ahmed Elsawalhy (Yagasoft.com)
 	/// </summary>
 	[ExcludeFromCodeCoverage]
-	[DebuggerNonUserCode]
+	//[DebuggerNonUserCode]
 	[GeneratedCode("This is not generated code, but this attribute is used for excluding the code from code analysis.", "0.0.0.0")]
 	public sealed class FifoSemaphore : IDisposable
 	{
-		private readonly Queue<ManualResetEvent> threadLocksQueue = new Queue<ManualResetEvent>();
-
-		private readonly int maxConcurrency;
-
-		private readonly object lockObject = new object();
+		public int MaxConcurrency;
+		public bool IsBlocked;
+		
+		private readonly ConcurrentQueue<SemaphoreSlim> threadLocksQueue = new();
 		private int currentRequests;
+		private readonly SemaphoreSlim semaphore = new(1);
 
 		public FifoSemaphore(int maxConcurrency)
 		{
-			this.maxConcurrency = maxConcurrency;
+			MaxConcurrency = maxConcurrency;
 		}
 
 		public void Dispose()
 		{
-			ReleasePermit();
+			Release();
 		}
 
+		public async Task<bool> WaitAsync()
+		{
+			return await WaitAsync(null, null);
+		}
+
+		public async Task<bool> WaitAsync(TimeSpan timeout)
+		{
+			return await WaitAsync(timeout, null);
+		}
+
+		public async Task<bool> WaitAsync(CancellationToken cancellationToken)
+		{
+			return await WaitAsync(null, cancellationToken);
+		}
+		
 		/// <summary>
 		///     Check how many permits have been requested before, and if the number is greater than the limit,
 		///     hold this request until a permit elsewhere is released.
 		/// </summary>
-		public FifoSemaphore AcquirePermit()
+		public async Task<bool> WaitAsync(TimeSpan? timeout, CancellationToken? cancellationToken)
 		{
-			lock (lockObject)
-			{
-				currentRequests++;
+			Interlocked.Increment(ref currentRequests);
+			
+			await semaphore.WaitAsync();
 
+			try
+			{
 				// if the limit hasn't been reached yet, note it, and give permission
-				if (currentRequests <= maxConcurrency)
+				if (!IsBlocked && currentRequests <= MaxConcurrency)
 				{
-					return this;
+					return true;
 				}
 			}
-
-			using (var newLock = new ManualResetEvent(false))
+			finally
 			{
-				// we have to wait for a slot to open
-				threadLocksQueue.Enqueue(newLock);
-				newLock.WaitOne();
+				semaphore.Release();
 			}
 
-			return this;
+			var newLock = new SemaphoreSlim(0);
+			
+			// we have to wait for a slot to open
+			threadLocksQueue.Enqueue(newLock);
+
+			if (timeout is null && cancellationToken is null)
+			{
+				await newLock.WaitAsync();
+			}
+			else if (cancellationToken is null)
+			{
+				if (await newLock.WaitAsync(timeout.Value))
+				{
+					return true;
+				}
+				
+				Interlocked.Decrement(ref currentRequests);
+				
+				return false;
+			}
+			else if (timeout is null)
+			{
+				await newLock.WaitAsync(cancellationToken.Value);
+			}
+			else
+			{
+				if (await newLock.WaitAsync(timeout.Value, cancellationToken.Value))
+				{
+					return true;
+				}
+				
+				Interlocked.Decrement(ref currentRequests);
+				
+				return false;
+			}
+
+			return true;
 		}
 
 		/// <summary>
 		///     Release a permit, and release the hold on the next in line.
 		/// </summary>
-		public void ReleasePermit()
+		public void Release(int count = 1)
 		{
-			lock (lockObject)
-			{
-				// note the release
-				currentRequests--;
+			// note the release
+			Interlocked.Decrement(ref currentRequests);
 
+			if (IsBlocked)
+			{
+				return;
+			}
+			
+			ReleaseFromQueue(count);
+		}
+
+		/// <summary>
+		///     Release permits without affecting current request count.
+		/// </summary>
+		public void ReleaseBlocked(int count = 1)
+		{
+			ReleaseFromQueue(count);
+		}
+
+		/// <summary>
+		///     Release all permits without affecting current request count.
+		/// </summary>
+		public void ReleaseAllBlocked()
+		{
+			ReleaseFromQueue(threadLocksQueue.Count);
+		}
+
+		private void ReleaseFromQueue(int count = 1)
+		{
+			for (var i = 0; i < count && threadLocksQueue.Count > 0; i++)
+			{
 				// give permission to the next in line
-				if (threadLocksQueue.Any())
+				if (threadLocksQueue.TryDequeue(out var threadLock))
 				{
-					threadLocksQueue.Dequeue().Set();
+					threadLock.Release();
+					threadLock.Dispose();
 				}
 			}
 		}
@@ -9802,8 +9879,8 @@ else if (Context.CodeScopeCount <= 0)
 	public sealed class QueuedLock : IDisposable
 	{
 		private readonly object innerLock;
-		private volatile int ticketsCount;
-		private volatile int ticketToRide;
+		private int ticketsCount;
+		private int ticketToRide;
 
 		public QueuedLock()
 		{
@@ -9851,10 +9928,12 @@ else if (Context.CodeScopeCount <= 0)
 	{
 		#region ctor(s)
 
-		public BlockingQueue() : base(new ConcurrentQueue<T>())
+		public BlockingQueue(IEnumerable<T> initialCollection = null)
+			: base(initialCollection is null ? new ConcurrentQueue<T>() : new ConcurrentQueue<T>(initialCollection))
 		{ }
 
-		public BlockingQueue(int maxSize) : base(new ConcurrentQueue<T>(), maxSize)
+		public BlockingQueue(int maxSize, IEnumerable<T> initialCollection = null)
+			: base(initialCollection is null ? new ConcurrentQueue<T>() : new ConcurrentQueue<T>(initialCollection), maxSize)
 		{ }
 
 		#endregion ctor(s)

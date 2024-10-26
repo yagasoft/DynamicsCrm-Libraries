@@ -78,7 +78,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 		///     Define functions to retry failures. If one works, then the operation will be considered a success at its original
 		///     location.
 		/// </summary>
-		public readonly List<Func<Func<IOrganizationServiceAsync2, Task<object>>, Operation, ExecuteParams, Exception, Task<object>>>
+		public readonly List<Func<Func<IOrganizationServiceAsync2, Task<object>>, Operation, ExecuteParams?, Exception?, Task<object>>>
 			CustomRetryFunctions = new();
 
 		private int? maxRetryCount;

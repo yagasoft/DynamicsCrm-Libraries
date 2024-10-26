@@ -15,7 +15,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Operations
 {
 	public class OperationStats : IOperationStats
 	{
-		public virtual event EventHandler<IOrganizationService, OperationStatusEventArgs> OperationStatusChanged
+		public virtual event EventHandler<IOrganizationService, OperationStatusEventArgs, IOrganizationService> OperationStatusChanged
 		{
 			add
 			{
@@ -44,7 +44,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Operations
 			}
 		}
 
-		private event EventHandler<IEnhancedOrgService, OperationStatusEventArgs> InnerOperationStatusChanged;
+		private event EventHandler<IEnhancedOrgService, OperationStatusEventArgs, IOrganizationService> InnerOperationStatusChanged;
 
 		public virtual int RequestCount => TargetStatsParent?.StatTargets?.Sum(t => t.RequestCount) ?? -1;
 
@@ -70,7 +70,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Operations
 			if (InnerOperationStatusChanged != null)
 			{
 				foreach (var invocation in InnerOperationStatusChanged.GetInvocationList()
-					.OfType<EventHandler<IOrganizationService, OperationStatusEventArgs>>().ToArray())
+					.OfType<EventHandler<IOrganizationService, OperationStatusEventArgs, IOrganizationService>>().ToArray())
 				{
 					OperationStatusChanged += invocation;
 				}

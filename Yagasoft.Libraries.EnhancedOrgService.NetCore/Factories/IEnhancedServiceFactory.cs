@@ -14,7 +14,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 	///     No caching of connections is used; use <see cref="IEnhancedServicePool{TService}" /> instead.<br />
 	///     Author: Ahmed Elsawalhy
 	/// </summary>
-	public interface IEnhancedServiceFactory<out TService> : IServiceFactory<TService>, IOpStatsAggregate, IOpStatsParent
+	public interface IEnhancedServiceFactory<TService> : IServiceFactory<TService>, IOpStatsAggregate, IOpStatsParent
 		where TService : IEnhancedOrgService
 	{
 		/// <summary>

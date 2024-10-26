@@ -12,7 +12,6 @@ using Yagasoft.Libraries.EnhancedOrgService.Factories;
 using Yagasoft.Libraries.EnhancedOrgService.Operations;
 using Yagasoft.Libraries.EnhancedOrgService.Params;
 using Yagasoft.Libraries.EnhancedOrgService.Pools;
-using Yagasoft.Libraries.EnhancedOrgService.Pools.WarmUp;
 using Yagasoft.Libraries.EnhancedOrgService.Response.Operations;
 using Yagasoft.Libraries.EnhancedOrgService.Response.Tokens;
 using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Deferred;
@@ -38,7 +37,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 	///     passing the factory as a parameter to the constructor<br />
 	///     Author: Ahmed Elsawalhy
 	/// </summary>
-	public interface IEnhancedOrgService : IDisposableService, ITransactionOrgService, IOperationStats, IWarmUp
+	public interface IEnhancedOrgService : IDisposableService, ITransactionOrgService, IOperationStats
 	{
 		IEnumerable<OrganizationRequest> DeferredRequests { get; }
 		ServiceParams Parameters { get; }

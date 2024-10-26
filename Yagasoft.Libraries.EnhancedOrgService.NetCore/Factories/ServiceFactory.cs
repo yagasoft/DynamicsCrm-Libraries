@@ -17,26 +17,31 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 {
 	public class ServiceFactory : IServiceFactory<IOrganizationService>
 	{
-		private readonly ConnectionParams connectionParams;
-		private readonly TimeSpan? tokenExpiryCheck;
-
-		private readonly Func<string, IOrganizationService> customServiceFactory = ConnectionHelpers.CreateCrmService;
+		public ServiceParams ServiceParams { get; }
+		private readonly ConnectionParams? connectionParams;
+		
+		private readonly Func<string, Task<IOrganizationService>> customServiceFactory = ConnectionHelpers.CreateCrmService;
 
 		private ServiceClient? serviceCloneBase;
 
-		public ServiceFactory(ConnectionParams connectionParams, TimeSpan? tokenExpiryCheck)
+		public ServiceFactory(ServiceParams serviceParams)
 		{
-			connectionParams.Require(nameof(connectionParams));
+			serviceParams.Require(nameof(serviceParams));
 
-			this.connectionParams = connectionParams;
-			this.tokenExpiryCheck = tokenExpiryCheck;
+			serviceParams.IsLocked = true;
+			ServiceParams = serviceParams;
+			connectionParams = serviceParams.ConnectionParams;
+			
+			customServiceFactory = connectionParams?.CustomIOrgSvcFactory ?? customServiceFactory;
 
-			customServiceFactory = connectionParams.CustomIOrgSvcFactory ?? customServiceFactory;
-
-			ParamHelpers.SetPerformanceParams(connectionParams);
+			if (connectionParams is not null)
+			{
+				ParamHelpers.SetPerformanceParams(connectionParams);
+			}
 		}
 
-		public virtual IOrganizationService CreateService()
+
+		public virtual async Task<IOrganizationService> CreateService()
 		{
 			if (connectionParams == null)
 			{
@@ -54,12 +59,12 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 
 			if (serviceCloneBase == null)
 			{
-				service = customServiceFactory(connectionParams.ConnectionString ?? string.Empty);
+				service = await customServiceFactory(connectionParams.ConnectionString ?? string.Empty);
 				var serviceClient = service as ServiceClient;
 
 				if (serviceClient is not null && connectionParams.IsMaxPerformance)
 				{
-					serviceClient.EnableAffinityCookie = true;
+					serviceClient.EnableAffinityCookie = false;
 				}
 
 				if (serviceClient?.ActiveAuthenticationType == AuthenticationType.OAuth)
@@ -73,7 +78,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 				service = serviceCloneBase.Clone();
 			}
 
-			service ??= customServiceFactory(connectionParams.ConnectionString ?? string.Empty);
+			service ??= await customServiceFactory(connectionParams.ConnectionString ?? string.Empty);
 
 			if (timeout == null)
 			{

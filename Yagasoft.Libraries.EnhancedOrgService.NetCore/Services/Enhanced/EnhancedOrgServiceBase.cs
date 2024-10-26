@@ -24,7 +24,6 @@ using Yagasoft.Libraries.EnhancedOrgService.Exceptions;
 using Yagasoft.Libraries.EnhancedOrgService.Helpers;
 using Yagasoft.Libraries.EnhancedOrgService.Params;
 using Yagasoft.Libraries.EnhancedOrgService.Pools;
-using Yagasoft.Libraries.EnhancedOrgService.Pools.WarmUp;
 using Yagasoft.Libraries.EnhancedOrgService.Response.Operations;
 using Yagasoft.Libraries.EnhancedOrgService.Response.Tokens;
 using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced.Deferred;
@@ -39,7 +38,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 	/// <inheritdoc cref="IEnhancedOrgService" />
 	public abstract class EnhancedOrgServiceBase : IStateful, IEnhancedOrgService
 	{
-		public virtual event EventHandler<IOrganizationService, OperationStatusEventArgs> OperationStatusChanged
+		public virtual event EventHandler<IOrganizationService, OperationStatusEventArgs, IOrganizationService> OperationStatusChanged
 		{
 			add
 			{
@@ -49,7 +48,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 			remove => InnerOperationStatusChanged -= value;
 		}
 
-		protected virtual event EventHandler<IOrganizationService, OperationStatusEventArgs> InnerOperationStatusChanged;
+		protected virtual event EventHandler<IOrganizationService, OperationStatusEventArgs, IOrganizationService> InnerOperationStatusChanged;
 
 		public virtual IEnumerable<Operation> PendingOperations => pendingOperations;
 		public virtual IEnumerable<Operation> ExecutedOperations => executedOperations;
@@ -87,6 +86,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 
 		private readonly List<Operation> pendingOperations;
 		private readonly FixedSizeQueue<Operation> executedOperations;
+		private readonly SemaphoreSlim opsSemaphore = new (1);
 
 		private IDeferredOrgService deferredOrgService;
 		private bool isUseSdkDeferredOperations;
@@ -99,7 +99,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 		private double RetryBackoffMultiplier => Parameters?.AutoRetryParams?.BackoffMultiplier ?? 1;
 		private TimeSpan? MaxmimumRetryInterval => Parameters?.AutoRetryParams?.MaxmimumRetryInterval;
 
-		private IEnumerable<Func<Func<IOrganizationServiceAsync2, Task<object>>, Operation, ExecuteParams, Exception, Task<object>>> CustomRetryFunctions
+		private IEnumerable<Func<Func<IOrganizationServiceAsync2, Task<object>>, Operation, ExecuteParams?, Exception?, Task<object>>>? CustomRetryFunctions
 			=> Parameters?.AutoRetryParams?.CustomRetryFunctions;
 
 		protected internal EnhancedOrgServiceBase(ServiceParams parameters)
@@ -120,22 +120,6 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 		}
 
 		#region Service
-
-		public virtual void WarmUp()
-		{
-			if (ServicePool != null)
-			{
-				ServicePool.WarmUp();
-			}
-		}
-
-		public virtual void EndWarmup()
-		{
-			if (ServicePool != null)
-			{
-				ServicePool.EndWarmup();
-			}
-		}
 
 		protected internal virtual void InitialiseConnection(IOrganizationService service)
 		{
@@ -162,21 +146,12 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 		{
 			ValidateState();
 
-			var service = CrmService;
-
 			if (ServicePool != null)
 			{
-				service = ((await ServicePool.GetService()) ?? CrmService) as IOrganizationServiceAsync2;
+				return await ServicePool.GetSelfDisposingService();
 			}
 
-			if (service == null)
-			{
-				throw new StateException("Failed to find an internal CRM service.");
-			}
-
-			return ServicePool == null
-				? new SelfDisposingService(service, () => { })
-				: new SelfDisposingService(service, () => ServicePool.ReleaseService(service));
+			return new SelfDisposingService(CrmService, () => { });
 		}
 
 		#endregion
@@ -270,7 +245,6 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 
 		protected virtual async Task<OrganizationResponse> InnerExecute(OrganizationRequest request)
 		{
-			// TODO dead-lock potential: second call in a row
 			using var service = await GetService();
 			return await service.ExecuteAsync(request is KeyedRequest keyedRequest ? keyedRequest.Request : request);
 		}
@@ -322,7 +296,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 		#endregion
 
 		#region Async
-		
+
 		public async Task<Guid> CreateAsync(Entity entity)
 		{
 			return await CreateAsync(entity, CancellationToken.None);
@@ -1371,8 +1345,9 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 
 		#region Operation Handling
 
+		private int ops = 0;
 		protected internal virtual async Task<TResult> TryRunOperation<TResult>(Func<IOrganizationServiceAsync2, Task<TResult>> action,
-			Operation operation, ExecuteParams executeParams, bool isDelegated = false)
+			Operation operation, ExecuteParams? executeParams, bool isDelegated = false)
 		{
 			var isRetryEnabled = executeParams?.IsAutoRetryEnabled ?? IsRetryEnabled;
 			var maxRetryCount = executeParams?.AutoRetryParams?.MaxRetryCount ?? MaxRetryCount;
@@ -1387,49 +1362,36 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 			{
 				if (!isDelegated)
 				{
-					lock (pendingOperations)
-					{
-						pendingOperations.Add(operation); 
-					}
+					await opsSemaphore.WaitAsync();
+					pendingOperations.Add(operation); 
+					opsSemaphore.Release();
 				}
 
 				while (true)
 				{
+					var service = await GetService();
+					operation.Service = service;
+					
+					var isDisposed = false;
+					
 					try
 					{
 						operation.OperationStatus = Status.InProgress;
-
-						using (var service = await GetService())
-						{
-							var result = await action(service);
-							ServicePool?.AutoSizeIncrement();
-
-							return result;
-						}
+						var result = await action(service);
+						operation.OperationStatus = Status.RequestDone;
+						return result;
 					}
 					catch (Exception ex)
 					{
+						operation.OperationStatus = Status.RequestDone;
+
 						var isForceRetry = false;
-						
+
 						if (ex is FaultException<OrganizationServiceFault> svcFault)
 						{
-							switch (svcFault.Detail.ErrorCode)
-							{
-								case -2147015902:
-								case -2147015903:
-									isForceRetry = true;
-									break;
-									
-								case -2147015898:
-									// 0x80072326: too many connections
-									// decrease the limit
-									ServicePool?.AutoSizeDecrement();
-									isForceRetry = true;
-									
-									break;
-							}
+							isForceRetry = Parameters?.ConnectionParams?.IsApiLimit(svcFault.Detail.ErrorCode) is true;
 						}
-						
+
 						if (!isForceRetry && (!isRetryEnabled || currentRetry >= maxRetryCount || nextInterval > maxmimumRetryInterval))
 						{
 							if (!isDelegated)
@@ -1437,6 +1399,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 								FailureCount++;
 
 								operation.Exception = ex;
+								service.Dispose();
+								isDisposed = true;
 
 								if (CustomRetryFunctions != null)
 								{
@@ -1462,9 +1426,12 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 							throw;
 						}
 
+						operation.PreException = ex;
 						operation.OperationStatus = Status.Retry;
+						service.Dispose();
+						isDisposed = true;
 
-						Task.Delay(nextInterval).Wait();
+						await Task.Delay(nextInterval);
 						nextInterval = new TimeSpan((long)(nextInterval.Ticks * backoffMultiplier));
 
 						currentRetry++;
@@ -1472,6 +1439,13 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 						if (!isDelegated)
 						{
 							RetryCount++;
+						}
+					}
+					finally
+					{
+						if (!isDisposed)
+						{
+							service.Dispose();
 						}
 					}
 				}
@@ -1482,17 +1456,15 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 				{
 					RequestCount++;
 
-					lock (pendingOperations)
-					{
-						pendingOperations.Remove(operation);
-					}
+					await opsSemaphore.WaitAsync();
+					pendingOperations.Remove(operation);
+					opsSemaphore.Release();
 
 					if (executeParams?.IsExcludeFromHistory != true && Parameters?.OperationHistoryLimit != 0)
 					{
-						lock (executedOperations)
-						{
-							executedOperations.Enqueue(operation);
-						}
+						await opsSemaphore.WaitAsync();
+						executedOperations.Enqueue(operation);
+						opsSemaphore.Release();
 					}
 				}
 
@@ -1500,9 +1472,9 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 			}
 		}
 
-		protected virtual void OnOperationStatusChanged(OperationStatusEventArgs e)
+		protected virtual void OnOperationStatusChanged(OperationStatusEventArgs e, IOrganizationService s)
 		{
-			InnerOperationStatusChanged?.Invoke(this, e);
+			InnerOperationStatusChanged?.Invoke(this, e, s);
 		}
 
 		protected virtual Operation PrepOperation<TResponse>(OrganizationRequest request) where TResponse : OrganizationResponse
@@ -1512,7 +1484,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 				{
 					Index = ++OperationIndex
 				};
-			operation.OperationStatusChanged += (s, e) => OnOperationStatusChanged(e);
+			operation.OperationStatusChanged += (o, e, s) => OnOperationStatusChanged(e, s);
 			operation.OperationStatus = Status.Ready;
 			return operation;
 		}

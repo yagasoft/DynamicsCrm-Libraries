@@ -27,11 +27,11 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 		where TService : IEnhancedOrgService
 		where TEnhancedOrgService : EnhancedOrgServiceBase, TService
 	{
+		public ServiceParams ServiceParams { get; }
+
 		public IOperationStats Stats { get; }
 
 		public virtual IEnumerable<IOperationStats> StatTargets => statServices;
-
-		internal readonly ServiceParams Parameters;
 
 		private readonly ServiceFactory crmFactory;
 
@@ -67,7 +67,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 			ParamHelpers.SetPerformanceParams(parameters.ConnectionParams);
 
 			parameters.IsLocked = true;
-			Parameters = parameters;
+			ServiceParams = parameters;
 
 			if (parameters.IsCachingEnabled == true && parameters.CachingParams != null)
 			{
@@ -78,13 +78,13 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 					case CacheScope.Global:
 						factoryCache = customCacheFactory == null
 							? MemoryCache.Default
-							: customCacheFactory((IServiceFactory<IOrganizationService>)this, Parameters, null);
+							: customCacheFactory((IServiceFactory<IOrganizationService>)this, ServiceParams, null);
 						break;
 
 					case CacheScope.Factory:
 						factoryCache = customCacheFactory == null
 							? (parameters.CachingParams.ObjectCache ?? new MemoryCache(parameters.ConnectionParams.ConnectionString))
-							: customCacheFactory((IServiceFactory<IOrganizationService>)this, Parameters, null);
+							: customCacheFactory((IServiceFactory<IOrganizationService>)this, ServiceParams, null);
 						break;
 
 					case CacheScope.Service:
@@ -95,13 +95,13 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 				}
 			}
 
-			crmFactory = new ServiceFactory(parameters.ConnectionParams, parameters.PoolParams?.TokenExpiryCheck);
+			crmFactory = new ServiceFactory(parameters);
 		}
 
-		public virtual TService CreateService()
+		public virtual async Task<TService> CreateService()
 		{
 			var service = CreateEnhancedService();
-			(service as TEnhancedOrgService)?.InitialiseConnection(crmFactory.CreateService());
+			(service as TEnhancedOrgService)?.InitialiseConnection(await crmFactory.CreateService());
 			return service;
 		}
 
@@ -115,12 +115,12 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 
 		public void ClearCache()
 		{
-			if (Parameters.IsCachingEnabled != true)
+			if (ServiceParams.IsCachingEnabled != true)
 			{
 				throw new NotSupportedException("Cannot clear the cache because caching is not enabled.");
 			}
 
-			if (Parameters.CachingParams?.CacheScope == CacheScope.Service)
+			if (ServiceParams.CachingParams?.CacheScope == CacheScope.Service)
 			{
 				foreach (var service in statServices.OfType<ICachingOrgService>())
 				{
@@ -139,14 +139,14 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 		internal virtual TService CreateEnhancedService()
 		{
 			var enhancedService = (TEnhancedOrgService)Activator.CreateInstance(typeof(TEnhancedOrgService),
-				BindingFlags.NonPublic | BindingFlags.Instance, null, new object[] { Parameters }, null);
+				BindingFlags.NonPublic | BindingFlags.Instance, null, new object[] { ServiceParams }, null);
 
-			if (Parameters.IsTransactionsEnabled == true)
+			if (ServiceParams.IsTransactionsEnabled == true)
 			{
 				enhancedService.TransactionManager = new TransactionManager();
 			}
 
-			if (Parameters.IsCachingEnabled == true)
+			if (ServiceParams.IsCachingEnabled == true)
 			{
 				InitialiseCaching(enhancedService);
 			}
@@ -160,7 +160,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 
 		private void InitialiseCaching(TEnhancedOrgService enhancedService)
 		{
-			if (Parameters.IsCachingEnabled != true || Parameters.CachingParams == null)
+			if (ServiceParams.IsCachingEnabled != true || ServiceParams.CachingParams == null)
 			{
 				return;
 			}
@@ -169,7 +169,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 
 			ObjectCache cache;
 
-			switch (Parameters.CachingParams.CacheScope)
+			switch (ServiceParams.CachingParams.CacheScope)
 			{
 				case CacheScope.Global:
 				case CacheScope.Factory:
@@ -178,32 +178,32 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Factories
 
 				case CacheScope.Service:
 					cache = customCacheFactory == null
-						? new MemoryCache(Parameters.ConnectionParams.ConnectionString)
-						: customCacheFactory((IServiceFactory<IOrganizationService>)this, Parameters, enhancedService);
+						? new MemoryCache(ServiceParams.ConnectionParams.ConnectionString)
+						: customCacheFactory((IServiceFactory<IOrganizationService>)this, ServiceParams, enhancedService);
 					break;
 
 				default:
-					throw new ArgumentOutOfRangeException(nameof(Parameters.CachingParams.CacheScope));
+					throw new ArgumentOutOfRangeException(nameof(ServiceParams.CachingParams.CacheScope));
 			}
 
 			OrganizationServiceCacheSettings cacheSettings = null;
 
-			if (Parameters.CachingParams.Offset.HasValue)
+			if (ServiceParams.CachingParams.Offset.HasValue)
 			{
 				cacheSettings =
 					new OrganizationServiceCacheSettings
 					{
-						PolicyFactory = new CacheItemPolicyFactory(Parameters.CachingParams.Offset.Value, Parameters.CachingParams.Priority)
+						PolicyFactory = new CacheItemPolicyFactory(ServiceParams.CachingParams.Offset.Value, ServiceParams.CachingParams.Priority)
 					};
 			}
 
-			if (Parameters.CachingParams.SlidingExpiration.HasValue)
+			if (ServiceParams.CachingParams.SlidingExpiration.HasValue)
 			{
 				cacheSettings =
 					new OrganizationServiceCacheSettings
 					{
-						PolicyFactory = new CacheItemPolicyFactory(Parameters.CachingParams.SlidingExpiration.Value,
-							Parameters.CachingParams.Priority)
+						PolicyFactory = new CacheItemPolicyFactory(ServiceParams.CachingParams.SlidingExpiration.Value,
+							ServiceParams.CachingParams.Priority)
 					};
 			}
 

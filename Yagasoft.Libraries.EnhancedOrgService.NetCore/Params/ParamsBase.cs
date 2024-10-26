@@ -12,8 +12,25 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 	/// </summary>
 	public abstract class ParamsBase
 	{
-		public virtual bool IsLocked { get; internal set; }
+		public bool IsLocked
+		{
+			get => isLocked;
+			set
+			{
+				foreach (var property in GetType().GetProperties()
+					.Where(p => p.PropertyType.IsAssignableTo(typeof(ParamsBase)))
+					.Select(p => p.GetValue(this))
+					.OfType<ParamsBase>())
+				{
+					property.IsLocked = value;
+				}
+				
+				isLocked = value;
+			}
+		}
 
+		private bool isLocked;
+		
 		public void ValidateLock()
 		{
 			if (IsLocked)

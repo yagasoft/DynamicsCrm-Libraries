@@ -1,7 +1,8 @@
 ﻿#region Imports
 
-using System;
 using Microsoft.Xrm.Sdk;
+using Yagasoft.Libraries.EnhancedOrgService.Events;
+using Yagasoft.Libraries.EnhancedOrgService.Events.EventArgs;
 using Yagasoft.Libraries.EnhancedOrgService.Factories;
 using Yagasoft.Libraries.EnhancedOrgService.Params;
 
@@ -26,11 +27,12 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 			: this(new ConnectionParams { ConnectionString = connectionString }, poolParams)
 		{ }
 
-		public DefaultServicePool(ServiceParams serviceParams) : this(serviceParams.ConnectionParams, serviceParams.PoolParams)
+		public DefaultServicePool(ServiceParams serviceParams)
+			: this(serviceParams.ConnectionParams, serviceParams.PoolParams)
 		{ }
 
 		public DefaultServicePool(ConnectionParams connectionParams, PoolParams poolParams = null)
-			: base(new ServiceFactory(connectionParams, poolParams?.TokenExpiryCheck), poolParams)
+			: base(new ServiceFactory(new ServiceParams { ConnectionParams = connectionParams, PoolParams = poolParams }), poolParams)
 		{ }
 
 		public DefaultServicePool(IServiceFactory<IOrganizationService> factory, int poolSize = -1, TimeSpan? tokenExpiryCheck = null)

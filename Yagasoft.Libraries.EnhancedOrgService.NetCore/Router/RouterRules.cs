@@ -26,14 +26,12 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 		StaticWithFallback,
 
 		/// <summary>
-		///     Use the least loaded node -- node with least pending requests.<br />
-		///     This algorithm makes a periodic <see cref="WhoAmIRequest" /> to nodes.
+		///     Use the least loaded node -- node with least pending requests.
 		/// </summary>
 		LeastLoaded,
 
 		/// <summary>
-		///     Sort nodes by their latency and use the fastest one.<br />
-		///     This algorithm makes a periodic <see cref="WhoAmIRequest" /> to nodes.
+		///     Sort nodes by their latency and use the fastest one.
 		/// </summary>
 		LeastLatency
 	}

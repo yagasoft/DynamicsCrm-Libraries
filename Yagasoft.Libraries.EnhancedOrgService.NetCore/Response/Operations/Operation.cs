@@ -13,6 +13,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Response.Operations
 	{
 		Success,
 		Failure,
+		RequestDone,
 		InProgress,
 		Retry,
 		Ready
@@ -24,6 +25,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Response.Operations
 	public class Operation
 	{
 		public OrganizationRequest Request { get; internal set; }
+		public IOrganizationService Service { get; internal set; }
 
 		public OrganizationRequest UndoRequest { get; set; }
 
@@ -33,7 +35,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Response.Operations
 		/// <value>
 		///     The exception.
 		/// </value>
-		public Exception Exception
+		public Exception? Exception
 		{
 			get => exception;
 
@@ -44,9 +46,15 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Response.Operations
 			}
 		}
 
+		public Exception? PreException { get; internal set; }
+		
 		public DateTime? StartDate { get; protected set; }
 		public DateTime? EndDate { get; protected set; }
 		public TimeSpan? TotalTime => EndDate - StartDate;
+		
+		public DateTime? RequestStartDate { get; protected set; }
+		public DateTime? RequestEndDate { get; protected set; }
+		public TimeSpan? RequestDuration => EndDate - StartDate;
 
 		public Status? OperationStatus
 		{
@@ -63,6 +71,19 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Response.Operations
 					case Status.Failure when EndDate == null:
 						EndDate = DateTime.Now;
 						break;
+	
+					case Status.InProgress:
+						RequestStartDate = DateTime.Now;
+						break;
+	
+					case Status.RequestDone:
+						RequestEndDate = DateTime.Now;
+						break;
+				
+					case Status.Success when RequestEndDate == null:
+					case Status.Failure when RequestEndDate == null:
+						RequestEndDate = DateTime.Now;
+						break;
 				}
 
 				operationStatus = value;
@@ -76,7 +97,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Response.Operations
 		/// <value>
 		///     The index.
 		/// </value>
-		public int Index { get; internal set; }
+		public long Index { get; internal set; }
 
 		/// <summary>
 		///     Gets or sets the response. 'Get' blocks until the response is ready.
@@ -85,7 +106,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Response.Operations
 		///     The response.
 		/// </value>
 		/// <exception cref="System.Exception">Can't set the response of a failed response: Exception.Message</exception>
-		public OrganizationResponse Response
+		public OrganizationResponse? Response
 		{
 			get
 			{
@@ -110,9 +131,9 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Response.Operations
 			}
 		}
 
-		internal event EventHandler<Operation, OperationStatusEventArgs> OperationStatusChanged;
+		internal event EventHandler<Operation, OperationStatusEventArgs, IOrganizationService> OperationStatusChanged;
 
-		private Exception exception;
+		private Exception? exception;
 		private OrganizationResponse response;
 		private Status? operationStatus;
 
@@ -121,15 +142,15 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Response.Operations
 			Request = request;
 			UndoRequest = undoRequest;
 		}
-		
+
+		private void OnOperationStatusChanged(OperationStatusEventArgs e)  
+		{  
+			OperationStatusChanged?.Invoke(this, e, Service);  
+		}
+
 		internal void ClearEventHandlers()  
 		{  
 			OperationStatusChanged = null;  
-		}
-		
-		private void OnOperationStatusChanged(OperationStatusEventArgs e)  
-		{  
-			OperationStatusChanged?.Invoke(this, e);  
 		}
 	}
 

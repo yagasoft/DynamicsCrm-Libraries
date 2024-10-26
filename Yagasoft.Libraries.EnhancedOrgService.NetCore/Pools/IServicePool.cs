@@ -1,22 +1,30 @@
 ﻿#region Imports
 
 using Microsoft.Xrm.Sdk;
+
+using Yagasoft.Libraries.EnhancedOrgService.Events;
+using Yagasoft.Libraries.EnhancedOrgService.Events.EventArgs;
 using Yagasoft.Libraries.EnhancedOrgService.Factories;
-using Yagasoft.Libraries.EnhancedOrgService.Pools.WarmUp;
+using Yagasoft.Libraries.EnhancedOrgService.Params;
+using Yagasoft.Libraries.EnhancedOrgService.Services.SelfDisposing;
 
 #endregion
 
 namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 {
-	public interface IServicePool<TService> : IWarmUp
+	public interface IServicePool<TService>
 		where TService : IOrganizationService
 	{
-		int CreatedServices { get; }
 		int CurrentPoolSize { get; }
-		bool IsAutoPoolSize { get; set; }
+		bool IsAutoPoolSize { get; internal set; }
 		int MaxPoolSize { get; set; }
 
 		IServiceFactory<TService> Factory { get; }
+		int? RecommendedDegreesOfParallelism { get; }
+		
+		PoolParams PoolParams { get; }
+		
+		EventHandler<IOrganizationService, OperationStatusEventArgs, IOrganizationService>? OperationsEventHandler { get; protected set; }
 
 		/// <summary>
 		///     If the pool is empty, creates a new Enhanced Service.<br />
@@ -27,21 +35,16 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 		Task<TService> GetService();
 
 		/// <summary>
+		///     Gets a service (<see cref="GetService" />) and wraps it in a 'disposing' logic to return this pool once done.
+		///     Must call 'dispose', or embed service in a 'using' block.
+		/// </summary>
+		Task<IDisposableService> GetSelfDisposingService();
+
+		/// <summary>
 		///     Puts the service back into the pool for re-use.<br />
 		///     The state of the service becomes invalid; so it should not be used after calling this method.
 		/// </summary>
 		/// <param name="service">Service to release.</param>
 		void ReleaseService(IOrganizationService service);
-
-		/// <summary>
-		///     Increments the <see cref="MaxPoolSize" /> after a successful request.
-		///     Does not exceed the max size set in the parameters.
-		/// </summary>
-		void AutoSizeIncrement();
-
-		/// <summary>
-		///     Decrements the <see cref="MaxPoolSize" /> after a failed request.
-		/// </summary>
-		void AutoSizeDecrement();
 	}
 }

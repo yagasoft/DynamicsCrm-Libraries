@@ -28,12 +28,12 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 		/// </summary>
 		public int? PoolSize
 		{
-			get => poolSize ?? int.MaxValue;
+			get => poolSize ?? 1;
 			set
 			{
 				ValidateLock();
 
-				if (value < 1)
+				if (value is < 1 or null)
 				{
 					IsAutoPoolSize = true;
 					poolSize = null;
@@ -62,11 +62,11 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 
 		/// <summary>
 		///     Threshold time to wait for a connection to become available in the connection pool.<br />
-		///     Default value: 2 minutes.
+		///     Default value: 5 minutes.
 		/// </summary>
 		public TimeSpan? DequeueTimeout
 		{
-		    get => dequeueTimeout ?? TimeSpan.FromMinutes(2);
+		    get => dequeueTimeout ?? TimeSpan.FromMinutes(7);
 		    set
 		    {
 		        ValidateLock();

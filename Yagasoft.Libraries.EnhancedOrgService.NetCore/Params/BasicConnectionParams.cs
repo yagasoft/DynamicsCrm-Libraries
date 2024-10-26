@@ -24,7 +24,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 		/// <summary>
 		///     A custom factory that will be used to create CRM connections instead of the library's built-in method.
 		/// </summary>
-		public Func<string, IOrganizationService>? CustomIOrgSvcFactory
+		public Func<string, Task<IOrganizationService>>? CustomIOrgSvcFactory
 		{
 			get => customIOrgSvcFactory;
 			set
@@ -35,6 +35,6 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 		}
 
 		private string? connectionString;
-		private Func<string, IOrganizationService>? customIOrgSvcFactory;
+		private Func<string, Task<IOrganizationService>>? customIOrgSvcFactory;
 	}
 }

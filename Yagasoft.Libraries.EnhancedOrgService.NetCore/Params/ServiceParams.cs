@@ -10,40 +10,6 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Params
 {
 	public class ServiceParams : ServiceParamsBase
 	{
-		public override bool IsLocked
-		{
-			get => isLocked;
-			internal set
-			{
-				if (ConnectionParams != null)
-				{
-					ConnectionParams.IsLocked = value;
-				}
-
-				if (CachingParams != null)
-				{
-					CachingParams.IsLocked = value;
-				}
-
-				if (TransactionParams != null)
-				{
-					TransactionParams.IsLocked = value;
-				}
-
-				if (AutoRetryParams != null)
-				{
-					AutoRetryParams.IsLocked = value;
-				}
-
-				if (PoolParams != null)
-				{
-					PoolParams.IsLocked = value;
-				}
-
-				isLocked = value;
-			}
-		}
-
 		public ConnectionParams? ConnectionParams
 		{
 			get => connectionParams ??= new ConnectionParams();

@@ -16,10 +16,10 @@ using Yagasoft.Libraries.EnhancedOrgService.Exceptions;
 using Yagasoft.Libraries.EnhancedOrgService.Operations;
 using Yagasoft.Libraries.EnhancedOrgService.Params;
 using Yagasoft.Libraries.EnhancedOrgService.Pools;
-using Yagasoft.Libraries.EnhancedOrgService.Pools.WarmUp;
 using Yagasoft.Libraries.EnhancedOrgService.Response.Operations;
 using Yagasoft.Libraries.EnhancedOrgService.Router.Node;
 using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced;
+using Yagasoft.Libraries.EnhancedOrgService.Services.SelfDisposing;
 using Yagasoft.Libraries.EnhancedOrgService.State;
 using NodeStatus = Yagasoft.Libraries.EnhancedOrgService.Router.Node.NodeStatus;
 
@@ -70,7 +70,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 
 		protected internal virtual INodeService LatestFaultyNode { get; set; }
 
-		private readonly object dequeueLock = new();
+		private readonly SemaphoreSlim dequeueLock = new(1);
+		
 		private Status status;
 
 		public RoutingService()
@@ -150,19 +151,26 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 			return this;
 		}
 
-		public IRoutingService<TService> RemoveNode(INodeService nodeToRemove)
+		public async Task<IRoutingService<TService>> RemoveNode(INodeService nodeToRemove)
 		{
 			ValidateState();
 
-			lock (dequeueLock)
+			await dequeueLock.WaitAsync();
+			
+			try
 			{
 				while (NodeQueue.TryDequeue(out var node) && node != nodeToRemove)
 				{
 					NodeQueue.Enqueue(node);
 				}
 			}
+			finally
+			{
+				dequeueLock.Release();
+			}
 
 			OnEventOccurred(Event.NodeQueueRemoved, nodeToRemove);
+			
 			return this;
 		}
 
@@ -260,22 +268,18 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 
 			foreach (var node in NodeQueue)
 			{
-				await Task.Factory.StartNew(
-					() =>
-					{
-						try
-						{
-							node.NodeStatusChanged += NodeEvent;
-							node.StartNode();
-						}
-						catch
-						{
-							LatestConnectionError = node.LatestConnectionError;
-							LatestFaultyNode = node;
-							Status = Status.Failed;
-							throw;
-						}
-					}, TaskCreationOptions.LongRunning).ConfigureAwait(false);
+				try
+				{
+					node.NodeStatusChanged += NodeEvent;
+					await node.StartNode();
+				}
+				catch
+				{
+					LatestConnectionError = node.LatestConnectionError;
+					LatestFaultyNode = node;
+					Status = Status.Failed;
+					throw;
+				}
 			}
 		}
 
@@ -296,29 +300,11 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 			Status = Status.Offline;
 		}
 
-		public virtual void WarmUp()
-		{
-			ValidateState();
-
-			foreach (var service in NodeQueue)
-			{
-				service.Pool.WarmUp();
-			}
-		}
-
-		public virtual void EndWarmup()
-		{
-			foreach (var service in NodeQueue)
-			{
-				service.Pool.EndWarmup();
-			}
-		}
-
 		public virtual async Task<TService> GetService()
 		{
 			for (var i = 0; i < (60 * 1000 / 100) && Status == Status.Starting; i++)
 			{
-				Thread.Sleep(100);
+				await Task.Delay(100);
 			}
 
 			if (Status != Status.Online)
@@ -326,9 +312,11 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 				throw new StateException("Router must be running.");
 			}
 
-			NodeService node;
+			NodeService? node;
 
-			lock (dequeueLock)
+			await dequeueLock.WaitAsync();
+			
+			try
 			{
 				while (true)
 				{
@@ -339,9 +327,13 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 							foreach (var _ in NodeQueue)
 							{
 								NodeQueue.TryDequeue(out node);
-								NodeQueue.Enqueue(node);
 
-								if (node.Status == NodeStatus.Online)
+								if (node is not null)
+								{
+									NodeQueue.Enqueue(node);
+								}
+
+								if (node?.Status == NodeStatus.Online)
 								{
 									break;
 								}
@@ -367,7 +359,12 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 								else
 								{
 									NodeQueue.TryDequeue(out node);
-									NodeQueue.Enqueue(node);
+									
+									if (node is not null)
+									{
+										NodeQueue.Enqueue(node);
+									}
+									
 									node = NodeQueue.FirstOrDefault();
 								}
 
@@ -421,6 +418,10 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 					break;
 				}
 			}
+			finally
+			{
+				dequeueLock.Release();
+			}
 
 			if (node == null)
 			{
@@ -428,42 +429,51 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 				throw new NodeSelectException("Cannot find a valid node.");
 			}
 
-			var service = await node.Pool.GetService();
+			var service = await node.Pool.GetSelfDisposingService();
 
 			if (Rules.IsFallbackEnabled == true && service is IEnhancedOrgService enhancedService
 				&& enhancedService.Parameters.AutoRetryParams?.CustomRetryFunctions.Contains(CustomRetry) == false)
 			{
-				enhancedService.Parameters.AutoRetryParams.CustomRetryFunctions?.Add(CustomRetry);
+				enhancedService.Parameters.AutoRetryParams.CustomRetryFunctions.Add(CustomRetry);
 			}
 
-			return (TService)service;
+			if (service == null)
+			{
+				throw new NodeSelectException("Cannot find a valid node.");
+			}
+
+			return service is TService castService ? castService : throw new NodeSelectException("Cannot find a valid node.");
 		}
 
 		protected internal virtual async Task<object> CustomRetry(Func<IOrganizationServiceAsync2, Task<object>> action, Operation operation,
-			ExecuteParams executeParams, Exception ex)
+			ExecuteParams? executeParams, Exception? ex)
 		{
-			FallbackNodes.Require(nameof(FallbackNodes));
+			var nodes = FallbackNodes.Require(nameof(FallbackNodes)).ToArray();
 
-			foreach (var fallbackNode in FallbackNodes)
+			for (var i = 0; i < nodes.Length; i++)
 			{
+				var fallbackNode = nodes[i];
+				
 				try
 				{
-					using var service  = await fallbackNode.Pool.GetService() as EnhancedOrgServiceBase;
-
-					if (service == null)
-					{
-						continue;
-					}
-
-					return service.TryRunOperation(action, operation, executeParams, true);
+					using var service = await fallbackNode.Pool.GetSelfDisposingService();
+					return action(service);
 				}
 				catch
 				{
-					// ignored
+					if (i == nodes.Length - 1)
+					{
+						throw;
+					}
 				}
 			}
 
-			return null;
+			if (ex is not null)
+			{
+				throw ex;
+			}
+			
+			throw new Exception("Custom retry failed.");
 		}
 		
 		protected virtual void OnEventOccurred(Event @event, INodeService node = null)

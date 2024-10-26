@@ -11,7 +11,6 @@ using Yagasoft.Libraries.EnhancedOrgService.Events.EventArgs;
 using Yagasoft.Libraries.EnhancedOrgService.Operations;
 using Yagasoft.Libraries.EnhancedOrgService.Params;
 using Yagasoft.Libraries.EnhancedOrgService.Pools;
-using Yagasoft.Libraries.EnhancedOrgService.Pools.WarmUp;
 using Yagasoft.Libraries.EnhancedOrgService.Response.Operations;
 using Yagasoft.Libraries.EnhancedOrgService.Router.Node;
 using Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced;
@@ -29,7 +28,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 		Stopping
 	}
 
-	public interface IRoutingService<TService> : IOpStatsAggregate, IOpStatsParent, IWarmUp
+	public interface IRoutingService<TService> : IOpStatsAggregate, IOpStatsParent
 		where TService : IOrganizationService
 	{
 		event EventHandler<IRoutingService<TService>, RouterEventArgs> RouterEventOccurred;
@@ -51,7 +50,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 		/// <returns>A node that can be used to define a rule exception, for example.</returns>
 		INodeService AddNode(IServicePool<TService> pool, int weight = 1);
 
-		IRoutingService<TService> RemoveNode(INodeService node);
+		Task<IRoutingService<TService>> RemoveNode(INodeService node);
 
 		/// <summary>
 		///     Defines the rules to apply on this router.
