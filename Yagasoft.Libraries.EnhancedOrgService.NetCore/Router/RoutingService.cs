@@ -413,7 +413,9 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router
 						node ??= FallbackNodes?.OfType<NodeService>().Union(NodeQueue).FirstOrDefault(n => n.Status == NodeStatus.Online);
 					}
 
-					node ??= NodeQueue.FirstOrDefault(n => n.Status == NodeStatus.Online);
+					node ??= NodeQueue.FirstOrDefault(n => n.Status is NodeStatus.Online);
+					node ??= NodeQueue.FirstOrDefault(n => n.Status is NodeStatus.Unknown);
+					node ??= NodeQueue.FirstOrDefault(n => n.Status is NodeStatus.Faulty);
 
 					break;
 				}

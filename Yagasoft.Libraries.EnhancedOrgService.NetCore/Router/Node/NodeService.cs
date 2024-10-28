@@ -118,7 +118,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Router.Node
 										{ }
 									}, cancellationToken, TaskCreationOptions.LongRunning);
 
-								if (task.Wait(TimeSpan.FromSeconds(10)))
+								if (task.Wait(TimeSpan.FromMinutes(1)))
 								{
 									stopwatch.Stop();
 

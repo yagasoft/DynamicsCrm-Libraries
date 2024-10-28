@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.ServiceModel;
 using System.Xml.Linq;
 
@@ -84,8 +85,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 		private TimeSpan requestsDuration = TimeSpan.Zero;
 		private readonly SemaphoreSlim durationSemaphore = new(1);
 		
-		private ConcurrentDictionary<long, long> requests = new();
-		private readonly ConcurrentDictionary<long, long> throttledRequests = new();
+		private ConcurrentDictionary<OrganizationRequest, Request> requests = new();
+		private readonly ConcurrentDictionary<OrganizationRequest, Request> throttledRequests = new();
 		private long requestId;
 
 		public ServicePool(IServiceFactory<TService> factory, int poolSize = -1)
@@ -207,14 +208,14 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 					break;
 				
 				case Status.InProgress:
-					Task.Run(RegisterRequest);
+					Task.Run(() => RegisterRequest(e.Operation.Request));
 					break;
 				
 				case Status.RequestDone:
 					Task.Run(async
 						() =>
 						{
-							_ = RecordDuration(e.Operation.RequestDuration);
+							_ = RecordDuration(e.Operation);
 
 							await maxPoolSemaphore.WaitAsync();
 
@@ -250,9 +251,9 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 			}
 		}
 
-		private async Task RecordDuration(TimeSpan? duration)
+		private async Task RecordDuration(Operation? operation)
 		{
-			if (duration is null)
+			if (operation is null)
 			{
 				return;
 			}
@@ -261,12 +262,9 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 
 			try
 			{
-				requestsDuration = requestsDuration.Add(duration.Value);
-
-				if (requestsDuration > TimeSpan.FromMinutes(20))
+				if (requests.TryGetValue(operation.Request, out var request))
 				{
-					_ = Task.Run(SwitchService);
-					requestsDuration = TimeSpan.Zero;
+					request.Duration.Stop();
 				}
 			}
 			finally
@@ -275,10 +273,34 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 			}
 		}
 
-		private async Task RegisterRequest()
+		private async Task RegisterRequest(OrganizationRequest? operationRequest)
 		{
-			var id = Interlocked.Increment(ref requestId);
-			requests[id] = id;
+			if (operationRequest == null)
+			{
+				return;
+			}
+
+			var newRequest = new Request(operationRequest, Stopwatch.StartNew());
+			requests[operationRequest] = newRequest;
+
+			await durationSemaphore.WaitAsync();
+			
+			try
+			{
+				requestsDuration = requests
+					.Aggregate(TimeSpan.Zero,
+						(t, r) => t.Add(TimeSpan.FromMilliseconds(r.Value.Duration.ElapsedMilliseconds)));
+
+				if (requestsDuration > TimeSpan.FromMinutes(15))
+				{
+					requests.Clear();
+					_ = Task.Run(SwitchService);
+				}
+			}
+			finally
+			{
+				durationSemaphore.Release();
+			}
 
 			await Task.Delay(TimeSpan.FromMinutes(5));
 
@@ -286,12 +308,12 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 
 			try
 			{
-				if (requests.TryRemove(id, out _))
+				if (requests.TryRemove(operationRequest, out var request))
 				{
 					return;
 				}
 
-				if (throttledRequests.TryRemove(id, out _))
+				if (throttledRequests.TryRemove(operationRequest, out var throttledRequest))
 				{
 					if (throttledRequests.Count <= 0)
 					{
@@ -325,7 +347,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 				consumeSemaphore.IsBlocked = true;
 
 				var newThrottledRequests = requests;
-				requests = new ConcurrentDictionary<long, long>();
+				requests = new ConcurrentDictionary<OrganizationRequest, Request>();
 
 				foreach (var (key, value) in newThrottledRequests)
 				{
@@ -337,5 +359,11 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 				throttleSemaphore.Release();
 			}
 		}
+	}
+
+	internal struct Request(OrganizationRequest operationRequest, Stopwatch duration)
+	{
+		internal readonly OrganizationRequest OperationRequest = operationRequest;
+		internal readonly Stopwatch Duration = duration;
 	}
 }
