@@ -199,6 +199,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 			{
 				SelfDisposingService.Service = Service;
 			}
+			
 			_ = Task.Run(async () => BackupService = await factory.CreateService());
 		}
 		
@@ -282,7 +283,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 				return;
 			}
 
-			var newRequest = new Request(operationRequest, Stopwatch.StartNew());
+			var newRequest = new Request(operationRequest, DateTime.Now, Stopwatch.StartNew());
 			requests[operationRequest] = newRequest;
 
 			await durationSemaphore.WaitAsync();
@@ -303,35 +304,6 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 			{
 				durationSemaphore.Release();
 			}
-
-			await Task.Delay(TimeSpan.FromMinutes(5));
-
-			await throttleSemaphore.WaitAsync();
-
-			try
-			{
-				if (requests.TryRemove(operationRequest, out var request))
-				{
-					return;
-				}
-
-				if (throttledRequests.TryRemove(operationRequest, out var throttledRequest))
-				{
-					if (throttledRequests.Count <= 0)
-					{
-						consumeSemaphore.IsBlocked = false;
-						await consumeSemaphore.ReleaseAllBlocked();
-					}
-					else
-					{
-						await consumeSemaphore.ReleaseBlocked();
-					}
-				}
-			}
-			finally
-			{
-				throttleSemaphore.Release();
-			}
 		}
 
 		private void HandleFailure(Operation operation, Exception? exception)
@@ -344,6 +316,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 			
 			throttleSemaphore.WaitAsync().Wait();
 
+			var isAlreadyBlocked = consumeSemaphore.IsBlocked;
+			
 			try
 			{
 				consumeSemaphore.IsBlocked = true;
@@ -355,17 +329,62 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 				{
 					throttledRequests[key] = value;
 				}
+
+				if (isAlreadyBlocked)
+				{
+					return;
+				}
+				
+				_ = ThottledRelease();
 			}
 			finally
 			{
 				throttleSemaphore.Release();
 			}
 		}
+
+		private async Task ThottledRelease()
+		{
+			while (throttledRequests.Count > 0)
+			{
+				await throttleSemaphore.WaitAsync();
+
+				try
+				{
+					var closest = throttledRequests.Select(r => TimeSpan.FromMinutes(5).Add(-(DateTime.Now - r.Value.Timestamp)))
+						.OrderBy(t => t).FirstOrDefault();
+
+					if (closest > TimeSpan.Zero)
+					{
+						await Task.Delay(closest);
+					}
+					else
+					{
+						continue;
+					}
+
+					if (throttledRequests.IsEmpty)
+					{
+						consumeSemaphore.IsBlocked = false;
+						await consumeSemaphore.ReleaseAllBlocked();
+					}
+					else
+					{
+						await consumeSemaphore.ReleaseBlocked();
+					}
+				}
+				finally
+				{
+					throttleSemaphore.Release();
+				}
+			}
+		}
 	}
 
-	internal struct Request(OrganizationRequest operationRequest, Stopwatch duration)
+	internal struct Request(OrganizationRequest operationRequest, DateTime timestamp, Stopwatch duration)
 	{
 		internal readonly OrganizationRequest OperationRequest = operationRequest;
+		internal readonly DateTime Timestamp = timestamp;
 		internal readonly Stopwatch Duration = duration;
 	}
 }
