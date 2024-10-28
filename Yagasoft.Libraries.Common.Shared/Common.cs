@@ -9732,6 +9732,7 @@ else if (Context.CodeScopeCount <= 0)
 		public int MaxConcurrency;
 		public bool IsBlocked;
 		
+		private readonly ConcurrentQueue<SemaphoreSlim> consumedLocksQueue = new();
 		private readonly ConcurrentQueue<SemaphoreSlim> threadLocksQueue = new();
 		private int currentRequests;
 		private readonly SemaphoreSlim semaphore = new(1);
@@ -9784,7 +9785,10 @@ else if (Context.CodeScopeCount <= 0)
 				semaphore.Release();
 			}
 
-			var newLock = new SemaphoreSlim(0);
+			if (!consumedLocksQueue.TryDequeue(out var newLock))
+			{
+				newLock = new SemaphoreSlim(0);
+			}
 			
 			// we have to wait for a slot to open
 			threadLocksQueue.Enqueue(newLock);
@@ -9863,7 +9867,7 @@ else if (Context.CodeScopeCount <= 0)
 				if (threadLocksQueue.TryDequeue(out var threadLock))
 				{
 					threadLock.Release();
-					threadLock.Dispose();
+					consumedLocksQueue.Enqueue(threadLock);
 				}
 			}
 		}

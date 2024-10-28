@@ -10,7 +10,7 @@
   <PropertyGroup>
     <PackageId>Yagasoft.Libraries.Common.NetCore</PackageId>
     <Title>Power Platform Common Library</Title>
-    <Version>1.1.2</Version>
+    <Version>1.1.3</Version>
     <Authors>ahmed-elsawalhy;Yagasoft</Authors>
     <Company>Yagasoft</Company>
     <Owners>Yagasoft</Owners>
@@ -26,7 +26,7 @@
     <PackageProjectUrl>https://github.com/yagasoft/DynamicsCrm-Libraries</PackageProjectUrl>
     <RepositoryUrl>https://github.com/yagasoft/DynamicsCrm-Libraries.git</RepositoryUrl>
     <PackageTags>common;library;CRM;Dynamics;365;sdk;helpers;netcore;net6.0</PackageTags>
-    <PackageReleaseNotes>      * 1.1.2
+    <PackageReleaseNotes>      * 1.1.3
       Improved: FIFO semaphore.
       * 1.1.1
       Added: support for .NET 6.0

@@ -107,7 +107,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 			Parameters = parameters;
 			pendingOperations = new List<Operation>();
 
-			var limit = parameters?.OperationHistoryLimit ?? int.MaxValue;
+			var limit = parameters?.OperationHistoryLimit ?? 0;
 			executedOperations = new FixedSizeQueue<Operation>(limit == 0 ? 1 : limit);
 		}
 
@@ -1345,7 +1345,6 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 
 		#region Operation Handling
 
-		private int ops = 0;
 		protected internal virtual async Task<TResult> TryRunOperation<TResult>(Func<IOrganizationServiceAsync2, Task<TResult>> action,
 			Operation operation, ExecuteParams? executeParams, bool isDelegated = false)
 		{
