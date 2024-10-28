@@ -70,6 +70,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 		protected SelfDisposingService? SelfDisposingService;
 		protected TService? Service;
 		protected TService? BackupService;
+		protected TService? BackupService2;
 
 		private readonly IServiceFactory<TService> factory;
 
@@ -194,13 +195,23 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 		private async Task SwitchService()
 		{
 			Service = BackupService ?? await factory.CreateService();
+			BackupService = BackupService2;
+			BackupService2 = default;
+
+			if (BackupService is null)
+			{
+				_ = Task.Run(async () => BackupService = await factory.CreateService());
+			}
+
+			if (BackupService2 is null)
+			{
+				_ = Task.Run(async () => BackupService2 = await factory.CreateService());
+			}
 
 			if (SelfDisposingService is not null)
 			{
 				SelfDisposingService.Service = Service;
 			}
-			
-			_ = Task.Run(async () => BackupService = await factory.CreateService());
 		}
 		
 		protected virtual void OnOperationStatusChanged(IOrganizationService sender, OperationStatusEventArgs e, IOrganizationService s)
