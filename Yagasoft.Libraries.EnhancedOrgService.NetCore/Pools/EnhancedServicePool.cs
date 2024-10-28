@@ -52,7 +52,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 			return await GetInitialisedService(await base.GetService());
 		}
 
-		public override void ReleaseService(IOrganizationService service)
+		public override async Task ReleaseService(IOrganizationService service)
 		{
 			service.Require(nameof(service));
 
@@ -62,13 +62,13 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 
 				if (releasedService != null)
 				{
-					crmPool.ReleaseService(releasedService);
+					await crmPool.ReleaseService(releasedService);
 				}
 			}
 
 			if (service is TService thisService)
 			{
-				base.ReleaseService(thisService);
+				await base.ReleaseService(thisService);
 			}
 		}
 
@@ -86,7 +86,9 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 
 			if (enhancedService is EnhancedOrgServiceBase enhancedOrgServiceBase)
 			{
-				enhancedOrgServiceBase.ReleaseService = () => ReleaseService(enhancedService);
+				async Task Action() => await ReleaseService(enhancedService);
+
+				enhancedOrgServiceBase.ReleaseService = Action;
 
 				try
 				{
@@ -94,7 +96,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 				}
 				catch
 				{
-					enhancedOrgServiceBase.ReleaseService();
+					await enhancedOrgServiceBase.ReleaseService();
 					throw;
 				}
 			}

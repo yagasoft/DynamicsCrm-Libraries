@@ -9770,19 +9770,10 @@ else if (Context.CodeScopeCount <= 0)
 		{
 			Interlocked.Increment(ref currentRequests);
 			
-			await semaphore.WaitAsync();
-
-			try
+			// if the limit hasn't been reached yet, note it, and give permission
+			if (!IsBlocked && currentRequests <= MaxConcurrency)
 			{
-				// if the limit hasn't been reached yet, note it, and give permission
-				if (!IsBlocked && currentRequests <= MaxConcurrency)
-				{
-					return true;
-				}
-			}
-			finally
-			{
-				semaphore.Release();
+				return true;
 			}
 
 			if (!consumedLocksQueue.TryDequeue(out var newLock))
@@ -9830,7 +9821,7 @@ else if (Context.CodeScopeCount <= 0)
 		/// <summary>
 		///     Release a permit, and release the hold on the next in line.
 		/// </summary>
-		public void Release(int count = 1)
+		public async Task Release(int count = 1)
 		{
 			// note the release
 			Interlocked.Decrement(ref currentRequests);
@@ -9840,35 +9831,49 @@ else if (Context.CodeScopeCount <= 0)
 				return;
 			}
 			
-			ReleaseFromQueue(count);
+			await ReleaseFromQueue(count);
 		}
 
 		/// <summary>
 		///     Release permits without affecting current request count.
 		/// </summary>
-		public void ReleaseBlocked(int count = 1)
+		public async Task ReleaseBlocked(int count = 1)
 		{
-			ReleaseFromQueue(count);
+			await ReleaseFromQueue(count);
 		}
 
 		/// <summary>
 		///     Release all permits without affecting current request count.
 		/// </summary>
-		public void ReleaseAllBlocked()
+		public async Task ReleaseAllBlocked()
 		{
-			ReleaseFromQueue(threadLocksQueue.Count);
+			await ReleaseFromQueue(threadLocksQueue.Count);
 		}
 
-		private void ReleaseFromQueue(int count = 1)
+		private async Task ReleaseFromQueue(int count = 1)
 		{
-			for (var i = 0; i < count && threadLocksQueue.Count > 0; i++)
+			if (threadLocksQueue.Count == 0)
 			{
-				// give permission to the next in line
-				if (threadLocksQueue.TryDequeue(out var threadLock))
+				return;
+			}
+			
+			await semaphore.WaitAsync();
+
+			try
+			{
+				for (var i = 0; i < count && threadLocksQueue.Count > 0; i++)
 				{
-					threadLock.Release();
-					consumedLocksQueue.Enqueue(threadLock);
+					// give permission to the next in line
+					if (threadLocksQueue.TryDequeue(out var threadLock))
+					{
+						threadLock.Release();
+						consumedLocksQueue.Enqueue(threadLock);
+					}
 				}
+			}
+			finally
+			{
+				semaphore.Release();
 			}
 		}
 	}

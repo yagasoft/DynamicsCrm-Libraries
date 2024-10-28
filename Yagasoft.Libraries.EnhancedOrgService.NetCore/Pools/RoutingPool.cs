@@ -77,10 +77,10 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 				throw new StateException("Failed to find an internal CRM service.");
 			}
 
-			return new SelfDisposingService(service, () => ReleaseService(service));
+			return new SelfDisposingService(service, async () => await ReleaseService(service));
 		}
 
-		public void ReleaseService(IOrganizationService service)
+		public async Task ReleaseService(IOrganizationService service)
 		{
 			if (service is SelfDisposingService disposableService)
 			{

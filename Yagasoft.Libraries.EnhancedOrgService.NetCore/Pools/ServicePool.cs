@@ -168,11 +168,13 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 				throw new StateException("Failed to find an internal CRM service.");
 			}
 
+			async Task Disposer() => await ReleaseService(service);
+
 			return SelfDisposingService ??=
-				new SelfDisposingService(service, () => ReleaseService(service), this as IServicePool<IOrganizationService>);
+				new SelfDisposingService(service, Disposer, this as IServicePool<IOrganizationService>);
 		}
 
-		public virtual void ReleaseService(IOrganizationService service)
+		public virtual async Task ReleaseService(IOrganizationService service)
 		{
 			if (semaphoreExtra > 0)
 			{
@@ -180,7 +182,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 				return;
 			}
 
-			consumeSemaphore.Release();
+			await consumeSemaphore.Release();
 			Interlocked.Increment(ref currentPoolSize);
 		}
 
@@ -318,11 +320,11 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 					if (throttledRequests.Count <= 0)
 					{
 						consumeSemaphore.IsBlocked = false;
-						consumeSemaphore.ReleaseAllBlocked();
+						await consumeSemaphore.ReleaseAllBlocked();
 					}
 					else
 					{
-						consumeSemaphore.ReleaseBlocked();
+						await consumeSemaphore.ReleaseBlocked();
 					}
 				}
 			}

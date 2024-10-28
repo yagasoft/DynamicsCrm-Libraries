@@ -19,10 +19,10 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.SelfDisposing
 	public class SelfDisposingService : IDisposableService
 	{
 		internal IOrganizationService Service;
-		internal IServicePool<IOrganizationService>? ServicePool;
-		private readonly Action disposer;
+		internal readonly IServicePool<IOrganizationService>? ServicePool;
+		private readonly Func<Task> disposer;
 
-		internal SelfDisposingService(IOrganizationService service, Action disposer, IServicePool<IOrganizationService>? pool = null)
+		internal SelfDisposingService(IOrganizationService service, Func<Task> disposer, IServicePool<IOrganizationService>? pool = null)
 		{
 			service.Require(nameof(service));
 			disposer.Require(nameof(disposer));
@@ -161,7 +161,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.SelfDisposing
 
 		public void Dispose()
 		{
-			disposer.Invoke();
+			 disposer?.Invoke();
 		}
 	}
 }

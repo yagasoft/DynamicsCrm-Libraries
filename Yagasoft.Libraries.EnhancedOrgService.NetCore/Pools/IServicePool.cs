@@ -45,6 +45,6 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 		///     The state of the service becomes invalid; so it should not be used after calling this method.
 		/// </summary>
 		/// <param name="service">Service to release.</param>
-		void ReleaseService(IOrganizationService service);
+		Task ReleaseService(IOrganizationService service);
 	}
 }

@@ -76,7 +76,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 		protected internal IOrganizationService CrmService;
 		public IServicePool<IOrganizationService>? ServicePool;
 
-		protected internal Action ReleaseService;
+		protected internal Func<Task> ReleaseService;
 
 		protected internal virtual IOrganizationServiceCache Cache { get; set; }
 		protected internal virtual ObjectCache ObjectCache { get; set; }
@@ -151,7 +151,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 				return await ServicePool.GetSelfDisposingService();
 			}
 
-			return new SelfDisposingService(CrmService, () => { });
+			return new SelfDisposingService(CrmService, async () => await Task.CompletedTask);
 		}
 
 		#endregion
