@@ -206,7 +206,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 			return await GetSelfBalancingService(serviceParameters, null, poolParametersRepeated);
 		}
 
-		public static async Task<IEnhancedOrgService> GetSelfBalancingService(ServiceParams serviceParameters,
+		public static async Task<IEnhancedOrgService> GetSelfBalancingService(ServiceParams? serviceParameters,
 			RouterRules? rules, params (SelfBalancingParams PoolParameters, int RepeatPools)[] poolParametersRepeated)
 		{
 			return await GetSelfBalancingService(serviceParameters,
@@ -223,10 +223,16 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Helpers
 			return await GetSelfBalancingService(serviceParameters, null, poolParameters);
 		}
 
-		public static async Task<IEnhancedOrgService> GetSelfBalancingService(ServiceParams serviceParameters,
+		public static async Task<IEnhancedOrgService> GetSelfBalancingService(ServiceParams? serviceParameters,
 			RouterRules? rules, params SelfBalancingParams[] poolParameters)
 		{
 			return await GetSelfBalancingService(serviceParameters, rules, poolParameters.Select(GetPool).ToArray());
+		}
+
+		public static async Task<IEnhancedOrgService> GetSelfBalancingService(
+			params (SelfBalancingParams PoolParameters, int RepeatPools)[] poolParametersRepeated)
+		{
+			return await GetSelfBalancingService(null, null, poolParametersRepeated);
 		}
 
 		public static async Task<IEnhancedOrgService> GetSelfBalancingService(params SelfBalancingParams[] poolParameters)
