@@ -280,6 +280,13 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 				{
 					request.Duration.Stop();
 				}
+				
+				foreach (var(key, value) in requests
+					.Where(r => DateTime.Now - r.Value.Timestamp > TimeSpan.FromMinutes(5)).ToArray())
+				{
+					requests.TryRemove(key, out _);
+					value.Duration.Stop();
+				}
 			}
 			finally
 			{
@@ -302,6 +309,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 			try
 			{
 				requestsDuration = requests
+					.Where(r => DateTime.Now - r.Value.Timestamp < TimeSpan.FromMinutes(5))
 					.Aggregate(TimeSpan.Zero,
 						(t, r) => t.Add(TimeSpan.FromMilliseconds(r.Value.Duration.ElapsedMilliseconds)));
 
@@ -325,6 +333,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 				return;
 			}
 			
+			//Console.WriteLine($"EX: {svcFault.Detail.Message}");
+			
 			throttleSemaphore.WaitAsync().Wait();
 
 			var isAlreadyBlocked = consumeSemaphore.IsBlocked;
@@ -333,7 +343,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 			{
 				consumeSemaphore.IsBlocked = true;
 
-				var newThrottledRequests = requests;
+				var newThrottledRequests = requests.Where(r => DateTime.Now - r.Value.Timestamp < TimeSpan.FromMinutes(5));
 				requests = new ConcurrentDictionary<OrganizationRequest, Request>();
 
 				foreach (var (key, value) in newThrottledRequests)
@@ -362,16 +372,19 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 
 				try
 				{
-					var closest = throttledRequests.Select(r => TimeSpan.FromMinutes(5).Add(-(DateTime.Now - r.Value.Timestamp)))
-						.OrderBy(t => t).FirstOrDefault();
+					var closest = throttledRequests.Select(r => new { Duration = TimeSpan.FromMinutes(5).Add(-(DateTime.Now - r.Value.Timestamp)), Request = r})
+						.OrderBy(t => t.Duration).FirstOrDefault();
 
-					if (closest > TimeSpan.Zero)
-					{
-						await Task.Delay(closest);
-					}
-					else
+					if (closest is null)
 					{
 						continue;
+					}
+					
+					throttledRequests.TryRemove(closest.Request.Key, out _);
+					
+					if (closest.Duration > TimeSpan.Zero)
+					{
+						await Task.Delay(closest.Duration);
 					}
 
 					if (throttledRequests.IsEmpty)

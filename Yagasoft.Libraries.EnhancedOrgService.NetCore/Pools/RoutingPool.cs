@@ -1,6 +1,7 @@
 ﻿#region Imports
 
 using Microsoft.Xrm.Sdk;
+using Yagasoft.Libraries.Common;
 using Yagasoft.Libraries.EnhancedOrgService.Events;
 using Yagasoft.Libraries.EnhancedOrgService.Events.EventArgs;
 using Yagasoft.Libraries.EnhancedOrgService.Exceptions;
@@ -18,6 +19,8 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 		where TService : IOrganizationService
 	{
 		public int CurrentPoolSize => routingService.Nodes.Sum(n => n.Pool.CurrentPoolSize);
+		//public string consume => routingService.Nodes.Select(n => (n.Pool as ServicePool<IOrganizationService>).consumeSemaphore.IsBlocked).StringAggregate("-");
+		//public string concurrent => routingService.Nodes.Select(n => (n.Pool as ServicePool<IOrganizationService>).consumeSemaphore.MaxConcurrency).StringAggregate("-");
 
 		public virtual bool IsAutoPoolSize
 		{

@@ -1345,6 +1345,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 
 		#region Operation Handling
 
+		private int x = 0;
 		protected internal virtual async Task<TResult> TryRunOperation<TResult>(Func<IOrganizationServiceAsync2, Task<TResult>> action,
 			Operation operation, ExecuteParams? executeParams, bool isDelegated = false)
 		{
@@ -1389,6 +1390,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Services.Enhanced
 						if (ex is FaultException<OrganizationServiceFault> svcFault)
 						{
 							isForceRetry = Parameters?.ConnectionParams?.IsApiLimit(svcFault.Detail.ErrorCode) is true;
+							//Console.WriteLine($"EX: {svcFault.Detail.Message}");
 						}
 
 						if (!isForceRetry && (!isRetryEnabled || currentRetry >= maxRetryCount || nextInterval > maxmimumRetryInterval))

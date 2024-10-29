@@ -9,7 +9,7 @@
   <PropertyGroup>
     <PackageId>Yagasoft.Libraries.EnhancedOrgService.NetCore</PackageId>
     <Title>Power Platform Enhanced Service Client</Title>
-    <Version>1.4.10</Version>
+    <Version>1.4.13</Version>
     <Authors>ahmed-elsawalhy;Yagasoft</Authors>
     <Company>Yagasoft</Company>
     <Owners>Yagasoft</Owners>
@@ -23,7 +23,7 @@ It supports pooling, transactions, deferred execution, caching, load balancing, 
     <PackageProjectUrl>https://github.com/yagasoft/DynamicsCrm-Libraries</PackageProjectUrl>
     <RepositoryUrl>https://github.com/yagasoft/DynamicsCrm-Libraries.git</RepositoryUrl>
     <PackageTags>organization;service;IOrganizationService;CrmServiceClient;ServiceClient;CRM;Dynamics;365;performance;transaction;pool;bulk;cache;caching;load;balancing;deferred;retry;auto;netcore;net6.0</PackageTags>
-    <PackageReleaseNotes>      * 1.4.10
+    <PackageReleaseNotes>      * 1.4.13
       Fixed: race condition.
       * 1.4.4
       Improved: refactored and improved performance.
