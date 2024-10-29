@@ -20,6 +20,7 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 	{
 		public int CurrentPoolSize => routingService.Nodes.Sum(n => n.Pool.CurrentPoolSize);
 		//public string consume => routingService.Nodes.Select(n => (n.Pool as ServicePool<IOrganizationService>).consumeSemaphore.IsBlocked).StringAggregate("-");
+		//public string currentRequests => routingService.Nodes.Select(n => (n.Pool as ServicePool<IOrganizationService>).consumeSemaphore.currentRequests).StringAggregate("-");
 		//public string concurrent => routingService.Nodes.Select(n => (n.Pool as ServicePool<IOrganizationService>).consumeSemaphore.MaxConcurrency).StringAggregate("-");
 
 		public virtual bool IsAutoPoolSize

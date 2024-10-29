@@ -9729,12 +9729,28 @@ else if (Context.CodeScopeCount <= 0)
 	[GeneratedCode("This is not generated code, but this attribute is used for excluding the code from code analysis.", "0.0.0.0")]
 	public sealed class FifoSemaphore : IDisposable
 	{
-		public int MaxConcurrency;
+		public int MaxConcurrency
+		{
+			get => maxConcurrency;
+			set
+			{
+				var diff = value - maxConcurrency;
+
+				if (diff > 0)
+				{
+					_ = Release(diff);
+				}
+				
+				maxConcurrency = value;
+			}
+		}
+
 		public bool IsBlocked;
 		
 		private readonly ConcurrentQueue<SemaphoreSlim> consumedLocksQueue = new();
 		private readonly ConcurrentQueue<SemaphoreSlim> threadLocksQueue = new();
-		private int currentRequests;
+		public int currentRequests;
+		private int maxConcurrency;
 		private readonly SemaphoreSlim semaphore = new(1);
 
 		public FifoSemaphore(int maxConcurrency)
@@ -9744,7 +9760,9 @@ else if (Context.CodeScopeCount <= 0)
 
 		public void Dispose()
 		{
-			Release();
+			IsBlocked = false;
+			MaxConcurrency = int.MaxValue;
+			_ = ReleaseAllBlocked();
 		}
 
 		public async Task<bool> WaitAsync()
@@ -9823,8 +9841,14 @@ else if (Context.CodeScopeCount <= 0)
 		/// </summary>
 		public async Task Release(int count = 1)
 		{
-			// note the release
-			Interlocked.Decrement(ref currentRequests);
+			for (var i = 0; i < count; i++)
+			{
+				if (currentRequests > 0)
+				{
+					// note the release
+					Interlocked.Decrement(ref currentRequests);
+				}
+			}
 
 			if (IsBlocked)
 			{
