@@ -83,7 +83,6 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 		private readonly SemaphoreSlim throttleSemaphore = new(1);
 		private int semaphoreExtra;
 		
-		private TimeSpan requestsDuration = TimeSpan.Zero;
 		private readonly SemaphoreSlim durationSemaphore = new(1);
 		
 		private ConcurrentDictionary<OrganizationRequest, Request> requests = new();
@@ -100,6 +99,12 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 			poolParams.Require(nameof(poolParams));
 			
 			this.factory = factory;
+
+			handledErrors =
+				[
+					factory.ServiceParams.ConnectionParams?.ExecutionTime?.ErrorCode,
+					factory.ServiceParams.ConnectionParams?.NumberOfRequests?.ErrorCode
+					];
 
 			poolParams.IsLocked = true;
 			PoolParams = poolParams;
@@ -308,12 +313,13 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 			
 			try
 			{
-				requestsDuration = requests
-					.Where(r => DateTime.Now - r.Value.Timestamp < TimeSpan.FromMinutes(5))
+				var consideredRequests = requests
+					.Where(r => DateTime.Now - r.Value.Timestamp < TimeSpan.FromMinutes(5)).ToArray();
+				var requestsDuration = consideredRequests
 					.Aggregate(TimeSpan.Zero,
 						(t, r) => t.Add(TimeSpan.FromMilliseconds(r.Value.Duration.ElapsedMilliseconds)));
 
-				if (requestsDuration > TimeSpan.FromMinutes(15))
+				if (requestsDuration > TimeSpan.FromMinutes(15) || consideredRequests.Length > 5000)
 				{
 					requests.Clear();
 					_ = Task.Run(SwitchService);
@@ -325,14 +331,16 @@ namespace Yagasoft.Libraries.EnhancedOrgService.Pools
 			}
 		}
 
+		private readonly int?[]? handledErrors;
+		
 		private void HandleFailure(Operation operation, Exception? exception)
 		{
 			if (exception is not FaultException<OrganizationServiceFault> svcFault
-				|| Factory.ServiceParams.ConnectionParams?.IsApiLimit(svcFault.Detail.ErrorCode) is not true)
+				|| handledErrors?.Contains(svcFault.Detail.ErrorCode) is not true)
 			{
 				return;
 			}
-			
+
 			//Console.WriteLine($"EX: {svcFault.Detail.Message}");
 			
 			throttleSemaphore.WaitAsync().Wait();
